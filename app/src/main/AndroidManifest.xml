@@ -32,6 +32,10 @@
             android:exported="false" />
 
         <service
+            android:name=".vm.BackupManagerService"
+            android:exported="false" />
+
+        <service
             android:name=".vm.VirtualMachineManagerService"
             android:exported="false" />
 

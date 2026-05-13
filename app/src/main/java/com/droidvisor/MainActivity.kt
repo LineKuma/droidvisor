@@ -95,6 +95,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val backupManagerConnection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as BackupManagerService.LocalBinder
+            backupManagerService = binder.getService()
+            backupManagerBound = true
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            backupManagerBound = false
+            backupManagerService = null
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -110,10 +123,15 @@ class MainActivity : ComponentActivity() {
             bindService(intent, vsockServiceConnection, Context.BIND_AUTO_CREATE)
         }
 
+        Intent(this, BackupManagerService::class.java).also { intent ->
+            bindService(intent, backupManagerConnection, Context.BIND_AUTO_CREATE)
+        }
+
         setContent {
             DroidvisorApp(
                 vmManagerService = vmManagerService,
-                consoleOutputService = consoleService
+                consoleOutputService = consoleService,
+                backupManagerService = backupManagerService
             )
         }
     }
@@ -132,6 +150,10 @@ class MainActivity : ComponentActivity() {
             unbindService(vsockServiceConnection)
             vsockServiceBound = false
         }
+        if (backupManagerBound) {
+            unbindService(backupManagerConnection)
+            backupManagerBound = false
+        }
     }
 }
 
@@ -144,7 +166,8 @@ data class NavItem(
 @Composable
 fun DroidvisorApp(
     vmManagerService: VmManagerService?,
-    consoleOutputService: ConsoleOutputService?
+    consoleOutputService: ConsoleOutputService?,
+    backupManagerService: BackupManagerService?
 ) {
     val navController = rememberNavController()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -165,7 +188,10 @@ fun DroidvisorApp(
         Surface(modifier = Modifier.fillMaxSize()) {
             NavHost(navController = navController, startDestination = "vm") {
                 composable("vm") {
-                    VmManagementScreen(vmManagerService = vmManagerService)
+                    VmManagementScreen(
+                        vmManagerService = vmManagerService,
+                        backupManagerService = backupManagerService
+                    )
                 }
                 composable("docker") {
                     DockerDashboardScreen(viewModel = dockerViewModel)
