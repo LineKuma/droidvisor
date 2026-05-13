@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">droidvisor</string>
+    <string name="nav_vm">VM</string>
+    <string name="nav_terminal">终端</string>
+    <string name="nav_docker">Docker</string>
+    <string name="nav_settings">设置</string>
+</resources>
