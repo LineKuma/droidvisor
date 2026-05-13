@@ -22,12 +22,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
@@ -64,16 +66,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmInstanceStatus
 import com.droidvisor.vm.model.VmTemplate
 
 @Composable
-fun VmManagementScreen(vmManagerService: VmManagerService?) {
+fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService: BackupManagerService?) {
     val vmInstances by vmManagerService?.vmInstances?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var selectedVm by remember { mutableStateOf<VmInstance?>(null) }
+    var showBackupScreen by remember { mutableStateOf(false) }
+    var showNetworkScreen by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -117,7 +122,15 @@ fun VmManagementScreen(vmManagerService: VmManagerService?) {
                             onStart = { vmManagerService?.startVm(vm.id) },
                             onStop = { vmManagerService?.stopVm(vm.id) },
                             onRestart = { vmManagerService?.restartVm(vm.id) },
-                            onDelete = { vmManagerService?.deleteVm(vm.id) }
+                            onDelete = { vmManagerService?.deleteVm(vm.id) },
+                            onBackup = {
+                                selectedVm = vm
+                                showBackupScreen = true
+                            },
+                            onNetwork = {
+                                selectedVm = vm
+                                showNetworkScreen = true
+                            }
                         )
                     }
                 }
@@ -167,7 +180,9 @@ fun VmCard(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onRestart: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onBackup: () -> Unit,
+    onNetwork: () -> Unit
 ) {
     val statusColor = when (vm.status) {
         VmInstanceStatus.RUNNING -> Color.Green
@@ -226,6 +241,22 @@ fun VmCard(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("备份管理") },
+                                onClick = {
+                                    onBackup()
+                                    showMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Backup, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("网络配置") },
+                                onClick = {
+                                    onNetwork()
+                                    showMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.NetworkCheck, null) }
+                            )
                             DropdownMenuItem(
                                 text = { Text("重启") },
                                 onClick = {
@@ -497,4 +528,30 @@ fun VmInstanceStatus.displayName(): String = when (this) {
     VmInstanceStatus.RUNNING -> "运行中"
     VmInstanceStatus.STOPPING -> "停止中"
     VmInstanceStatus.ERROR -> "错误"
+}
+
+@Composable
+fun VmBackupAndNetworkDialogs(
+    selectedVm: VmInstance?,
+    backupManagerService: BackupManagerService?,
+    showBackupScreen: Boolean,
+    showNetworkScreen: Boolean,
+    onDismissBackup: () -> Unit,
+    onDismissNetwork: () -> Unit
+) {
+    if (showBackupScreen && selectedVm != null) {
+        BackupManagementScreen(
+            vmId = selectedVm.id,
+            vmName = selectedVm.name,
+            backupManagerService = backupManagerService
+        )
+    }
+
+    if (showNetworkScreen && selectedVm != null) {
+        NetworkConfigScreen(
+            vmId = selectedVm.id,
+            vmName = selectedVm.name,
+            onSave = { /* 保存网络配置 */ }
+        )
+    }
 }

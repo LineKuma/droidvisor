@@ -39,6 +39,7 @@ import com.droidvisor.ui.screen.SettingsScreen
 import com.droidvisor.ui.screen.TerminalScreen
 import com.droidvisor.ui.screen.VmManagementScreen
 import com.droidvisor.ui.viewmodel.SettingsViewModel
+import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.vsock.VsockService
@@ -48,10 +49,12 @@ class MainActivity : ComponentActivity() {
     private var vmManagerService: VmManagerService? = null
     private var consoleService: ConsoleOutputService? = null
     private var vsockService: VsockService? = null
+    private var backupManagerService: BackupManagerService? = null
 
     private var vmManagerBound = false
     private var consoleServiceBound = false
     private var vsockServiceBound = false
+    private var backupManagerBound = false
 
     private val vmManagerConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
