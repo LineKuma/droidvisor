@@ -21,6 +21,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import com.droidvisor.datastore.dataStore
 import com.droidvisor.docker.DockerDashboardScreen
 import com.droidvisor.docker.DockerDashboardViewModel
+import com.droidvisor.ui.screen.PermissionScreen
 import com.droidvisor.ui.screen.SettingsScreen
 import com.droidvisor.ui.screen.TerminalScreen
 import com.droidvisor.ui.screen.VmManagementScreen
@@ -171,56 +174,68 @@ fun DroidvisorApp(
 ) {
     val navController = rememberNavController()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var hasPassedPermissionCheck by remember { mutableStateOf(false) }
 
-    val dockerViewModel: DockerDashboardViewModel = viewModel()
-    val settingsViewModel: SettingsViewModel = viewModel {
-        SettingsViewModel(androidx.compose.ui.platform.LocalContext.current.dataStore)
-    }
+    val permissionViewModel: PermissionViewModel = viewModel()
 
-    val navItems = listOf(
-        NavItem("vm", "虚拟机", Icons.Default.Computer),
-        NavItem("docker", "Docker", Icons.Default.Cloud),
-        NavItem("terminal", "终端", Icons.Default.Terminal),
-        NavItem("settings", "设置", Icons.Default.Settings)
-    )
+    val permissionState by permissionViewModel.permissionState.collectAsState()
 
-    MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            NavHost(navController = navController, startDestination = "vm") {
-                composable("vm") {
-                    VmManagementScreen(
-                        vmManagerService = vmManagerService,
-                        backupManagerService = backupManagerService
-                    )
-                }
-                composable("docker") {
-                    DockerDashboardScreen(viewModel = dockerViewModel)
-                }
-                composable("terminal") {
-                    TerminalScreen(consoleOutputService = consoleOutputService)
-                }
-                composable("settings") {
-                    SettingsScreen(viewModel = settingsViewModel)
-                }
-            }
+    if (!hasPassedPermissionCheck) {
+        PermissionScreen(
+            viewModel = permissionViewModel,
+            onAllPermissionsGranted = { hasPassedPermissionCheck = true }
+        )
+    } else {
+        val dockerViewModel: DockerDashboardViewModel = viewModel()
+        val settingsViewModel: SettingsViewModel = viewModel {
+            SettingsViewModel(androidx.compose.ui.platform.LocalContext.current.dataStore)
+        }
 
-            NavigationBar {
-                navItems.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        icon = { Icon(item.icon, contentDescription = item.title) },
-                        label = { Text(item.title) },
-                        selected = selectedTabIndex == index,
-                        onClick = {
-                            selectedTabIndex = index
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
+        val navItems = listOf(
+            NavItem("vm", "虚拟机", Icons.Default.Computer),
+            NavItem("docker", "Docker", Icons.Default.Cloud),
+            NavItem("terminal", "终端", Icons.Default.Terminal),
+            NavItem("settings", "设置", Icons.Default.Settings)
+        )
+
+        MaterialTheme {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                NavHost(navController = navController, startDestination = "vm") {
+                    composable("vm") {
+                        VmManagementScreen(
+                            vmManagerService = vmManagerService,
+                            backupManagerService = backupManagerService
+                        )
+                    }
+                    composable("docker") {
+                        DockerDashboardScreen(viewModel = dockerViewModel)
+                    }
+                    composable("terminal") {
+                        TerminalScreen(consoleOutputService = consoleOutputService)
+                    }
+                    composable("settings") {
+                        SettingsScreen(viewModel = settingsViewModel)
+                    }
+                }
+
+                NavigationBar {
+                    navItems.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            icon = { Icon(item.icon, contentDescription = item.title) },
+                            label = { Text(item.title) },
+                            selected = selectedTabIndex == index,
+                            onClick = {
+                                selectedTabIndex = index
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
