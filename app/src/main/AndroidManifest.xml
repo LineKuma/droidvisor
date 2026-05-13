@@ -28,6 +28,10 @@
         </activity>
 
         <service
+            android:name=".vm.VmManagerService"
+            android:exported="false" />
+
+        <service
             android:name=".vm.VirtualMachineManagerService"
             android:exported="false" />
 
