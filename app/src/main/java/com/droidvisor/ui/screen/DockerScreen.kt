@@ -13,13 +13,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -30,17 +36,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.droidvisor.ui.viewmodel.DockerViewModel
+import com.droidvisor.docker.DockerProxyService
+import com.droidvisor.docker.model.Container
+import com.droidvisor.docker.model.Image
 
 @Composable
-fun DockerScreen(viewModel: DockerViewModel) {
+fun DockerScreen(dockerProxyService: DockerProxyService?) {
     val tabs = listOf("Containers", "Images")
     val selectedTabIndex = remember { mutableStateOf(0) }
+    val isRefreshing = remember { mutableStateOf(false) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -55,38 +65,81 @@ fun DockerScreen(viewModel: DockerViewModel) {
             }
 
             when (selectedTabIndex.value) {
-                0 -> ContainerList(viewModel)
-                1 -> ImageList(viewModel)
+                0 -> ContainerList(dockerProxyService, isRefreshing)
+                1 -> ImageList(dockerProxyService, isRefreshing)
             }
         }
     }
 }
 
 @Composable
-fun ContainerList(viewModel: DockerViewModel) {
-    val containers = viewModel.containers.collectAsState().value
+fun ContainerList(dockerProxyService: DockerProxyService?, isRefreshing: androidx.compose.runtime.MutableState<Boolean>) {
+    val containers by dockerProxyService?.containers?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
+    val isConnected by dockerProxyService?.isConnected?.collectAsState() ?: remember { mutableStateOf(false) }
+    val expandedContainer = remember { mutableStateOf<String?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Button(
-            onClick = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text("Run Container")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Button(
+                onClick = { /* Run Container */ },
+                modifier = Modifier.padding(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Run Container")
+            }
+            Button(
+                onClick = {
+                    isRefreshing.value = true
+                    kotlinx.coroutines.MainScope().launch {
+                        dockerProxyService?.listContainers()
+                        isRefreshing.value = false
+                    }
+                },
+                modifier = Modifier.padding(8.dp)
+            ) {
+                if (isRefreshing.value) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                } else {
+                    Text("Refresh")
+                }
+            }
         }
 
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(containers) { container ->
-                ContainerCard(
-                    container = container,
-                    onStart = { viewModel.startContainer(container.id) },
-                    onStop = { viewModel.stopContainer(container.id) },
-                    onRemove = { viewModel.removeContainer(container.id) }
-                )
+        if (!isConnected) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Docker is not connected")
+                    Text("Start the VM to enable Docker", color = Color.Gray)
+                }
+            }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(containers) { container ->
+                    ContainerCard(
+                        container = container,
+                        isExpanded = expandedContainer.value == container.Id,
+                        onToggleExpand = {
+                            expandedContainer.value = if (expandedContainer.value == container.Id) null else container.Id
+                        },
+                        onStart = {
+                            kotlinx.coroutines.MainScope().launch {
+                                dockerProxyService?.startContainer(container.Id)
+                            }
+                        },
+                        onStop = {
+                            kotlinx.coroutines.MainScope().launch {
+                                dockerProxyService?.stopContainer(container.Id)
+                            }
+                        },
+                        onRemove = {
+                            kotlinx.coroutines.MainScope().launch {
+                                dockerProxyService?.removeContainer(container.Id)
+                            }
+                        }
+                    )
+                }
             }
         }
     }
@@ -94,12 +147,14 @@ fun ContainerList(viewModel: DockerViewModel) {
 
 @Composable
 fun ContainerCard(
-    container: com.droidvisor.ui.viewmodel.ContainerInfo,
+    container: Container,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onRemove: () -> Unit
 ) {
-    val isRunning = container.status == "Running"
+    val isRunning = container.State == "running"
 
     Card(
         modifier = Modifier
@@ -112,18 +167,27 @@ fun ContainerCard(
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(text = container.name, fontWeight = FontWeight.Bold)
-                    Text(text = container.image, fontSize = 12.sp, color = Color.Gray)
+                    Text(text = container.Image, fontSize = 12.sp, color = Color.Gray)
                 }
-                StatusBadge(isRunning = isRunning)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusBadge(isRunning = isRunning)
+                    IconButton(onClick = onToggleExpand) {
+                        Icon(
+                            if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = "Expand"
+                        )
+                    }
+                }
             }
 
-            if (container.ports.isNotEmpty()) {
+            if (container.Ports.isNotEmpty()) {
                 Row(modifier = Modifier.padding(top = 8.dp)) {
-                    Text(text = "Ports: ${container.ports.joinToString()}")
+                    Text(text = "Ports: ${container.Ports.joinToString { it.PrivatePort.toString() }}")
                 }
             }
 
@@ -133,14 +197,14 @@ fun ContainerCard(
                         onClick = onStart,
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
                     ) {
-                        androidx.compose.material3.Icon(Icons.Default.PlayArrow, contentDescription = "Start")
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Start")
                     }
                 } else {
                     Button(
                         onClick = onStop,
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Yellow)
                     ) {
-                        androidx.compose.material3.Icon(Icons.Default.Stop, contentDescription = "Stop")
+                        Icon(Icons.Default.Stop, contentDescription = "Stop")
                     }
                 }
                 Button(
@@ -148,10 +212,47 @@ fun ContainerCard(
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                     modifier = Modifier.padding(start = 8.dp)
                 ) {
-                    androidx.compose.material3.Icon(Icons.Default.Delete, contentDescription = "Remove")
+                    Icon(Icons.Default.Delete, contentDescription = "Remove")
                 }
             }
+
+            if (isExpanded) {
+                ContainerDetails(container = container)
+            }
         }
+    }
+}
+
+@Composable
+fun ContainerDetails(container: Container) {
+    Divider(modifier = Modifier.padding(8.dp 0.dp))
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Text(text = "Container ID: ${container.shortId}", fontSize = 12.sp, color = Color.Gray)
+        Text(text = "Command: ${container.Command}", fontSize = 12.sp, color = Color.Gray)
+        Text(text = "Created: ${formatTimestamp(container.Created)}", fontSize = 12.sp, color = Color.Gray)
+        Text(text = "Status: ${container.Status}", fontSize = 12.sp, color = Color.Gray)
+
+        if (container.NetworkSettings.Networks.isNotEmpty()) {
+            Text(text = "Networks:", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+            container.NetworkSettings.Networks.forEach { (name, network) ->
+                Text(text = "  $name: ${network.IPAddress}", fontSize = 12.sp, color = Color.Gray)
+            }
+        }
+
+        if (container.Mounts.isNotEmpty()) {
+            Text(text = "Mounts:", fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+            container.Mounts.forEach { mount ->
+                Text(text = "  ${mount.Source} -> ${mount.Destination}", fontSize = 12.sp, color = Color.Gray)
+            }
+        }
+    }
+}
+
+fun formatTimestamp(timestamp: Long): String {
+    return try {
+        java.time.Instant.ofEpochSecond(timestamp).toString()
+    } catch (e: Exception) {
+        timestamp.toString()
     }
 }
 
@@ -173,23 +274,39 @@ fun StatusBadge(isRunning: Boolean) {
 }
 
 @Composable
-fun ImageList(viewModel: DockerViewModel) {
-    val images = viewModel.images.collectAsState().value
+fun ImageList(dockerProxyService: DockerProxyService?, isRefreshing: androidx.compose.runtime.MutableState<Boolean>) {
+    val images by dockerProxyService?.images?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
     val showPullDialog = remember { mutableStateOf(false) }
     val imageName = remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Button(
-            onClick = { showPullDialog.value = true },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            androidx.compose.material3.Icon(Icons.Default.Download, contentDescription = "Pull")
-            Text("Pull Image")
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Button(
+                onClick = { showPullDialog.value = true },
+                modifier = Modifier.padding(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Icon(Icons.Default.Download, contentDescription = "Pull")
+                Text("Pull Image")
+            }
+            Button(
+                onClick = {
+                    isRefreshing.value = true
+                    kotlinx.coroutines.MainScope().launch {
+                        dockerProxyService?.listImages()
+                        isRefreshing.value = false
+                    }
+                },
+                modifier = Modifier.padding(8.dp)
+            ) {
+                if (isRefreshing.value) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                } else {
+                    Text("Refresh")
+                }
+            }
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -216,7 +333,9 @@ fun ImageList(viewModel: DockerViewModel) {
                         }
                         Button(
                             onClick = {
-                                viewModel.pullImage(imageName.value)
+                                kotlinx.coroutines.MainScope().launch {
+                                    dockerProxyService?.pullImage(imageName.value)
+                                }
                                 showPullDialog.value = false
                             },
                             modifier = Modifier.padding(start = 8.dp)
@@ -231,7 +350,7 @@ fun ImageList(viewModel: DockerViewModel) {
 }
 
 @Composable
-fun ImageCard(image: com.droidvisor.ui.viewmodel.ImageInfo) {
+fun ImageCard(image: Image) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -242,11 +361,13 @@ fun ImageCard(image: com.droidvisor.ui.viewmodel.ImageInfo) {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(text = "${image.name}:${image.tag}", fontWeight = FontWeight.Bold)
-            Text(text = image.id, fontSize = 12.sp, color = Color.Gray)
+            Text(text = image.shortId, fontSize = 12.sp, color = Color.Gray)
             Row(modifier = Modifier.padding(top = 8.dp)) {
-                Text(text = "Size: ${image.size}")
-                Divider(modifier = Modifier.padding(0.dp 8.dp), color = Color.Gray)
-                Text(text = "Created: ${image.created}")
+                Text(text = "Size: ${image.sizeFormatted}")
+                Text(text = "|", color = Color.Gray, modifier = Modifier.padding(0.dp 8.dp))
+                Text(text = "Containers: ${image.Containers}")
+                Text(text = "|", color = Color.Gray, modifier = Modifier.padding(0.dp 8.dp))
+                Text(text = "Created: ${formatTimestamp(image.Created)}")
             }
         }
     }

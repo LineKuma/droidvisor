@@ -1,5 +1,6 @@
 package com.droidvisor.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,35 +10,58 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Paste
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.droidvisor.vm.ConsoleOutputService
+import kotlinx.coroutines.flow.collect
 
 @Composable
-fun TerminalScreen() {
+fun TerminalScreen(consoleOutputService: ConsoleOutputService?) {
     val outputLines = remember { mutableStateListOf<String>() }
     val inputText = remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val commandHistory = remember { mutableStateListOf<String>() }
+    val historyIndex = remember { mutableStateOf(-1) }
 
     LaunchedEffect(Unit) {
         outputLines.add("Welcome to droidvisor Terminal")
         outputLines.add("Debian GNU/Linux 12 (bookworm)")
         outputLines.add("user@droidvisor:~$ ")
+    }
+
+    LaunchedEffect(consoleOutputService) {
+        consoleOutputService?.outputFlow?.collect { line ->
+            outputLines.add(line)
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -57,15 +81,16 @@ fun TerminalScreen() {
                         .padding(8.dp)
                 ) {
                     items(outputLines) { line ->
-                        Text(
-                            text = line,
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                        )
+                        TerminalText(text = line)
                     }
                 }
             }
+
+            TerminalToolbar(
+                onClear = { outputLines.clear() },
+                onCopy = {},
+                onPaste = {}
+            )
 
             OutlinedTextField(
                 value = inputText.value,
@@ -81,9 +106,9 @@ fun TerminalScreen() {
                 keyboardActions = KeyboardActions(
                     onDone = {
                         if (inputText.value.isNotEmpty()) {
-                            outputLines.add(inputText.value)
-                            outputLines.add("user@droidvisor:~$ ")
+                            executeCommand(inputText.value, outputLines, commandHistory)
                             inputText.value = ""
+                            historyIndex.value = -1
                         }
                     }
                 ),
@@ -100,4 +125,131 @@ fun TerminalScreen() {
     }
 }
 
-import androidx.compose.ui.graphics.Color
+@Composable
+fun TerminalToolbar(
+    onClear: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit
+) {
+    androidx.compose.material3.TopAppBar(
+        title = {},
+        actions = {
+            IconButton(onClick = onClear) {
+                Icon(Icons.Default.Clear, contentDescription = "Clear")
+            }
+            IconButton(onClick = onCopy) {
+                Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+            }
+            IconButton(onClick = onPaste) {
+                Icon(Icons.Default.Paste, contentDescription = "Paste")
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+fun executeCommand(command: String, outputLines: MutableList<String>, history: MutableList<String>) {
+    history.add(command)
+
+    when (command.trim()) {
+        "clear" -> {
+            outputLines.clear()
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "ls" -> {
+            outputLines.add("Documents  Downloads  Pictures  Projects")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "pwd" -> {
+            outputLines.add("/home/user")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "whoami" -> {
+            outputLines.add("user")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "date" -> {
+            outputLines.add(java.time.LocalDateTime.now().toString())
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "echo $PATH" -> {
+            outputLines.add("/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "uname -a" -> {
+            outputLines.add("Linux droidvisor 6.1.0 #1 SMP PREEMPT Tue Jan 1 00:00:00 UTC 2024 aarch64 GNU/Linux")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "docker --version" -> {
+            outputLines.add("Docker version 25.0.0, build abc123")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "docker ps" -> {
+            outputLines.add("CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        else -> {
+            outputLines.add("Command executed: $command")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+    }
+}
+
+@Composable
+fun TerminalText(text: String) {
+    val annotatedText = parseAnsiEscapeCodes(text)
+    Text(
+        text = annotatedText,
+        fontSize = 14.sp,
+        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+    )
+}
+
+fun parseAnsiEscapeCodes(input: String): AnnotatedString {
+    val builder = buildAnnotatedString {
+        var currentColor = Color.White
+        var currentStyle = SpanStyle(color = currentColor)
+        var i = 0
+
+        while (i < input.length) {
+            if (input[i] == '\u001B' && i + 1 < input.length && input[i + 1] == '[') {
+                val endIndex = input.indexOf('m', i)
+                if (endIndex != -1) {
+                    val code = input.substring(i + 2, endIndex)
+                    currentColor = parseAnsiColor(code)
+                    currentStyle = SpanStyle(color = currentColor)
+                    i = endIndex + 1
+                    continue
+                }
+            }
+
+            withStyle(currentStyle) {
+                append(input[i])
+            }
+            i++
+        }
+    }
+    return builder
+}
+
+fun parseAnsiColor(code: String): Color {
+    return when (code) {
+        "30" -> Color.Black
+        "31" -> Color.Red
+        "32" -> Color.Green
+        "33" -> Color.Yellow
+        "34" -> Color.Blue
+        "35" -> Color.Magenta
+        "36" -> Color.Cyan
+        "37" -> Color.White
+        "90" -> Color.Gray
+        "91" -> Color(0xFFFF6B6B)
+        "92" -> Color(0xFF69DB7C)
+        "93" -> Color(0xFFFFE066)
+        "94" -> Color(0xFF74C0FC)
+        "95" -> Color(0xFFDA77F2)
+        "96" -> Color(0xFF81ECEC)
+        "97" -> Color.White
+        else -> Color.White
+    }
+}

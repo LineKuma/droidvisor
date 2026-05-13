@@ -20,17 +20,15 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.droidvisor.datastore.dataStore
+import com.droidvisor.docker.DockerProxyService
 import com.droidvisor.ui.screen.DockerScreen
 import com.droidvisor.ui.screen.SettingsScreen
 import com.droidvisor.ui.screen.TerminalScreen
@@ -40,13 +38,19 @@ import com.droidvisor.ui.viewmodel.SettingsViewModel
 import com.droidvisor.ui.viewmodel.VmStatusViewModel
 import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.VirtualMachineManagerService
+import com.droidvisor.vm.vsock.VsockService
 
 class MainActivity : ComponentActivity() {
 
     private var vmService: VirtualMachineManagerService? = null
     private var consoleService: ConsoleOutputService? = null
+    private var vsockService: VsockService? = null
+    private var dockerProxyService: DockerProxyService? = null
+
     private var vmServiceBound = false
     private var consoleServiceBound = false
+    private var vsockServiceBound = false
+    private var dockerProxyServiceBound = false
 
     private val vmServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
@@ -76,6 +80,34 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val vsockServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as VsockService.LocalBinder
+            vsockService = binder.getService()
+            vsockServiceBound = true
+            dockerProxyService?.let { it.attachVsockService(vsockService!!) }
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            vsockServiceBound = false
+            vsockService = null
+        }
+    }
+
+    private val dockerProxyServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as DockerProxyService.LocalBinder
+            dockerProxyService = binder.getService()
+            dockerProxyServiceBound = true
+            vsockService?.let { dockerProxyService?.attachVsockService(it) }
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            dockerProxyServiceBound = false
+            dockerProxyService = null
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -87,8 +119,20 @@ class MainActivity : ComponentActivity() {
             bindService(intent, consoleServiceConnection, Context.BIND_AUTO_CREATE)
         }
 
+        Intent(this, VsockService::class.java).also { intent ->
+            bindService(intent, vsockServiceConnection, Context.BIND_AUTO_CREATE)
+        }
+
+        Intent(this, DockerProxyService::class.java).also { intent ->
+            bindService(intent, dockerProxyServiceConnection, Context.BIND_AUTO_CREATE)
+        }
+
         setContent {
-            DroidvisorApp(vmService)
+            DroidvisorApp(
+                vmService = vmService,
+                consoleOutputService = consoleService,
+                dockerProxyService = dockerProxyService
+            )
         }
     }
 
@@ -102,11 +146,23 @@ class MainActivity : ComponentActivity() {
             unbindService(consoleServiceConnection)
             consoleServiceBound = false
         }
+        if (vsockServiceBound) {
+            unbindService(vsockServiceConnection)
+            vsockServiceBound = false
+        }
+        if (dockerProxyServiceBound) {
+            unbindService(dockerProxyServiceConnection)
+            dockerProxyServiceBound = false
+        }
     }
 }
 
 @Composable
-fun DroidvisorApp(vmService: VirtualMachineManagerService?) {
+fun DroidvisorApp(
+    vmService: VirtualMachineManagerService?,
+    consoleOutputService: ConsoleOutputService?,
+    dockerProxyService: DockerProxyService?
+) {
     val navController = rememberNavController()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
@@ -125,10 +181,10 @@ fun DroidvisorApp(vmService: VirtualMachineManagerService?) {
                     VmScreen(viewModel = vmStatusViewModel)
                 }
                 composable("terminal") {
-                    TerminalScreen()
+                    TerminalScreen(consoleOutputService = consoleOutputService)
                 }
                 composable("docker") {
-                    DockerScreen(viewModel = dockerViewModel)
+                    DockerScreen(dockerProxyService = dockerProxyService)
                 }
                 composable("settings") {
                     SettingsScreen(viewModel = settingsViewModel)
