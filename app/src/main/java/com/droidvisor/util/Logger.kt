@@ -43,15 +43,34 @@ object Logger {
         log(LogLevel.ERROR, "$message\n${throwable.stackTraceToString()}")
     }
 
+    private fun sanitizeLog(message: String): String {
+        var sanitized = message
+
+        val patterns = listOf(
+            Regex("""(password|secret|key|token|api_?key|auth_?token)[:=]\s*["']?[^\s"']+["']?""", RegexOption.IGNORE_CASE) to "$1=[REDACTED]",
+            Regex("""(user|username|email|login)[:=]\s*["']?[^\s"']+["']?""", RegexOption.IGNORE_CASE) to "$1=[REDACTED]",
+            Regex("""(id|uuid|token|session)[:=]\s*[a-fA-F0-9-]+""", RegexOption.IGNORE_CASE) to "$1=[REDACTED]",
+            Regex("""http[s]?://[^\s]+""") to "[URL REDACTED]",
+            Regex("""\{[^}]*\}""") to "[JSON REDACTED]"
+        )
+
+        patterns.forEach { (pattern, replacement) ->
+            sanitized = sanitized.replace(pattern, replacement)
+        }
+
+        return sanitized
+    }
+
     private fun log(level: LogLevel, message: String) {
+        val sanitizedMessage = sanitizeLog(message)
         val timestamp = dateFormat.format(Date())
-        val logMessage = "[$timestamp] [${level.name}] $message"
+        val logMessage = "[$timestamp] [${level.name}] $sanitizedMessage"
 
         when (level) {
-            LogLevel.DEBUG -> Log.d(TAG, message)
-            LogLevel.INFO -> Log.i(TAG, message)
-            LogLevel.WARN -> Log.w(TAG, message)
-            LogLevel.ERROR -> Log.e(TAG, message)
+            LogLevel.DEBUG -> Log.d(TAG, sanitizedMessage)
+            LogLevel.INFO -> Log.i(TAG, sanitizedMessage)
+            LogLevel.WARN -> Log.w(TAG, sanitizedMessage)
+            LogLevel.ERROR -> Log.e(TAG, sanitizedMessage)
         }
 
         logFile?.let { file ->

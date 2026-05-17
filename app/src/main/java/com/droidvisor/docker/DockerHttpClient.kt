@@ -33,6 +33,12 @@ class DockerHttpClient(private val vsockService: VsockService) {
         return executeRequest("DELETE", path)
     }
 
+    private fun sanitizeLog(message: String): String {
+        return message
+            .replace(Regex("""\{[^}]*\}"""), "[JSON REDACTED]")
+            .replace(Regex("""http[s]?://[^\s]+"""), "[URL REDACTED]")
+    }
+
     suspend fun executeRequest(method: String, path: String, body: String = ""): String {
         return withContext(Dispatchers.IO) {
             try {
@@ -59,17 +65,18 @@ class DockerHttpClient(private val vsockService: VsockService) {
                     responseBody
                 } else {
                     val errorBody = readStream(connection.errorStream)
+                    val sanitizedError = sanitizeLog(errorBody)
                     throw when (responseCode) {
-                        404 -> DockerError.NotFoundError(errorBody)
-                        409 -> DockerError.ConflictError(errorBody)
-                        else -> DockerError.ApiError(errorBody, responseCode)
+                        404 -> DockerError.NotFoundError(sanitizedError)
+                        409 -> DockerError.ConflictError(sanitizedError)
+                        else -> DockerError.ApiError(sanitizedError, responseCode)
                     }
                 }
             } catch (e: DockerError) {
                 throw e
             } catch (e: Exception) {
-                Log.e(TAG, "HTTP request failed", e)
-                throw DockerError.ConnectionError(e.message ?: "Connection failed")
+                Log.e(TAG, "HTTP request failed: ${e.message}", e)
+                throw DockerError.ConnectionError("Connection failed")
             }
         }
     }
@@ -79,7 +86,7 @@ class DockerHttpClient(private val vsockService: VsockService) {
         return try {
             deserializer(response)
         } catch (e: SerializationException) {
-            throw DockerError.ParseError("Failed to parse response: ${e.message}")
+            throw DockerError.ParseError("Failed to parse response")
         }
     }
 

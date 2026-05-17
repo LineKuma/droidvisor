@@ -11,9 +11,39 @@ class DockerApiClient(private val httpClient: DockerHttpClient) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private fun sanitizePath(path: String): String {
+        return path
+            .replace(Regex("[^a-zA-Z0-9/_?=&-]"), "")
+            .take(256)
+    }
+
+    private fun sanitizeContainerId(containerId: String): String {
+        return containerId
+            .replace(Regex("[^a-fA-F0-9]"), "")
+            .take(64)
+    }
+
+    private fun sanitizeImageName(imageName: String): String {
+        return imageName
+            .replace(Regex("[^a-zA-Z0-9/_.:-]"), "")
+            .take(256)
+    }
+
+    private fun sanitizeContainerName(name: String): String {
+        return name
+            .replace(Regex("[^a-zA-Z0-9_.-]"), "")
+            .take(64)
+    }
+
+    private fun sanitizeCommand(command: String?): String? {
+        return command
+            ?.replace(Regex("[^a-zA-Z0-9_\\-\\s./]"), "")
+            ?.take(512)
+    }
+
     suspend fun listContainers(all: Boolean = false): List<Container> {
         val path = "/containers/json?all=${if (all) "true" else "false"}"
-        val response = httpClient.get(path)
+        val response = httpClient.get(sanitizePath(path))
         return json.decodeFromString(response)
     }
 
@@ -23,26 +53,38 @@ class DockerApiClient(private val httpClient: DockerHttpClient) {
         command: String? = null,
         ports: Map<Int, Int>? = null
     ): CreateContainerResponse {
+        val sanitizedName = sanitizeContainerName(name)
+        val sanitizedImage = sanitizeImageName(image)
+        val sanitizedCommand = sanitizeCommand(command)
+        
         val body = CreateContainerRequest(
-            name = name,
-            image = image,
-            command = command,
+            name = sanitizedName,
+            image = sanitizedImage,
+            command = sanitizedCommand,
             ports = ports
         )
-        val response = httpClient.post("/containers/create?name=$name", json.encodeToString(body))
+        val path = "/containers/create?name=$sanitizedName"
+        val response = httpClient.post(sanitizePath(path), json.encodeToString(body))
         return json.decodeFromString(response)
     }
 
     suspend fun startContainer(containerId: String) {
-        httpClient.post("/containers/$containerId/start")
+        val sanitizedId = sanitizeContainerId(containerId)
+        val path = "/containers/$sanitizedId/start"
+        httpClient.post(sanitizePath(path))
     }
 
     suspend fun stopContainer(containerId: String, timeout: Int = 10) {
-        httpClient.post("/containers/$containerId/stop?t=$timeout")
+        val sanitizedId = sanitizeContainerId(containerId)
+        val safeTimeout = timeout.coerceIn(1, 300)
+        val path = "/containers/$sanitizedId/stop?t=$safeTimeout"
+        httpClient.post(sanitizePath(path))
     }
 
     suspend fun removeContainer(containerId: String, force: Boolean = false) {
-        httpClient.delete("/containers/$containerId?force=${if (force) "true" else "false"}")
+        val sanitizedId = sanitizeContainerId(containerId)
+        val path = "/containers/$sanitizedId?force=${if (force) "true" else "false"}"
+        httpClient.delete(sanitizePath(path))
     }
 
     suspend fun listImages(): List<Image> {
@@ -51,15 +93,18 @@ class DockerApiClient(private val httpClient: DockerHttpClient) {
     }
 
     suspend fun pullImage(imageName: String): List<ImageCreateResponse> {
-        val path = "/images/create?fromImage=$imageName"
-        val response = httpClient.post(path)
+        val sanitizedImageName = sanitizeImageName(imageName)
+        val path = "/images/create?fromImage=$sanitizedImageName"
+        val response = httpClient.post(sanitizePath(path))
         return response.split("\n")
             .filter { it.isNotBlank() }
             .map { json.decodeFromString<ImageCreateResponse>(it) }
     }
 
     suspend fun removeImage(imageId: String, force: Boolean = false) {
-        httpClient.delete("/images/$imageId?force=${if (force) "true" else "false"}")
+        val sanitizedId = sanitizeContainerId(imageId)
+        val path = "/images/$sanitizedId?force=${if (force) "true" else "false"}"
+        httpClient.delete(sanitizePath(path))
     }
 
     suspend fun getDockerVersion(): VersionResponse {
