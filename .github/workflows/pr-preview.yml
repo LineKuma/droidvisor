@@ -3,6 +3,7 @@ name: PR Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    branches: [ main, master, develop, agent-develop ]
 
 concurrency:
   group: pr-preview-${{ github.event.pull_request.number }}
@@ -34,6 +35,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Debug APK
+        id: build
         run: ./gradlew assembleDebug
 
       - name: Upload APK as PR Artifact
@@ -44,13 +46,20 @@ jobs:
           retention-days: 5
 
       - name: Comment on PR with Build Status
-        if: github.event_name == 'pull_request'
+        if: always()
         uses: actions/github-script@v7
         with:
           script: |
+            const status = '${{ steps.build.outcome }}';
+            const statusEmoji = status === 'success' ? '✅' : '❌';
+            const statusText = status === 'success' ? 'Build succeeded!' : 'Build failed!';
+            const body = `${statusEmoji} ${statusText}\n\n` +
+              `${status === 'success' ? 'APK artifact available for download.' : 'Please check the logs for details.'}\n\n` +
+              `Commit: ${context.sha.substring(0, 7)}`;
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'Build completed! APK artifact available for download.'
-            })
+              body: body
+            });
