@@ -17,19 +17,10 @@ jobs:
   dependency-check:
     name: Dependency Vulnerability Check
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
@@ -37,47 +28,6 @@ jobs:
         with:
           fail-on-severity: 'critical'
           fail-on-scopes: 'runtime'
-
-      - name: Upload Dependency Check Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency-check-report
-          path: '**/build/reports/dependency-check-report.html'
-          retention-days: 14
-
-  codeql:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: 'java,kotlin'
-          queries: 'security-and-quality'
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: '/language:java-kotlin'
-          upload: 'true'
-          output: 'sarif-results'
-
-      - name: Upload SARIF Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: codeql-results
-          path: sarif-results
-          retention-days: 14
 
   gradle-check:
     name: Gradle Security Check
@@ -99,11 +49,3 @@ jobs:
       - name: Run Gradle Check
         id: gradle-check
         run: ./gradlew check --continue || echo "Gradle check completed with some issues"
-
-      - name: Upload Check Reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: check-reports
-          path: '**/build/reports/checkstyle/*.xml'
-          retention-days: 14

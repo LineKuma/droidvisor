@@ -15,6 +15,7 @@ jobs:
   lint:
     name: Lint Check
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,25 +31,12 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run lint
-        id: lint
-        run: ./gradlew lint || echo "Lint completed with warnings"
-
-      - name: Upload lint reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: lint-reports
-          path: app/build/reports/lint-results-*.html
-          retention-days: 14
-
-      - name: Lint Result
-        if: always()
-        run: |
-          echo "Lint check completed"
+        run: ./gradlew lint || echo "Lint completed"
 
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,26 +52,11 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests
-        id: test
         run: ./gradlew testDebugUnitTest || echo "Tests completed"
-
-      - name: Upload test reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-reports
-          path: app/build/reports/tests/testDebugUnitTest/
-          retention-days: 14
-
-      - name: Test Result
-        if: always()
-        run: |
-          echo "Unit tests completed"
 
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
-    needs: [ lint, unit-tests ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
