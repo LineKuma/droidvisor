@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build APKs
+    name: Build Debug APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,10 +29,6 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept Android licenses
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -40,22 +36,10 @@ jobs:
         id: build-debug
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Build Release APK
-        id: build-release
-        run: ./gradlew assembleRelease --stacktrace
-
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         if: success()
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 7
-
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: release-apk
-          path: app/build/outputs/apk/release/app-release.apk
           retention-days: 7

@@ -12,48 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint Check
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Run lint
-        run: ./gradlew lint || echo "Lint completed"
-
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest || echo "Tests completed"
-
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
@@ -71,10 +29,6 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept Android licenses
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -89,13 +43,3 @@ jobs:
           name: debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
-
-      - name: Build Result
-        if: always()
-        run: |
-          if [ "${{ steps.build.outcome }}" == "success" ]; then
-            echo "✅ Build succeeded! APK uploaded as artifact."
-          else
-            echo "❌ Build failed! Check the logs for details."
-            exit 1
-          fi

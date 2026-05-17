@@ -29,10 +29,6 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Accept Android licenses
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -47,13 +43,3 @@ jobs:
           name: debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
-
-      - name: Build Result
-        if: always()
-        run: |
-          if [ "${{ steps.build.outcome }}" == "success" ]; then
-            echo "✅ Build succeeded! APK uploaded as artifact."
-          else
-            echo "❌ Build failed! Check the logs for details."
-            exit 1
-          fi
