@@ -1,0 +1,15 @@
+# Code owners for droidvisor project
+
+# Default owner for all files
+* @droidvisor/maintainers
+
+# Android specific files
+/app/build.gradle @droidvisor/android-team
+/app/src/main/ @droidvisor/android-team
+
+# CI/CD
+/.github/workflows/ @droidvisor/devops
+
+# Documentation
+*.md @droidvisor/docs-team
+/docs/ @droidvisor/docs-team
