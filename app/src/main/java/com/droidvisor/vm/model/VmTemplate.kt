@@ -20,7 +20,8 @@ data class VmTemplate(
     val diskSizeBytes: Long = 4L * 1024 * 1024 * 1024,
     val includesDocker: Boolean = false,
     val includesDesktop: Boolean = false,
-    val recommended: Boolean = false
+    val recommended: Boolean = false,
+    val payloadBinaryName: String = "microdroid_payload"
 ) {
     companion object {
         val STANDARD_DEBIAN = VmTemplate(

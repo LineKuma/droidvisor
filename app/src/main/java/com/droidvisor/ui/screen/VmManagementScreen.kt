@@ -69,8 +69,8 @@ import androidx.compose.ui.window.Dialog
 import com.droidvisor.ui.components.StatusBadge
 import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.VmManagerService
+import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
-import com.droidvisor.vm.model.VmInstanceStatus
 import com.droidvisor.vm.model.VmTemplate
 
 @Composable
@@ -195,9 +195,9 @@ fun VmCard(
     onNetwork: () -> Unit
 ) {
     val statusColor = when (vm.status) {
-        VmInstanceStatus.RUNNING -> Color.Green
-        VmInstanceStatus.STARTING, VmInstanceStatus.STOPPING -> Color.Yellow
-        VmInstanceStatus.ERROR -> Color.Red
+        VmStatus.RUNNING -> Color.Green
+        VmStatus.STARTING, VmStatus.STOPPING -> Color.Yellow
+        VmStatus.ERROR -> Color.Red
         else -> Color.Gray
     }
 
@@ -319,7 +319,7 @@ fun VmCard(
                 horizontalArrangement = Arrangement.End
             ) {
                 when (vm.status) {
-                    VmInstanceStatus.STOPPED, VmInstanceStatus.ERROR -> {
+                    VmStatus.STOPPED, VmStatus.ERROR -> {
                         Button(
                             onClick = onStart,
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Green)
@@ -329,7 +329,7 @@ fun VmCard(
                             Text("启动")
                         }
                     }
-                    VmInstanceStatus.RUNNING -> {
+                    VmStatus.RUNNING -> {
                         Button(
                             onClick = onStop,
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
@@ -521,12 +521,12 @@ fun TemplateSpecsCard(template: VmTemplate) {
     }
 }
 
-fun VmInstanceStatus.displayName(): String = when (this) {
-    VmInstanceStatus.STOPPED -> "已停止"
-    VmInstanceStatus.STARTING -> "启动中"
-    VmInstanceStatus.RUNNING -> "运行中"
-    VmInstanceStatus.STOPPING -> "停止中"
-    VmInstanceStatus.ERROR -> "错误"
+fun VmStatus.displayName(): String = when (this) {
+    VmStatus.STOPPED -> "已停止"
+    VmStatus.STARTING -> "启动中"
+    VmStatus.RUNNING -> "运行中"
+    VmStatus.STOPPING -> "停止中"
+    VmStatus.ERROR -> "错误"
 }
 
 @Composable

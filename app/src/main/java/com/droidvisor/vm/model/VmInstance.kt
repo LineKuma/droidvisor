@@ -1,5 +1,6 @@
 package com.droidvisor.vm.model
 
+import com.droidvisor.vm.VmStatus
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -11,7 +12,7 @@ data class VmInstance(
     val customMemoryBytes: Long? = null,
     val customCpuCores: Int? = null,
     val customDiskSizeBytes: Long? = null,
-    val status: VmInstanceStatus = VmInstanceStatus.STOPPED,
+    val status: VmStatus = VmStatus.STOPPED,
     val createdAt: Long = System.currentTimeMillis(),
     val startedAt: Long? = null,
     val ipAddress: String? = null
@@ -26,19 +27,10 @@ data class VmInstance(
         get() = customDiskSizeBytes ?: template.diskSizeBytes
 
     val isRunning: Boolean
-        get() = status == VmInstanceStatus.RUNNING
+        get() = status == VmStatus.RUNNING
 
     val uptime: Long
         get() = if (startedAt != null && isRunning) {
             System.currentTimeMillis() - startedAt
         } else 0L
-}
-
-@Serializable
-enum class VmInstanceStatus {
-    STOPPED,
-    STARTING,
-    RUNNING,
-    STOPPING,
-    ERROR
 }

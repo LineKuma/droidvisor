@@ -1,10 +1,15 @@
 package com.droidvisor.vm.vsock
 
 import android.app.Service
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Binder
 import android.os.IBinder
+import android.os.ParcelFileDescriptor
 import android.util.Log
+import com.droidvisor.vm.VirtualMachineManagerService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,6 +19,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 
 class VsockService : Service() {
 
@@ -36,12 +45,40 @@ class VsockService : Service() {
 
     private var vsockChannel: VsockChannel? = null
 
+    private var avfService: VirtualMachineManagerService? = null
+    private var avfBound = false
+
+    private val avfConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as VirtualMachineManagerService.LocalBinder
+            avfService = binder.getService()
+            avfBound = true
+            Log.d(TAG, "VirtualMachineManagerService connected")
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            avfService = null
+            avfBound = false
+            Log.d(TAG, "VirtualMachineManagerService disconnected")
+        }
+    }
+
     inner class LocalBinder : Binder() {
         fun getService(): VsockService = this@VsockService
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        bindAvfService()
+    }
+
     override fun onBind(intent: Intent): IBinder {
         return binder
+    }
+
+    private fun bindAvfService() {
+        val intent = Intent(this, VirtualMachineManagerService::class.java)
+        bindService(intent, avfConnection, Context.BIND_AUTO_CREATE)
     }
 
     fun connect(port: Int, autoReconnect: Boolean = true) {
@@ -136,25 +173,38 @@ class VsockService : Service() {
         }
     }
 
+    fun getInputStream(): InputStream? {
+        return (vsockChannel as? RealVsockChannel)?.inputStream
+    }
+
+    fun getOutputStream(): OutputStream? {
+        return (vsockChannel as? RealVsockChannel)?.outputStream
+    }
+
+    fun isConnected(): Boolean = _connectionState.value.isConnected()
+
     private fun createVsockChannel(port: Int): VsockChannel {
-        return object : VsockChannel {
-            private var open = true
-
-            override fun send(data: ByteArray) {
-                if (!open) throw VsockError.SendError("Channel is closed")
+        if (avfBound && avfService != null) {
+            val pfd = avfService?.connectVsock(port) as? ParcelFileDescriptor
+            if (pfd != null) {
+                Log.d(TAG, "Created real Vsock channel via AVF on port $port")
+                return RealVsockChannel(pfd)
             }
-
-            override fun receive(): ByteArray? {
-                if (!open) throw VsockError.ReceiveError("Channel is closed")
-                return null
-            }
-
-            override fun close() {
-                open = false
-            }
-
-            override fun isOpen(): Boolean = open
         }
+
+        Log.w(TAG, "AVF Vsock not available, creating simulation channel on port $port")
+        return SimulationVsockChannel(port)
+    }
+
+    override fun onDestroy() {
+        vsockChannel?.close()
+        vsockChannel = null
+        if (avfBound) {
+            unbindService(avfConnection)
+            avfBound = false
+        }
+        coroutineScope.cancel()
+        super.onDestroy()
     }
 
     private suspend fun scheduleReconnect() {
@@ -165,14 +215,63 @@ class VsockService : Service() {
         }
     }
 
-    override fun onDestroy() {
-        disconnect()
-        coroutineScope.cancel()
-        super.onDestroy()
-    }
-
     companion object {
         const val DEFAULT_DOCKER_PORT = 2375
         const val DEFAULT_TTY_PORT = 22
     }
+}
+
+private class RealVsockChannel(
+    private val pfd: ParcelFileDescriptor
+) : VsockChannel {
+
+    val inputStream: InputStream = FileInputStream(pfd.fileDescriptor)
+    val outputStream: OutputStream = FileOutputStream(pfd.fileDescriptor)
+
+    private var open = true
+
+    override fun send(data: ByteArray) {
+        if (!open) throw VsockError.SendError("Channel is closed")
+        outputStream.write(data)
+        outputStream.flush()
+    }
+
+    override fun receive(): ByteArray? {
+        if (!open) throw VsockError.ReceiveError("Channel is closed")
+        if (inputStream.available() <= 0) return null
+        val buffer = ByteArray(minOf(inputStream.available(), 65536))
+        val bytesRead = inputStream.read(buffer)
+        return if (bytesRead > 0) buffer.copyOf(bytesRead) else null
+    }
+
+    override fun close() {
+        open = false
+        try { inputStream.close() } catch (_: Exception) {}
+        try { outputStream.close() } catch (_: Exception) {}
+        try { pfd.close() } catch (_: Exception) {}
+    }
+
+    override fun isOpen(): Boolean = open
+}
+
+private class SimulationVsockChannel(
+    private val port: Int
+) : VsockChannel {
+
+    private var open = true
+
+    override fun send(data: ByteArray) {
+        if (!open) throw VsockError.SendError("Channel is closed")
+    }
+
+    override fun receive(): ByteArray? {
+        if (!open) throw VsockError.ReceiveError("Channel is closed")
+        return null
+    }
+
+    override fun close() {
+        open = false
+    }
+
+    override fun isOpen(): Boolean = open
 }

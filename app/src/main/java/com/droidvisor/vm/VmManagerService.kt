@@ -4,19 +4,19 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import com.droidvisor.vm.model.VmInstance
-import com.droidvisor.vm.model.VmInstanceStatus
 import com.droidvisor.vm.model.VmTemplate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +36,25 @@ class VmManagerService : Service() {
 
     private val activeVms = mutableMapOf<String, ActiveVmContext>()
 
+    private var avfService: VirtualMachineManagerService? = null
+    private var avfBound = false
+
+    private val avfConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as VirtualMachineManagerService.LocalBinder
+            avfService = binder.getService()
+            avfBound = true
+            Log.d(TAG, "VirtualMachineManagerService connected")
+            observeAvfStatus()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            avfService = null
+            avfBound = false
+            Log.d(TAG, "VirtualMachineManagerService disconnected")
+        }
+    }
+
     inner class LocalBinder : Binder() {
         fun getService(): VmManagerService = this@VmManagerService
     }
@@ -43,10 +62,32 @@ class VmManagerService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        bindAvfService()
     }
 
     override fun onBind(intent: Intent): IBinder {
         return binder
+    }
+
+    private fun bindAvfService() {
+        val intent = Intent(this, VirtualMachineManagerService::class.java)
+        bindService(intent, avfConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    private fun observeAvfStatus() {
+        coroutineScope.launch {
+            avfService?.status?.collect { avfStatus ->
+                val activeVmId = activeVms.keys.firstOrNull()
+                if (activeVmId != null) {
+                    updateVmStatus(activeVmId, avfStatus)
+                    if (avfStatus == VmStatus.RUNNING) {
+                        updateVmStartedAt(activeVmId, System.currentTimeMillis())
+                    } else if (avfStatus == VmStatus.STOPPED || avfStatus == VmStatus.ERROR) {
+                        updateVmStartedAt(activeVmId, null)
+                    }
+                }
+            }
+        }
     }
 
     fun createVm(name: String, template: VmTemplate): VmInstance {
@@ -70,7 +111,7 @@ class VmManagerService : Service() {
         startForegroundIfNeeded()
         coroutineScope.launch {
             try {
-                updateVmStatus(vmId, VmInstanceStatus.STARTING)
+                updateVmStatus(vmId, VmStatus.STARTING)
 
                 val vm = _vmInstances.value.find { it.id == vmId }
                     ?: throw VmError.StartError("VM not found: $vmId")
@@ -83,34 +124,58 @@ class VmManagerService : Service() {
                 )
                 activeVms[vmId] = context
 
-                delay(1500)
-
-                updateVmStatus(vmId, VmInstanceStatus.RUNNING)
-                updateVmStartedAt(vmId, System.currentTimeMillis())
-
-                Log.d(TAG, "VM started successfully: ${vm.name}")
+                if (avfBound && avfService != null) {
+                    configureAndStartAvfVm(vm)
+                } else {
+                    Log.w(TAG, "AVF service not available, using simulation")
+                    simulateStartVm(vmId)
+                }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start VM", e)
-                updateVmStatus(vmId, VmInstanceStatus.ERROR)
+                updateVmStatus(vmId, VmStatus.ERROR)
             }
         }
+    }
+
+    private fun configureAndStartAvfVm(vm: VmInstance) {
+        val avf = avfService ?: return
+
+        val vmConfig = VmConfig(
+            memoryBytes = vm.effectiveMemoryBytes,
+            cpuCores = vm.effectiveCpuCores,
+            diskSizeBytes = vm.effectiveDiskSizeBytes,
+            payloadBinaryName = vm.template.payloadBinaryName
+        )
+        avf.configure(vmConfig)
+        avf.startVm()
+    }
+
+    private suspend fun simulateStartVm(vmId: String) {
+        kotlinx.coroutines.delay(1500)
+        updateVmStatus(vmId, VmStatus.RUNNING)
+        updateVmStartedAt(vmId, System.currentTimeMillis())
+        Log.d(TAG, "VM started (simulation)")
     }
 
     fun stopVm(vmId: String) {
         coroutineScope.launch {
             try {
-                updateVmStatus(vmId, VmInstanceStatus.STOPPING)
+                updateVmStatus(vmId, VmStatus.STOPPING)
 
                 val vm = _vmInstances.value.find { it.id == vmId }
                     ?: throw VmError.StopError("VM not found: $vmId")
 
                 Log.d(TAG, "Stopping VM: ${vm.name}")
 
-                delay(500)
+                if (avfBound && avfService != null) {
+                    avfService?.stopVm()
+                } else {
+                    kotlinx.coroutines.delay(500)
+                }
 
                 activeVms.remove(vmId)
-                updateVmStatus(vmId, VmInstanceStatus.STOPPED)
+                updateVmStatus(vmId, VmStatus.STOPPED)
                 updateVmStartedAt(vmId, null)
 
                 Log.d(TAG, "VM stopped successfully: ${vm.name}")
@@ -121,7 +186,7 @@ class VmManagerService : Service() {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to stop VM", e)
-                updateVmStatus(vmId, VmInstanceStatus.ERROR)
+                updateVmStatus(vmId, VmStatus.ERROR)
             }
         }
     }
@@ -129,7 +194,7 @@ class VmManagerService : Service() {
     fun restartVm(vmId: String) {
         coroutineScope.launch {
             stopVm(vmId)
-            delay(1000)
+            kotlinx.coroutines.delay(1000)
             startVm(vmId)
         }
     }
@@ -140,7 +205,7 @@ class VmManagerService : Service() {
             if (vm != null) {
                 if (vm.isRunning) {
                     stopVm(vmId)
-                    delay(500)
+                    kotlinx.coroutines.delay(500)
                 }
                 activeVms.remove(vmId)
                 _vmInstances.value = _vmInstances.value.filter { it.id != vmId }
@@ -156,7 +221,9 @@ class VmManagerService : Service() {
         return _vmInstances.value.find { it.id == vmId }
     }
 
-    private fun updateVmStatus(vmId: String, status: VmInstanceStatus) {
+    fun getAvfService(): VirtualMachineManagerService? = avfService
+
+    private fun updateVmStatus(vmId: String, status: VmStatus) {
         _vmInstances.value = _vmInstances.value.map {
             if (it.id == vmId) it.copy(status = status) else it
         }
@@ -190,6 +257,10 @@ class VmManagerService : Service() {
     }
 
     override fun onDestroy() {
+        if (avfBound) {
+            unbindService(avfConnection)
+            avfBound = false
+        }
         activeVms.clear()
         coroutineScope.cancel()
         super.onDestroy()

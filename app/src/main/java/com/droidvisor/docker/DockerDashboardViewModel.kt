@@ -36,6 +36,28 @@ class DockerDashboardViewModel : ViewModel() {
     private val _selectedContainerId = MutableStateFlow<String?>(null)
     val selectedContainerId: StateFlow<String?> = _selectedContainerId.asStateFlow()
 
+    private var dockerProxyService: DockerProxyService? = null
+    private var useRealData = false
+
+    fun attachDockerProxyService(service: DockerProxyService) {
+        dockerProxyService = service
+        useRealData = true
+
+        viewModelScope.launch {
+            service.isConnected.collect { connected ->
+                _isConnected.value = connected
+                if (connected) {
+                    refreshAll()
+                }
+            }
+        }
+    }
+
+    fun detachDockerProxyService() {
+        dockerProxyService = null
+        useRealData = false
+    }
+
     init {
         loadMockData()
     }
@@ -63,18 +85,8 @@ class DockerDashboardViewModel : ViewModel() {
                 Command = "/docker-entrypoint.sh nginx -g 'daemon off;'",
                 Created = System.currentTimeMillis() / 1000 - 3600,
                 Ports = listOf(
-                    PortBinding(
-                        IP = "0.0.0.0",
-                        PrivatePort = 80,
-                        PublicPort = 8080,
-                        Type = "tcp"
-                    ),
-                    PortBinding(
-                        IP = "0.0.0.0",
-                        PrivatePort = 443,
-                        PublicPort = 8443,
-                        Type = "tcp"
-                    )
+                    PortBinding(IP = "0.0.0.0", PrivatePort = 80, PublicPort = 8080, Type = "tcp"),
+                    PortBinding(IP = "0.0.0.0", PrivatePort = 443, PublicPort = 8443, Type = "tcp")
                 ),
                 State = "running",
                 Status = "Up 2 hours"
@@ -87,12 +99,7 @@ class DockerDashboardViewModel : ViewModel() {
                 Command = "redis-server",
                 Created = System.currentTimeMillis() / 1000 - 7200,
                 Ports = listOf(
-                    PortBinding(
-                        IP = "0.0.0.0",
-                        PrivatePort = 6379,
-                        PublicPort = 6379,
-                        Type = "tcp"
-                    )
+                    PortBinding(IP = "0.0.0.0", PrivatePort = 6379, PublicPort = 6379, Type = "tcp")
                 ),
                 State = "running",
                 Status = "Up 4 hours"
@@ -105,12 +112,7 @@ class DockerDashboardViewModel : ViewModel() {
                 Command = "docker-entrypoint.sh postgres",
                 Created = System.currentTimeMillis() / 1000 - 86400,
                 Ports = listOf(
-                    PortBinding(
-                        IP = "0.0.0.0",
-                        PrivatePort = 5432,
-                        PublicPort = 5432,
-                        Type = "tcp"
-                    )
+                    PortBinding(IP = "0.0.0.0", PrivatePort = 5432, PublicPort = 5432, Type = "tcp")
                 ),
                 State = "paused",
                 Status = "Up 24 hours (Paused)"
@@ -147,50 +149,38 @@ class DockerDashboardViewModel : ViewModel() {
         )
 
         _images.value = listOf(
-            Image(
-                Id = "sha256:a1b2c3d4e5f6",
-                RepoTags = listOf("nginx:latest"),
-                Created = System.currentTimeMillis() / 1000 - 172800,
-                Size = 187 * 1024 * 1024L
-            ),
-            Image(
-                Id = "sha256:b2c3d4e5f6a7",
-                RepoTags = listOf("redis:alpine"),
-                Created = System.currentTimeMillis() / 1000 - 604800,
-                Size = 30 * 1024 * 1024L
-            ),
-            Image(
-                Id = "sha256:c3d4e5f6a7b8",
-                RepoTags = listOf("postgres:15"),
-                Created = System.currentTimeMillis() / 1000 - 1814400,
-                Size = 378 * 1024 * 1024L
-            ),
-            Image(
-                Id = "sha256:d4e5f6a7b8c9",
-                RepoTags = listOf("node:18"),
-                Created = System.currentTimeMillis() / 1000 - 2592000,
-                Size = 1100 * 1024 * 1024L
-            ),
-            Image(
-                Id = "sha256:e5f6a7b8c9d0",
-                RepoTags = listOf("python:3.12"),
-                Created = System.currentTimeMillis() / 1000 - 5184000,
-                Size = 1300 * 1024 * 1024L
-            ),
-            Image(
-                Id = "sha256:f6a7b8c9d0e1",
-                RepoTags = listOf("hello-world:latest"),
-                Created = System.currentTimeMillis() / 1000 - 7776000,
-                Size = 13300L
-            )
+            Image(Id = "sha256:a1b2c3d4e5f6", RepoTags = listOf("nginx:latest"), Created = System.currentTimeMillis() / 1000 - 172800, Size = 187 * 1024 * 1024L),
+            Image(Id = "sha256:b2c3d4e5f6a7", RepoTags = listOf("redis:alpine"), Created = System.currentTimeMillis() / 1000 - 604800, Size = 30 * 1024 * 1024L),
+            Image(Id = "sha256:c3d4e5f6a7b8", RepoTags = listOf("postgres:15"), Created = System.currentTimeMillis() / 1000 - 1814400, Size = 378 * 1024 * 1024L),
+            Image(Id = "sha256:d4e5f6a7b8c9", RepoTags = listOf("node:18"), Created = System.currentTimeMillis() / 1000 - 2592000, Size = 1100 * 1024 * 1024L),
+            Image(Id = "sha256:e5f6a7b8c9d0", RepoTags = listOf("python:3.12"), Created = System.currentTimeMillis() / 1000 - 5184000, Size = 1300 * 1024 * 1024L),
+            Image(Id = "sha256:f6a7b8c9d0e1", RepoTags = listOf("hello-world:latest"), Created = System.currentTimeMillis() / 1000 - 7776000, Size = 13300L)
         )
+    }
+
+    fun refreshAll() {
+        refreshContainers()
+        refreshImages()
     }
 
     fun refreshContainers() {
         viewModelScope.launch {
             _isLoading.value = true
-            delay(500)
-            loadMockData()
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        _containers.value = proxy.listContainers()
+                    } else {
+                        loadMockData()
+                    }
+                } else {
+                    delay(500)
+                    loadMockData()
+                }
+            } catch (e: Exception) {
+                _containers.value = emptyList()
+            }
             _isLoading.value = false
         }
     }
@@ -198,7 +188,18 @@ class DockerDashboardViewModel : ViewModel() {
     fun refreshImages() {
         viewModelScope.launch {
             _isLoading.value = true
-            delay(500)
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        _images.value = proxy.listImages()
+                    }
+                } else {
+                    delay(500)
+                }
+            } catch (e: Exception) {
+                _images.value = emptyList()
+            }
             _isLoading.value = false
         }
     }
@@ -220,13 +221,25 @@ class DockerDashboardViewModel : ViewModel() {
     fun pullImage(imageName: String, tag: String = "latest") {
         viewModelScope.launch {
             _isLoading.value = true
-            delay(2000)
-            _images.value = _images.value + Image(
-                Id = "sha256:new${System.currentTimeMillis()}",
-                RepoTags = listOf("$imageName:$tag"),
-                Created = System.currentTimeMillis() / 1000,
-                Size = 0
-            )
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        proxy.pullImage("$imageName:$tag")
+                        _images.value = proxy.listImages()
+                    }
+                } else {
+                    delay(2000)
+                    _images.value = _images.value + Image(
+                        Id = "sha256:new${System.currentTimeMillis()}",
+                        RepoTags = listOf("$imageName:$tag"),
+                        Created = System.currentTimeMillis() / 1000,
+                        Size = 0
+                    )
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
             _isLoading.value = false
         }
     }
@@ -238,14 +251,34 @@ class DockerDashboardViewModel : ViewModel() {
     }
 
     fun startContainer(containerId: String) {
-        _containers.value = _containers.value.map {
-            if (it.Id == containerId) it.copy(State = "running") else it
+        viewModelScope.launch {
+            if (useRealData) {
+                val proxy = dockerProxyService
+                if (proxy != null && proxy.isConnected.value) {
+                    proxy.startContainer(containerId)
+                    _containers.value = proxy.listContainers()
+                }
+            } else {
+                _containers.value = _containers.value.map {
+                    if (it.Id == containerId) it.copy(State = "running") else it
+                }
+            }
         }
     }
 
     fun stopContainer(containerId: String) {
-        _containers.value = _containers.value.map {
-            if (it.Id == containerId) it.copy(State = "exited") else it
+        viewModelScope.launch {
+            if (useRealData) {
+                val proxy = dockerProxyService
+                if (proxy != null && proxy.isConnected.value) {
+                    proxy.stopContainer(containerId)
+                    _containers.value = proxy.listContainers()
+                }
+            } else {
+                _containers.value = _containers.value.map {
+                    if (it.Id == containerId) it.copy(State = "exited") else it
+                }
+            }
         }
     }
 
@@ -262,6 +295,16 @@ class DockerDashboardViewModel : ViewModel() {
     }
 
     fun removeContainer(containerId: String) {
-        _containers.value = _containers.value.filter { it.Id != containerId }
+        viewModelScope.launch {
+            if (useRealData) {
+                val proxy = dockerProxyService
+                if (proxy != null && proxy.isConnected.value) {
+                    proxy.removeContainer(containerId)
+                    _containers.value = proxy.listContainers()
+                }
+            } else {
+                _containers.value = _containers.value.filter { it.Id != containerId }
+            }
+        }
     }
 }
