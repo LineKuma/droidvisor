@@ -66,6 +66,7 @@ import com.droidvisor.docker.model.Container
 import com.droidvisor.docker.model.ContainerStats
 import com.droidvisor.docker.model.DockerInfo
 import com.droidvisor.docker.model.Image
+import com.droidvisor.ui.components.SimulationModeBanner
 import com.droidvisor.ui.components.StatusBadge
 
 @Composable
@@ -77,6 +78,13 @@ fun DockerDashboardScreen(viewModel: DockerDashboardViewModel) {
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
+            if (!isConnected) {
+                SimulationModeBanner(
+                    message = "Docker 未连接",
+                    detail = "虚拟机未运行或 Vsock 通道不可用，数据为演示用途"
+                )
+            }
+
             TabRow(selectedTabIndex = selectedTabIndex) {
                 tabs.forEachIndexed { index, title ->
                     Tab(

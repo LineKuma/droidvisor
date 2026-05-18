@@ -39,6 +39,12 @@ class VmManagerService : Service() {
     private var avfService: VirtualMachineManagerService? = null
     private var avfBound = false
 
+    private val _isAvfAvailable = MutableStateFlow(false)
+    val isAvfAvailable: StateFlow<Boolean> = _isAvfAvailable.asStateFlow()
+
+    private val _avfCapabilities = MutableStateFlow<AvfCapabilityChecker.AvfCapabilities?>(null)
+    val avfCapabilities: StateFlow<AvfCapabilityChecker.AvfCapabilities?> = _avfCapabilities.asStateFlow()
+
     private val avfConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as VirtualMachineManagerService.LocalBinder
@@ -62,7 +68,16 @@ class VmManagerService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        checkAvfCapabilities()
         bindAvfService()
+    }
+
+    private fun checkAvfCapabilities() {
+        val checker = AvfCapabilityChecker(this)
+        val capabilities = checker.checkCapabilities()
+        _avfCapabilities.value = capabilities
+        _isAvfAvailable.value = capabilities.canRunRealVm
+        Log.d(TAG, "AVF capabilities: available=${capabilities.isAvfSupported}, canRunRealVm=${capabilities.canRunRealVm}, reasons=${capabilities.avfUnavailableReasons}")
     }
 
     override fun onBind(intent: Intent): IBinder {

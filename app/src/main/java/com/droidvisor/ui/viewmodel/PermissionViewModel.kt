@@ -16,10 +16,17 @@ data class PermissionState(
     val meetsMinSdk: Boolean = false,
     val avfSupported: Boolean = false,
     val protectedVmSupported: Boolean = false,
-    val vsockSupported: Boolean = false
+    val vsockSupported: Boolean = false,
+    val avfUnavailableReasons: List<AvfCapabilityChecker.AvfUnavailableReason> = emptyList()
 ) {
     val allPermissionsGranted: Boolean
         get() = hasInternetPermission && hasStoragePermission && meetsMinSdk && avfSupported
+
+    val isAvfFullyAvailable: Boolean
+        get() = avfSupported && protectedVmSupported && meetsMinSdk
+
+    val isSimulationOnly: Boolean
+        get() = !isAvfFullyAvailable
 
     val missingPermissions: List<String>
         get() = buildList {
@@ -27,9 +34,16 @@ data class PermissionState(
             if (!storagePermissionText.isNotEmpty()) add(storagePermissionText)
             if (!meetsMinSdk) add("Android 13+")
             if (!avfSupported) add("虚拟化框架 (AVF)")
-            if (!protectedVmSupported) add("受保护虚拟机")
-            if (!vsockSupported) add("Vsock 支持")
         }
+
+    val avfWarnings: List<String>
+        get() = buildList {
+            if (!protectedVmSupported && avfSupported) add("受保护虚拟机 (pKVM) 不可用")
+            if (!vsockSupported && avfSupported) add("Vsock 通信不可用")
+        }
+
+    val avfUnavailableSuggestions: List<String>
+        get() = avfUnavailableReasons.map { it.suggestion }
 
     private val storagePermissionText: String
         get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -73,7 +87,8 @@ class PermissionViewModel : ViewModel() {
             meetsMinSdk = meetsMinSdk,
             avfSupported = capabilities.isAvfSupported,
             protectedVmSupported = capabilities.isProtectedVmSupported,
-            vsockSupported = capabilities.isVsockSupported
+            vsockSupported = capabilities.isVsockSupported,
+            avfUnavailableReasons = capabilities.avfUnavailableReasons
         )
     }
 }

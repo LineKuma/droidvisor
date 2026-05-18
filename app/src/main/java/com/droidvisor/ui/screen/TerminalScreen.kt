@@ -37,6 +37,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.droidvisor.ui.components.SimulationModeBanner
 import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.vsock.VsockService
 import kotlinx.coroutines.Dispatchers
@@ -101,6 +102,13 @@ fun TerminalScreen(
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
+            if (vsockService == null || !vsockService.isConnected()) {
+                SimulationModeBanner(
+                    message = "终端不可用",
+                    detail = "Vsock 通道未连接，终端命令将以模拟模式执行"
+                )
+            }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()

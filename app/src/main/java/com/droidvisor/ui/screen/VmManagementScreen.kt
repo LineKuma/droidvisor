@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.droidvisor.ui.components.StatusBadge
+import com.droidvisor.vm.AvfCapabilityChecker
 import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.VmStatus
@@ -76,6 +77,8 @@ import com.droidvisor.vm.model.VmTemplate
 @Composable
 fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService: BackupManagerService?) {
     val vmInstances by vmManagerService?.vmInstances?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
+    val isAvfAvailable by vmManagerService?.isAvfAvailable?.collectAsState() ?: remember { mutableStateOf(false) }
+    val avfCapabilities by vmManagerService?.avfCapabilities?.collectAsState() ?: remember { mutableStateOf(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var selectedVm by remember { mutableStateOf<VmInstance?>(null) }
     var showBackupScreen by remember { mutableStateOf(false) }
@@ -106,33 +109,39 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (vmInstances.isEmpty()) {
-                EmptyVmView(onCreateClick = { showCreateDialog = true })
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(vmInstances) { vm ->
-                        VmCard(
-                            vm = vm,
-                            isSelected = vm.id == selectedVm?.id,
-                            onSelect = { selectedVm = vm },
-                            onStart = { vmManagerService?.startVm(vm.id) },
-                            onStop = { vmManagerService?.stopVm(vm.id) },
-                            onRestart = { vmManagerService?.restartVm(vm.id) },
-                            onDelete = { vmManagerService?.deleteVm(vm.id) },
-                            onBackup = {
-                                selectedVm = vm
-                                showBackupScreen = true
-                            },
-                            onNetwork = {
-                                selectedVm = vm
-                                showNetworkScreen = true
-                            }
-                        )
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (!isAvfAvailable) {
+                    AvfSimulationModeBanner(avfCapabilities)
+                }
+
+                if (vmInstances.isEmpty()) {
+                    EmptyVmView(onCreateClick = { showCreateDialog = true })
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(vmInstances) { vm ->
+                            VmCard(
+                                vm = vm,
+                                isSelected = vm.id == selectedVm?.id,
+                                onSelect = { selectedVm = vm },
+                                onStart = { vmManagerService?.startVm(vm.id) },
+                                onStop = { vmManagerService?.stopVm(vm.id) },
+                                onRestart = { vmManagerService?.restartVm(vm.id) },
+                                onDelete = { vmManagerService?.deleteVm(vm.id) },
+                                onBackup = {
+                                    selectedVm = vm
+                                    showBackupScreen = true
+                                },
+                                onNetwork = {
+                                    selectedVm = vm
+                                    showNetworkScreen = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -552,5 +561,56 @@ fun VmBackupAndNetworkDialogs(
             vmName = selectedVm.name,
             onSave = { /* 保存网络配置 */ }
         )
+    }
+}
+
+@Composable
+private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabilities?) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFF9800).copy(alpha = 0.12f)
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = Color(0xFFFF9800),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "模拟模式运行中",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFF9800)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = if (capabilities != null && capabilities.avfUnavailableReasons.isNotEmpty()) {
+                    capabilities.avfUnavailableReasons.firstOrNull()?.displayText ?: "AVF 不可用"
+                } else {
+                    "此设备不支持 Android 虚拟化框架"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+
+            Text(
+                text = "虚拟机操作均为模拟演示，不会创建真实虚拟机",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray.copy(alpha = 0.7f)
+            )
+        }
     }
 }
