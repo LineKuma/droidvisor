@@ -4,4 +4,8 @@
     <string name="nav_terminal">终端</string>
     <string name="nav_docker">Docker</string>
     <string name="nav_settings">设置</string>
+    <string name="vm_service_notification_channel">虚拟机服务</string>
+    <string name="vm_service_notification_channel_desc">虚拟机运行状态通知</string>
+    <string name="vm_service_notification_title">Droidvisor 虚拟机</string>
+    <string name="vm_service_notification_text">虚拟机服务运行中</string>
 </resources>

@@ -1,5 +1,8 @@
 package com.droidvisor.vm
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -11,6 +14,8 @@ import com.droidvisor.vm.model.VmInstanceStatus
 import com.droidvisor.vm.model.VmTemplate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +26,7 @@ class VmManagerService : Service() {
 
     private val TAG = "VmManagerService"
     private val binder = LocalBinder()
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
     val vmInstances: StateFlow<List<VmInstance>> = _vmInstances.asStateFlow()
@@ -33,6 +38,11 @@ class VmManagerService : Service() {
 
     inner class LocalBinder : Binder() {
         fun getService(): VmManagerService = this@VmManagerService
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -57,6 +67,7 @@ class VmManagerService : Service() {
     }
 
     fun startVm(vmId: String) {
+        startForegroundIfNeeded()
         coroutineScope.launch {
             try {
                 updateVmStatus(vmId, VmInstanceStatus.STARTING)
@@ -103,6 +114,10 @@ class VmManagerService : Service() {
                 updateVmStartedAt(vmId, null)
 
                 Log.d(TAG, "VM stopped successfully: ${vm.name}")
+
+                if (activeVms.isEmpty()) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to stop VM", e)
@@ -153,17 +168,37 @@ class VmManagerService : Service() {
         }
     }
 
-    override fun onDestroy() {
-        coroutineScope.launch {
-            _vmInstances.value.filter { it.isRunning }.forEach {
-                stopVm(it.id)
-            }
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            getString(com.droidvisor.R.string.vm_service_notification_channel),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = getString(com.droidvisor.R.string.vm_service_notification_channel_desc)
         }
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    private fun startForegroundIfNeeded() {
+        val notification = Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(com.droidvisor.R.string.vm_service_notification_title))
+            .setContentText(getString(com.droidvisor.R.string.vm_service_notification_text))
+            .setSmallIcon(com.droidvisor.R.drawable.ic_launcher)
+            .build()
+        startForeground(NOTIFICATION_ID, notification)
+    }
+
+    override fun onDestroy() {
+        activeVms.clear()
         coroutineScope.cancel()
         super.onDestroy()
     }
 
     companion object {
+        private const val NOTIFICATION_CHANNEL_ID = "vm_service_channel"
+        private const val NOTIFICATION_ID = 1001
+
         fun startService(context: Context) {
             val intent = Intent(context, VmManagerService::class.java)
             context.startForegroundService(intent)

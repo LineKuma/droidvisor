@@ -66,6 +66,7 @@ import com.droidvisor.docker.model.Container
 import com.droidvisor.docker.model.ContainerStats
 import com.droidvisor.docker.model.DockerInfo
 import com.droidvisor.docker.model.Image
+import com.droidvisor.ui.components.StatusBadge
 
 @Composable
 fun DockerDashboardScreen(viewModel: DockerDashboardViewModel) {
@@ -186,7 +187,7 @@ fun DockerOverviewTab(viewModel: DockerDashboardViewModel) {
         }
 
         item {
-            RunningContainersPreview(containers = containers.filter { it.status == "running" })
+            RunningContainersPreview(containers = containers.filter { it.State == "running" })
         }
     }
 }
@@ -323,7 +324,7 @@ fun RunningContainerItem(container: Container) {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(container.name, fontWeight = FontWeight.Medium)
-                Text(container.image, fontSize = 12.sp, color = Color.Gray)
+                Text(container.Image, fontSize = 12.sp, color = Color.Gray)
             }
         }
         Text(container.shortId, fontSize = 12.sp, color = Color.Gray)
@@ -365,12 +366,12 @@ fun DockerContainersTab(viewModel: DockerDashboardViewModel) {
             items(containers) { container ->
                 ContainerCard(
                     container = container,
-                    isSelected = container.id == selectedContainer,
-                    onSelect = { viewModel.selectContainer(container.id) },
-                    onStart = { viewModel.startContainer(container.id) },
-                    onStop = { viewModel.stopContainer(container.id) },
-                    onPause = { viewModel.pauseContainer(container.id) },
-                    onRemove = { viewModel.removeContainer(container.id) }
+                    isSelected = container.Id == selectedContainer,
+                    onSelect = { viewModel.selectContainer(container.Id) },
+                    onStart = { viewModel.startContainer(container.Id) },
+                    onStop = { viewModel.stopContainer(container.Id) },
+                    onPause = { viewModel.pauseContainer(container.Id) },
+                    onRemove = { viewModel.removeContainer(container.Id) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -388,7 +389,7 @@ fun ContainerCard(
     onPause: () -> Unit,
     onRemove: () -> Unit
 ) {
-    val statusColor = when (container.status) {
+    val statusColor = when (container.State) {
         "running" -> Color.Green
         "paused" -> Color.Yellow
         else -> Color.Gray
@@ -409,7 +410,7 @@ fun ContainerCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(container.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(container.image, color = Color.Gray, fontSize = 12.sp)
+                    Text(container.Image, color = Color.Gray, fontSize = 12.sp)
                 }
                 StatusBadge(status = container.displayStatus, color = statusColor)
             }
@@ -421,17 +422,17 @@ fun ContainerCard(
                 Text(container.shortId, fontSize = 12.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
 
-            if (container.ports.isNotEmpty()) {
+            if (container.portsDisplay.isNotEmpty()) {
                 Row {
                     Text("端口: ", fontSize = 12.sp, color = Color.Gray)
-                    Text(container.ports.joinToString(", "), fontSize = 12.sp)
+                    Text(container.portsDisplay.joinToString(", "), fontSize = 12.sp)
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                when (container.status) {
+                when (container.State) {
                     "running" -> {
                         IconButton(onClick = onStop, modifier = Modifier.size(36.dp)) {
                             Icon(Icons.Default.Stop, contentDescription = "停止", tint = Color.Red)
@@ -456,17 +457,6 @@ fun ContainerCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun StatusBadge(status: String, color: Color) {
-    Box(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Text(status, color = color, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -537,9 +527,9 @@ fun ImageCard(image: Image, onRemove: () -> Unit) {
                 Text("${image.name}:${image.tag}", fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(4.dp))
                 Row {
-                    Text("大小: ${image.size}", fontSize = 12.sp, color = Color.Gray)
+                    Text("大小: ${image.sizeFormatted}", fontSize = 12.sp, color = Color.Gray)
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text("创建: ${image.created}", fontSize = 12.sp, color = Color.Gray)
+                    Text("创建: ${image.createdFormatted}", fontSize = 12.sp, color = Color.Gray)
                 }
             }
             IconButton(onClick = onRemove) {

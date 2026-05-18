@@ -10,6 +10,8 @@ import com.droidvisor.docker.model.Image
 import com.droidvisor.vm.vsock.VsockService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +21,7 @@ class DockerProxyService : Service() {
 
     private val TAG = "DockerProxyService"
     private val binder = LocalBinder()
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var vsockService: VsockService? = null
     private lateinit var httpClient: DockerHttpClient

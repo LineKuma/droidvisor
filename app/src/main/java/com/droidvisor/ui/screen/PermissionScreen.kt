@@ -2,7 +2,6 @@ package com.droidvisor.ui.screen
 
 import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
@@ -26,80 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModel
-import com.droidvisor.vm.AvfCapabilityChecker
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-
-data class PermissionState(
-    val hasInternetPermission: Boolean = false,
-    val hasStoragePermission: Boolean = false,
-    val meetsMinSdk: Boolean = false,
-    val avfSupported: Boolean = false,
-    val protectedVmSupported: Boolean = false,
-    val vsockSupported: Boolean = false
-) {
-    val allPermissionsGranted: Boolean
-        get() = hasInternetPermission && hasStoragePermission && meetsMinSdk && avfSupported
-
-    val missingPermissions: List<String>
-        get() = buildList {
-            if (!hasInternetPermission) add("网络访问")
-            if (!storagePermissionText.isNotEmpty()) add(storagePermissionText)
-            if (!meetsMinSdk) add("Android 13+")
-            if (!avfSupported) add("虚拟化框架 (AVF)")
-            if (!protectedVmSupported) add("受保护虚拟机")
-            if (!vsockSupported) add("Vsock 支持")
-        }
-
-    private val storagePermissionText: String
-        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (!hasStoragePermission) "存储访问" else ""
-        } else {
-            if (!hasStoragePermission) "存储读写" else ""
-        }
-}
-
-class PermissionViewModel : ViewModel() {
-
-    private val _permissionState = MutableStateFlow(PermissionState())
-    val permissionState: StateFlow<PermissionState> = _permissionState.asStateFlow()
-
-    fun updatePermissionState(context: android.content.Context) {
-        val hasInternet = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.INTERNET
-        ) == PackageManager.PERMISSION_GRANTED
-
-        val hasStorage = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_IMAGES
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-
-        val meetsMinSdk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-
-        val capabilityChecker = AvfCapabilityChecker(context)
-        val capabilities = capabilityChecker.checkCapabilities()
-
-        _permissionState.value = PermissionState(
-            hasInternetPermission = hasInternet,
-            hasStoragePermission = hasStorage,
-            meetsMinSdk = meetsMinSdk,
-            avfSupported = capabilities.isAvfSupported,
-            protectedVmSupported = capabilities.isProtectedVmSupported,
-            vsockSupported = capabilities.isVsockSupported
-        )
-    }
-}
+import com.droidvisor.ui.viewmodel.PermissionViewModel
 
 @Composable
 fun PermissionScreen(

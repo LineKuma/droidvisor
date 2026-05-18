@@ -66,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.droidvisor.ui.components.StatusBadge
 import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.model.VmInstance
@@ -147,6 +148,15 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
             }
         )
     }
+
+    VmBackupAndNetworkDialogs(
+        selectedVm = selectedVm,
+        backupManagerService = backupManagerService,
+        showBackupScreen = showBackupScreen,
+        showNetworkScreen = showNetworkScreen,
+        onDismissBackup = { showBackupScreen = false },
+        onDismissNetwork = { showNetworkScreen = false }
+    )
 }
 
 @Composable
@@ -354,17 +364,6 @@ fun VmInfoChip(icon: ImageVector, text: String) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
         Spacer(modifier = Modifier.width(4.dp))
         Text(text, fontSize = 12.sp, color = Color.Gray)
-    }
-}
-
-@Composable
-fun StatusBadge(status: String, color: Color) {
-    Box(
-        modifier = Modifier
-            .background(color.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Text(status, color = color, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 

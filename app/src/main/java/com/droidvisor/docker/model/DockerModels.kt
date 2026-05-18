@@ -1,24 +1,8 @@
 package com.droidvisor.docker.model
 
-data class Container(
-    val id: String,
-    val name: String,
-    val image: String,
-    val status: String,
-    val created: Long,
-    val ports: List<String> = emptyList()
-) {
-    val shortId: String get() = id.take(12)
+import kotlinx.serialization.Serializable
 
-    val displayStatus: String
-        get() = when (status) {
-            "running" -> "运行中"
-            "paused" -> "已暂停"
-            "exited", "stopped" -> "已停止"
-            else -> status
-        }
-}
-
+@Serializable
 data class ContainerStats(
     val cpuPercent: Float,
     val memoryPercent: Float,
@@ -42,15 +26,7 @@ data class ContainerStats(
     }
 }
 
-data class Image(
-    val name: String,
-    val tag: String,
-    val size: String,
-    val created: String
-) {
-    val fullName: String get() = "$name:$tag"
-}
-
+@Serializable
 data class DockerInfo(
     val containersTotal: Int,
     val containersRunning: Int,
@@ -76,6 +52,7 @@ data class DockerInfo(
     }
 }
 
+@Serializable
 data class DockerVolume(
     val name: String,
     val driver: String,
@@ -83,6 +60,7 @@ data class DockerVolume(
     val createdAt: String
 )
 
+@Serializable
 data class DockerNetwork(
     val id: String,
     val name: String,
