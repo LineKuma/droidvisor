@@ -22,6 +22,7 @@ import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.model.Backup
 import com.droidvisor.vm.model.BackupStatus
 import com.droidvisor.vm.model.BackupType
+import com.droidvisor.vm.model.VerificationStatus
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -33,7 +34,12 @@ fun BackupManagementScreen(
 ) {
     val backups by backupManagerService?.backups?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
     val isCreatingBackup by backupManagerService?.isCreatingBackup?.collectAsState() ?: remember { mutableStateOf(false) }
+    val restoreProgress by backupManagerService?.restoreProgress?.collectAsState() ?: remember { mutableStateOf(null) }
     var showCreateBackupDialog by remember { mutableStateOf(false) }
+    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
+    var backupToRestore by remember { mutableStateOf<Backup?>(null) }
+
+    val sortedBackups = backups.filter { it.vmId == vmId }.sortedByDescending { it.createdTime }
 
     Scaffold(
         topBar = {
@@ -42,6 +48,14 @@ fun BackupManagementScreen(
                 navigationIcon = {
                     IconButton(onClick = { /* 关闭界面 */ }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    if (restoreProgress != null) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).padding(end = 16.dp),
+                            strokeWidth = 2.dp
+                        )
                     }
                 }
             )
@@ -61,7 +75,12 @@ fun BackupManagementScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            if (backups.isEmpty() && !isCreatingBackup) {
+            if (restoreProgress != null) {
+                RestoreProgressCard(restoreProgress!!)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (sortedBackups.isEmpty() && !isCreatingBackup) {
                 EmptyBackupView()
             } else {
                 LazyColumn(
@@ -72,10 +91,13 @@ fun BackupManagementScreen(
                             CreatingBackupCard()
                         }
                     }
-                    items(backups.filter { it.vmId == vmId }) { backup ->
+                    items(sortedBackups) { backup ->
                         BackupCard(
                             backup = backup,
-                            onRestore = { backupManagerService?.restoreBackup(backup.id) },
+                            onRestore = {
+                                backupToRestore = backup
+                                showRestoreConfirmDialog = true
+                            },
                             onDelete = { backupManagerService?.deleteBackup(backup.id) }
                         )
                     }
@@ -93,6 +115,80 @@ fun BackupManagementScreen(
             }
         )
     }
+
+    if (showRestoreConfirmDialog && backupToRestore != null) {
+        RestoreConfirmDialog(
+            backup = backupToRestore!!,
+            onDismiss = {
+                showRestoreConfirmDialog = false
+                backupToRestore = null
+            },
+            onConfirm = {
+                backupManagerService?.restoreBackup(backupToRestore!!.id)
+                showRestoreConfirmDialog = false
+                backupToRestore = null
+            }
+        )
+    }
+}
+
+@Composable
+fun RestoreProgressCard(progress: BackupProgress) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("正在恢复...", fontWeight = FontWeight.Bold)
+                Text("${(progress.progress * 100).toInt()}%", fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { progress.progress },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(progress.currentPhase, fontSize = 12.sp, color = Color.Gray)
+        }
+    }
+}
+
+@Composable
+fun RestoreConfirmDialog(
+    backup: Backup,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("确认恢复") },
+        text = {
+            Column {
+                Text("确定要恢复以下备份吗？")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("备份名称: ${backup.name}", fontWeight = FontWeight.Medium)
+                Text("备份类型: ${if (backup.type == BackupType.FULL) "完整备份" else "增量备份"}")
+                Text("创建时间: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(backup.createdTime))}")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("恢复操作将覆盖当前虚拟机数据", color = Color.Red)
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("确认恢复")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 @Composable
@@ -238,6 +334,40 @@ fun BackupCard(
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
+                }
+
+                if (backup.verificationStatus == VerificationStatus.VERIFIED) {
+                    Row(
+                        modifier = Modifier
+                            .background(Color.Green.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.Green
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("已验证", fontSize = 12.sp, color = Color.Green)
+                    }
+                } else if (backup.verificationStatus == VerificationStatus.VERIFICATION_FAILED) {
+                    Row(
+                        modifier = Modifier
+                            .background(Color.Red.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.Red
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("验证失败", fontSize = 12.sp, color = Color.Red)
+                    }
                 }
             }
 
