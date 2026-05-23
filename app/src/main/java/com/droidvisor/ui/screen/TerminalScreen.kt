@@ -1,6 +1,5 @@
 package com.droidvisor.ui.screen
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +12,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Paste
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.TextDecrease
+import androidx.compose.material.icons.filled.TextIncrease
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -24,14 +25,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
@@ -42,7 +49,11 @@ import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.vsock.VsockService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.InputStream
+
+private const val MIN_FONT_SIZE = 10
+private const val MAX_FONT_SIZE = 24
+private const val DEFAULT_FONT_SIZE = 14
+private const val FONT_SIZE_STEP = 2
 
 @Composable
 fun TerminalScreen(
@@ -53,8 +64,10 @@ fun TerminalScreen(
     val inputText = remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val commandHistory = remember { mutableStateListOf<String>() }
-    val historyIndex = remember { mutableStateOf(-1) }
+    val historyIndex = remember { mutableIntStateOf(-1) }
     val isVmRunning = remember { mutableStateOf(false) }
+    var fontSize by remember { mutableIntStateOf(DEFAULT_FONT_SIZE) }
+    val clipboardManager = LocalClipboardManager.current
 
     LaunchedEffect(Unit) {
         outputLines.add("Welcome to Droidvisor Terminal")
@@ -124,15 +137,33 @@ fun TerminalScreen(
                         .padding(8.dp)
                 ) {
                     items(outputLines) { line ->
-                        TerminalText(text = line)
+                        TerminalText(text = line, fontSize = fontSize)
                     }
                 }
             }
 
             TerminalToolbar(
                 onClear = { outputLines.clear() },
-                onCopy = {},
-                onPaste = {}
+                onCopy = {
+                    val textToCopy = outputLines.joinToString("\n")
+                    clipboardManager?.setText(AnnotatedString(textToCopy))
+                },
+                onPaste = {
+                    clipboardManager?.getText()?.text?.let { pastedText ->
+                        inputText.value = pastedText
+                    }
+                },
+                fontSize = fontSize,
+                onFontSizeIncrease = {
+                    if (fontSize < MAX_FONT_SIZE) {
+                        fontSize += FONT_SIZE_STEP
+                    }
+                },
+                onFontSizeDecrease = {
+                    if (fontSize > MIN_FONT_SIZE) {
+                        fontSize -= FONT_SIZE_STEP
+                    }
+                }
             )
 
             OutlinedTextField(
@@ -149,7 +180,7 @@ fun TerminalScreen(
                     .padding(8.dp),
                 enabled = true,
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
+                    keyboardType = KeyboardType.Ascii,
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
@@ -163,7 +194,7 @@ fun TerminalScreen(
                                 vsockService
                             )
                             inputText.value = ""
-                            historyIndex.value = -1
+                            historyIndex.intValue = -1
                         }
                     }
                 ),
@@ -186,11 +217,28 @@ fun TerminalScreen(
 fun TerminalToolbar(
     onClear: () -> Unit,
     onCopy: () -> Unit,
-    onPaste: () -> Unit
+    onPaste: () -> Unit,
+    fontSize: Int = DEFAULT_FONT_SIZE,
+    onFontSizeIncrease: () -> Unit,
+    onFontSizeDecrease: () -> Unit
 ) {
     androidx.compose.material3.TopAppBar(
         title = {},
         actions = {
+            Text(
+                text = "${fontSize}sp",
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+                    .align(Alignment.CenterVertically),
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 12.sp
+            )
+            IconButton(onClick = onFontSizeDecrease) {
+                Icon(Icons.Default.TextDecrease, contentDescription = "Decrease font size")
+            }
+            IconButton(onClick = onFontSizeIncrease) {
+                Icon(Icons.Default.TextIncrease, contentDescription = "Increase font size")
+            }
             IconButton(onClick = onClear) {
                 Icon(Icons.Default.Clear, contentDescription = "Clear")
             }
@@ -198,7 +246,7 @@ fun TerminalToolbar(
                 Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
             }
             IconButton(onClick = onPaste) {
-                Icon(Icons.Default.Paste, contentDescription = "Paste")
+                Icon(Icons.Default.ContentPaste, contentDescription = "Paste")
             }
         },
         modifier = Modifier.fillMaxWidth()
@@ -209,37 +257,55 @@ fun executeCommand(
     command: String,
     outputLines: MutableList<String>,
     history: MutableList<String>,
-    vsockService: VsockService? = null
+    vsockService: VsockService? = null,
+    historyIndex: MutableIntState? = null,
+    inputText: MutableState<String>? = null
 ) {
-    history.add(command)
-    outputLines.add("user@droidvisor:~$ $command")
+    when {
+        command == "\u0003" -> {
+            outputLines.add("^C")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        command == "\u0004" -> {
+            outputLines.add("^D")
+            outputLines.add("Goodbye!")
+        }
+        command == "\u000C" -> {
+            outputLines.clear()
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        command.isNotEmpty() -> {
+            history.add(command)
+            outputLines.add("user@droidvisor:~$ $command")
 
-    if (command.trim() == "clear") {
-        outputLines.clear()
-        outputLines.add("user@droidvisor:~$ ")
-        return
-    }
-
-    if (vsockService != null && vsockService.isConnected()) {
-        val outputStream = vsockService.getOutputStream()
-        if (outputStream != null) {
-            try {
-                outputStream.write((command + "\n").toByteArray())
-                outputStream.flush()
-                return
-            } catch (e: Exception) {
-                outputLines.add("[发送失败: ${e.message}]")
+            if (vsockService != null && vsockService.isConnected()) {
+                val outputStream = vsockService.getOutputStream()
+                if (outputStream != null) {
+                    try {
+                        outputStream.write((command + "\n").toByteArray())
+                        outputStream.flush()
+                        historyIndex?.intValue = -1
+                        return
+                    } catch (e: Exception) {
+                        outputLines.add("[发送失败: ${e.message}]")
+                    }
+                }
             }
+
+            executeSimulatedCommand(command, outputLines)
+            historyIndex?.intValue = -1
         }
     }
-
-    executeSimulatedCommand(command, outputLines)
 }
 
 private fun executeSimulatedCommand(command: String, outputLines: MutableList<String>) {
-    when (command.trim()) {
-        "ls" -> {
-            outputLines.add("Documents  Downloads  Pictures  Projects")
+    when (command.trim().lowercase()) {
+        "ls", "ls --color=auto" -> {
+            outputLines.add("\u001B[32mDocuments\u001B[0m  \u001B[34mDownloads\u001B[0m  \u001B[36mPictures\u001B[0m  \u001B[35mProjects\u001B[0m")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "clear" -> {
+            outputLines.clear()
             outputLines.add("user@droidvisor:~$ ")
         }
         "pwd" -> {
@@ -270,6 +336,15 @@ private fun executeSimulatedCommand(command: String, outputLines: MutableList<St
             outputLines.add("CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES")
             outputLines.add("user@droidvisor:~$ ")
         }
+        "git diff" -> {
+            outputLines.add("\u001B[31m-diff output here-\u001B[0m")
+            outputLines.add("user@droidvisor:~$ ")
+        }
+        "git status" -> {
+            outputLines.add("On branch \u001B[32mmaster\u001B[0m")
+            outputLines.add("nothing to commit, working tree clean")
+            outputLines.add("user@droidvisor:~$ ")
+        }
         else -> {
             outputLines.add("[模拟模式] Command executed: $command")
             outputLines.add("user@droidvisor:~$ ")
@@ -278,12 +353,12 @@ private fun executeSimulatedCommand(command: String, outputLines: MutableList<St
 }
 
 @Composable
-fun TerminalText(text: String) {
+fun TerminalText(text: String, fontSize: Int = DEFAULT_FONT_SIZE) {
     val annotatedText = parseAnsiEscapeCodes(text)
     Text(
         text = annotatedText,
-        fontSize = 14.sp,
-        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+        fontSize = fontSize.sp,
+        fontFamily = FontFamily.Monospace
     )
 }
 
