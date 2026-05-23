@@ -8,8 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- 待添加：MVP 功能实现（Debian VM 运行时、Docker Engine 集成、Jetpack Compose UI）
-- 待添加：Android/Gradle 项目脚手架搭建（app 模块、Gradle 构建脚本、依赖配置）
+- MVP 功能实现：
+  - Debian VM 运行时：支持 Debian 标准虚拟机模板，包含完整的生命周期管理
+  - Docker Engine 集成：支持 Docker Host 虚拟机模板，原生 Docker 容器管理
+  - Jetpack Compose UI：Material 3 设计语言，现代 Android UI 开发
+- Android/Gradle 项目脚手架搭建：
+  - app 模块：标准 Android 应用模块结构
+  - Gradle 构建脚本：完整的构建配置，支持 debug/release 构建
+  - 依赖配置：Jetpack Compose、Material 3、DataStore、Kotlin Coroutines 等
 
 ## [0.1.0] - 2026-05-13
 

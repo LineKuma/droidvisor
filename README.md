@@ -2,6 +2,15 @@
 
 基于 Android AVF (Android Virtualization Framework) 的虚拟机管理应用，支持 Debian VM 运行和 Docker 容器化。
 
+## MVP 状态
+
+**当前版本：MVP (Minimum Viable Product) 开发阶段**
+
+核心功能已实现：
+- Debian VM 运行时管理
+- Docker Engine 集成
+- Jetpack Compose UI (Material 3)
+
 ## 功能特性
 
 ### 虚拟机管理
