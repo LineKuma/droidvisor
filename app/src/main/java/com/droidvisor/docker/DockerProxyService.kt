@@ -151,6 +151,21 @@ class DockerProxyService : Service() {
         }
     }
 
+    suspend fun getContainerLogs(containerId: String): List<ContainerLogEntry> {
+        return try {
+            apiClient.getContainerLogs(containerId)
+        } catch (e: DockerError) {
+            Log.e(TAG, "Failed to get container logs $containerId", e)
+            emptyList()
+        }
+    }
+
+    data class ContainerLogEntry(
+        val timestamp: String,
+        val message: String,
+        val isError: Boolean = false
+    )
+
     private suspend fun checkDockerVersion() {
         try {
             val version = apiClient.getDockerVersion()

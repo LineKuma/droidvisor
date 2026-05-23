@@ -1,6 +1,10 @@
 package com.droidvisor.ui.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,12 +20,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Pause
@@ -40,12 +52,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -57,7 +71,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -344,6 +360,9 @@ fun DockerContainersTab(viewModel: DockerDashboardViewModel) {
     val containers by viewModel.containers.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedContainer by viewModel.selectedContainerId.collectAsState()
+    val expandedContainerId by viewModel.expandedContainerId.collectAsState()
+    var showLogsDialog by remember { mutableStateOf(false) }
+    var logsContainerId by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -375,15 +394,31 @@ fun DockerContainersTab(viewModel: DockerDashboardViewModel) {
                 ContainerCard(
                     container = container,
                     isSelected = container.Id == selectedContainer,
+                    isExpanded = container.Id == expandedContainerId,
                     onSelect = { viewModel.selectContainer(container.Id) },
+                    onToggleExpand = { viewModel.toggleContainerDetails(container.Id) },
                     onStart = { viewModel.startContainer(container.Id) },
                     onStop = { viewModel.stopContainer(container.Id) },
                     onPause = { viewModel.pauseContainer(container.Id) },
-                    onRemove = { viewModel.removeContainer(container.Id) }
+                    onRemove = { viewModel.removeContainer(container.Id) },
+                    onViewLogs = {
+                        logsContainerId = container.Id
+                        viewModel.fetchContainerLogs(container.Id)
+                        showLogsDialog = true
+                    },
+                    viewModel = viewModel
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
+    }
+
+    if (showLogsDialog && logsContainerId != null) {
+        ContainerLogsDialog(
+            containerId = logsContainerId!!,
+            viewModel = viewModel,
+            onDismiss = { showLogsDialog = false }
+        )
     }
 }
 
@@ -391,11 +426,15 @@ fun DockerContainersTab(viewModel: DockerDashboardViewModel) {
 fun ContainerCard(
     container: Container,
     isSelected: Boolean,
+    isExpanded: Boolean,
     onSelect: () -> Unit,
+    onToggleExpand: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onPause: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onViewLogs: () -> Unit,
+    viewModel: DockerDashboardViewModel
 ) {
     val statusColor = when (container.State) {
         "running" -> Color.Green
@@ -404,7 +443,9 @@ fun ContainerCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() },
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
             else MaterialTheme.colorScheme.surfaceVariant
@@ -420,20 +461,89 @@ fun ContainerCard(
                     Text(container.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Text(container.Image, color = Color.Gray, fontSize = 12.sp)
                 }
-                StatusBadge(status = container.displayStatus, color = statusColor)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusBadge(status = container.displayStatus, color = statusColor)
+                    IconButton(onClick = onToggleExpand, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isExpanded) "收起" else "展开",
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Row {
                 Text("ID: ", fontSize = 12.sp, color = Color.Gray)
-                Text(container.shortId, fontSize = 12.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Text(container.shortId, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
             }
 
             if (container.portsDisplay.isNotEmpty()) {
                 Row {
                     Text("端口: ", fontSize = 12.sp, color = Color.Gray)
                     Text(container.portsDisplay.joinToString(", "), fontSize = 12.sp)
+                }
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(modifier = Modifier.padding(top = 12.dp)) {
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    Text("完整配置", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val envVars = viewModel.getContainerEnvironmentVars(container.Id)
+                    if (envVars.isNotEmpty()) {
+                        Text("环境变量:", fontSize = 12.sp, color = Color.Gray)
+                        envVars.forEach { (key, value) ->
+                            Row(modifier = Modifier.padding(start = 8.dp)) {
+                                Text("$key = ", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                                Text(value, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    val portMappings = viewModel.getContainerPortMappings(container.Id)
+                    if (portMappings.isNotEmpty()) {
+                        Text("端口映射:", fontSize = 12.sp, color = Color.Gray)
+                        portMappings.forEach { mapping ->
+                            Row(modifier = Modifier.padding(start = 8.dp)) {
+                                Text(mapping, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    val mounts = viewModel.getContainerMounts(container.Id)
+                    if (mounts.isNotEmpty()) {
+                        Text("卷挂载:", fontSize = 12.sp, color = Color.Gray)
+                        mounts.forEach { mount ->
+                            Row(modifier = Modifier.padding(start = 8.dp)) {
+                                Text(mount, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    Row {
+                        Text("命令: ", fontSize = 12.sp, color = Color.Gray)
+                        Text(container.Command, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    TextButton(onClick = onViewLogs, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("查看日志")
+                    }
                 }
             }
 
@@ -472,7 +582,9 @@ fun ContainerCard(
 fun DockerImagesTab(viewModel: DockerDashboardViewModel) {
     val images by viewModel.images.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val pullProgress by viewModel.pullProgress.collectAsState()
     var showPullDialog by remember { mutableStateOf(false) }
+    var showCleanupDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -486,11 +598,82 @@ fun DockerImagesTab(viewModel: DockerDashboardViewModel) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("刷新")
             }
-            Button(onClick = { showPullDialog = true }) {
-                Icon(Icons.Default.Download, contentDescription = null)
+            Row {
+                Button(onClick = { showCleanupDialog = true }) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("清理建议")
+                }
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("拉取镜像")
+                Button(onClick = { showPullDialog = true }) {
+                    Icon(Icons.Default.Download, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("拉取镜像")
+                }
             }
+        }
+
+        if (pullProgress.isPulling) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "正在拉取: ${pullProgress.imageName}",
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { pullProgress.progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${(pullProgress.progress * 100).toInt()}%",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "速度: ${pullProgress.speed}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${formatBytes(pullProgress.downloadedBytes)} / ${formatBytes(pullProgress.totalBytes)}",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                        Text(
+                            text = "剩余时间: ${pullProgress.estimatedTimeRemaining}",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = pullProgress.statusMessage,
+                        fontSize = 11.sp,
+                        color = Color.Blue
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
         LazyColumn(
@@ -511,10 +694,80 @@ fun DockerImagesTab(viewModel: DockerDashboardViewModel) {
         PullImageDialog(
             onDismiss = { showPullDialog = false },
             onPull = { name, tag ->
-                viewModel.pullImage(name, tag)
+                viewModel.pullImageWithProgress(name, tag)
                 showPullDialog = false
             }
         )
+    }
+
+    if (showCleanupDialog) {
+        ImageCleanupDialog(
+            viewModel = viewModel,
+            onDismiss = { showCleanupDialog = false }
+        )
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "${"%.2f".format(bytes / 1024.0)} KB"
+        bytes < 1024 * 1024 * 1024 -> "${"%.2f".format(bytes / (1024.0 * 1024))} MB"
+        else -> "${"%.2f".format(bytes / (1024.0 * 1024 * 1024))} GB"
+    }
+}
+
+@Composable
+fun ImageCleanupDialog(viewModel: DockerDashboardViewModel, onDismiss: () -> Unit) {
+    val images by viewModel.images.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.calculateImageCleanupSuggestions()
+    }
+
+    val suggestions = viewModel.getCleanupRecommendations()
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("镜像清理建议", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (suggestions.isEmpty()) {
+                    Text("所有镜像都在合理大小范围内，无需清理", color = Color.Gray)
+                } else {
+                    Text("以下镜像体积较小，可以考虑清理:", fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    suggestions.forEach { suggestion ->
+                        Text(
+                            text = suggestion,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val totalImages = images.size
+                val totalSize = images.sumOf { it.Size }
+                Text("镜像统计:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("总数: $totalImages", fontSize = 12.sp, color = Color.Gray)
+                Text("总大小: ${formatBytes(totalSize)}", fontSize = 12.sp, color = Color.Gray)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("关闭")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -591,6 +844,115 @@ fun PullImageDialog(onDismiss: () -> Unit, onPull: (String, String) -> Unit) {
                         enabled = imageName.isNotBlank()
                     ) {
                         Text("拉取")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContainerLogsDialog(containerId: String, viewModel: DockerDashboardViewModel, onDismiss: () -> Unit) {
+    val logs by viewModel.containerLogs.collectAsState()
+    val filter by viewModel.logFilter.collectAsState()
+    var localFilter by remember { mutableStateOf("") }
+    var showFilterInput by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("容器日志", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Row {
+                        IconButton(onClick = { showFilterInput = !showFilterInput }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "过滤")
+                        }
+                        IconButton(onClick = {
+                            val exportedLogs = viewModel.exportLogs()
+                            android.content.ClipboardManager().let { clipboard ->
+                                val clip = android.content.ClipData.newPlainText("Docker Logs", exportedLogs)
+                                clipboard.setPrimaryClip(clip)
+                            }
+                        }) {
+                            Icon(Icons.Default.FileDownload, contentDescription = "导出")
+                        }
+                    }
+                }
+
+                if (showFilterInput) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = localFilter,
+                        onValueChange = {
+                            localFilter = it
+                            viewModel.setLogFilter(it)
+                        },
+                        label = { Text("过滤日志") },
+                        placeholder = { Text("输入关键词过滤") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { showFilterInput = false })
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val filteredLogs = if (localFilter.isBlank()) logs else logs.filter {
+                    it.message.contains(localFilter, ignoreCase = true)
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                ) {
+                    items(filteredLogs) { logEntry ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = logEntry.timestamp,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = Color.Gray,
+                                modifier = Modifier.width(140.dp)
+                            )
+                            Text(
+                                text = if (logEntry.isError) "[ERROR]" else "[INFO]",
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = if (logEntry.isError) Color.Red else Color.Blue,
+                                modifier = Modifier.width(50.dp)
+                            )
+                            Text(
+                                text = logEntry.message,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = if (logEntry.isError) Color.Red else Color.Unspecified
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("关闭")
                     }
                 }
             }

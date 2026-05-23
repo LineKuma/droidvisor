@@ -13,6 +13,23 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class PullProgress(
+    val imageName: String = "",
+    val progress: Float = 0f,
+    val downloadedBytes: Long = 0L,
+    val totalBytes: Long = 0L,
+    val speed: String = "0 B/s",
+    val estimatedTimeRemaining: String = "--",
+    val isPulling: Boolean = false,
+    val statusMessage: String = ""
+)
+
+data class ContainerLog(
+    val timestamp: String,
+    val message: String,
+    val isError: Boolean = false
+)
+
 class DockerDashboardViewModel : ViewModel() {
 
     private val _containers = MutableStateFlow<List<Container>>(emptyList())
@@ -35,6 +52,21 @@ class DockerDashboardViewModel : ViewModel() {
 
     private val _selectedContainerId = MutableStateFlow<String?>(null)
     val selectedContainerId: StateFlow<String?> = _selectedContainerId.asStateFlow()
+
+    private val _pullProgress = MutableStateFlow(PullProgress())
+    val pullProgress: StateFlow<PullProgress> = _pullProgress.asStateFlow()
+
+    private val _containerLogs = MutableStateFlow<List<ContainerLog>>(emptyList())
+    val containerLogs: StateFlow<List<ContainerLog>> = _containerLogs.asStateFlow()
+
+    private val _logFilter = MutableStateFlow("")
+    val logFilter: StateFlow<String> = _logFilter.asStateFlow()
+
+    private val _expandedContainerId = MutableStateFlow<String?>(null)
+    val expandedContainerId: StateFlow<String?> = _expandedContainerId.asStateFlow()
+
+    private val _imageCleanupSuggestions = MutableStateFlow<Map<String, Long>>(emptyMap())
+    val imageCleanupSuggestions: StateFlow<Map<String, Long>> = _imageCleanupSuggestions.asStateFlow()
 
     private var dockerProxyService: DockerProxyService? = null
     private var useRealData = false
@@ -305,6 +337,254 @@ class DockerDashboardViewModel : ViewModel() {
             } else {
                 _containers.value = _containers.value.filter { it.Id != containerId }
             }
+        }
+    }
+
+    fun pullImageWithProgress(imageName: String, tag: String = "latest") {
+        viewModelScope.launch {
+            _pullProgress.value = PullProgress(
+                imageName = "$imageName:$tag",
+                isPulling = true,
+                statusMessage = "正在连接仓库..."
+            )
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        _pullProgress.value = PullProgress(
+                            imageName = "$imageName:$tag",
+                            isPulling = true,
+                            statusMessage = "正在拉取镜像...",
+                            progress = 0.5f,
+                            speed = "2.5 MB/s",
+                            estimatedTimeRemaining = "30s"
+                        )
+                        proxy.pullImage("$imageName:$tag")
+                        _images.value = proxy.listImages()
+                        _pullProgress.value = PullProgress(
+                            imageName = "$imageName:$tag",
+                            isPulling = false,
+                            statusMessage = "拉取完成",
+                            progress = 1f
+                        )
+                    } else {
+                        simulatePullProgress(imageName, tag)
+                    }
+                } else {
+                    simulatePullProgress(imageName, tag)
+                }
+            } catch (e: Exception) {
+                _pullProgress.value = PullProgress(
+                    imageName = "$imageName:$tag",
+                    isPulling = false,
+                    statusMessage = "拉取失败: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private suspend fun simulatePullProgress(imageName: String, tag: String) {
+        val totalBytes = (100..500).random() * 1024 * 1024L
+        var downloaded = 0L
+        val speeds = listOf("1.2 MB/s", "2.5 MB/s", "3.8 MB/s", "1.8 MB/s", "2.1 MB/s")
+        var speedIndex = 0
+        val startTime = System.currentTimeMillis()
+
+        while (downloaded < totalBytes) {
+            val currentSpeed = speeds[speedIndex % speeds.size]
+            val increment = (1..5).random() * 1024 * 1024L / 10
+            downloaded = minOf(downloaded + increment, totalBytes)
+            val elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0
+            val remainingBytes = totalBytes - downloaded
+            val speedNum = currentSpeed.replace(" MB/s", "").toDoubleOrNull() ?: 1.0
+            val remainingSeconds = if (speedNum > 0) (remainingBytes / (speedNum * 1024 * 1024)).toInt() else 999
+
+            _pullProgress.value = PullProgress(
+                imageName = "$imageName:$tag",
+                isPulling = true,
+                statusMessage = "正在拉取 $imageName:$tag",
+                progress = downloaded.toFloat() / totalBytes.toFloat(),
+                downloadedBytes = downloaded,
+                totalBytes = totalBytes,
+                speed = currentSpeed,
+                estimatedTimeRemaining = "${remainingSeconds}s"
+            )
+            speedIndex++
+            delay(300)
+        }
+
+        _pullProgress.value = PullProgress(
+            imageName = "$imageName:$tag",
+            isPulling = false,
+            statusMessage = "拉取完成",
+            progress = 1f,
+            downloadedBytes = totalBytes,
+            totalBytes = totalBytes,
+            speed = speeds.last(),
+            estimatedTimeRemaining = "0s"
+        )
+
+        _images.value = _images.value + Image(
+            Id = "sha256:new${System.currentTimeMillis()}",
+            RepoTags = listOf("$imageName:$tag"),
+            Created = System.currentTimeMillis() / 1000,
+            Size = totalBytes
+        )
+    }
+
+    fun fetchContainerLogs(containerId: String) {
+        viewModelScope.launch {
+            _containerLogs.value = emptyList()
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        val logs = proxy.getContainerLogs(containerId)
+                        _containerLogs.value = logs.map { log ->
+                            ContainerLog(
+                                timestamp = log.timestamp,
+                                message = log.message,
+                                isError = log.isError
+                            )
+                        }
+                    } else {
+                        loadMockContainerLogs(containerId)
+                    }
+                } else {
+                    loadMockContainerLogs(containerId)
+                }
+            } catch (e: Exception) {
+                _containerLogs.value = listOf(
+                    ContainerLog(
+                        timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date()),
+                        message = "获取日志失败: ${e.message}",
+                        isError = true
+                    )
+                )
+            }
+        }
+    }
+
+    private fun loadMockContainerLogs(containerId: String) {
+        val container = _containers.value.find { it.Id == containerId }
+        val logs = mutableListOf<ContainerLog>()
+        val logMessages = listOf(
+            "Starting application...",
+            "Server listening on port 8080",
+            "Received request: GET /api/health",
+            "Database connection established",
+            "Cache hit for key: user_123",
+            "Request completed in 45ms",
+            "Warning: High memory usage detected",
+            "Error: Connection timeout to database",
+            "Successfully processed batch job",
+            "Shutting down gracefully..."
+        )
+        val random = java.util.Random()
+        val baseTime = System.currentTimeMillis()
+
+        for (i in 0 until 20) {
+            val message = logMessages[random.nextInt(logMessages.size)]
+            val isError = message.startsWith("Error:")
+            val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
+                java.util.Date(baseTime - (20 - i) * 60000L)
+            )
+            logs.add(ContainerLog(timestamp = timestamp, message = message, isError = isError))
+        }
+        _containerLogs.value = logs
+    }
+
+    fun setLogFilter(filter: String) {
+        _logFilter.value = filter
+    }
+
+    fun getFilteredLogs(): List<ContainerLog> {
+        val filter = _logFilter.value
+        return if (filter.isBlank()) {
+            _containerLogs.value
+        } else {
+            _containerLogs.value.filter {
+                it.message.contains(filter, ignoreCase = true)
+            }
+        }
+    }
+
+    fun exportLogs(): String {
+        val logs = getFilteredLogs()
+        return buildString {
+            appendLine("Docker Container Logs - Export")
+            appendLine("Exported at: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date())}")
+            appendLine("="".padEnd(50, '='))
+            logs.forEach { log ->
+                val prefix = if (log.isError) "[ERROR]" else "[INFO]"
+                appendLine("${log.timestamp} $prefix ${log.message}")
+            }
+        }
+    }
+
+    fun toggleContainerDetails(containerId: String) {
+        _expandedContainerId.value = if (_expandedContainerId.value == containerId) null else containerId
+    }
+
+    fun isContainerExpanded(containerId: String): Boolean {
+        return _expandedContainerId.value == containerId
+    }
+
+    fun getContainerEnvironmentVars(containerId: String): Map<String, String> {
+        val container = _containers.value.find { it.Id == containerId }
+        return container?.HostConfig?.let { hostConfig ->
+            mapOf(
+                "NetworkMode" to hostConfig.NetworkMode,
+                "RestartPolicy" to hostConfig.RestartPolicy.Name
+            )
+        } ?: emptyMap()
+    }
+
+    fun getContainerPortMappings(containerId: String): List<String> {
+        val container = _containers.value.find { it.Id == containerId }
+        return container?.Ports?.mapNotNull { port ->
+            val public = port.PublicPort
+            if (public != null) "${port.IP ?: "0.0.0.0"}:${public}:${port.PrivatePort}/${port.Type}" else null
+        } ?: emptyList()
+    }
+
+    fun getContainerMounts(containerId: String): List<String> {
+        val container = _containers.value.find { it.Id == containerId }
+        return container?.Mounts?.map { mount ->
+            "${mount.Source} -> ${mount.Destination}"
+        } ?: emptyList()
+    }
+
+    fun calculateImageCleanupSuggestions() {
+        val suggestions = mutableMapOf<String, Long>()
+        val images = _images.value
+        val totalSize = images.sumOf { it.Size }
+        val avgSize = if (images.isNotEmpty()) totalSize / images.size else 0L
+
+        images.filter { it.Size < avgSize / 2 }.forEach { image ->
+            suggestions["${image.name}:${image.tag}"] = image.Size
+        }
+
+        _imageCleanupSuggestions.value = suggestions
+    }
+
+    fun getImageSizeInfo(image: Image): String {
+        return "大小: ${image.sizeFormatted}"
+    }
+
+    fun getCleanupRecommendations(): List<String> {
+        val suggestions = _imageCleanupSuggestions.value
+        return suggestions.map { (name, size) ->
+            "可清理: $name (${formatSize(size)})"
+        }
+    }
+
+    private fun formatSize(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> "${"%.2f".format(bytes / 1024.0)} KB"
+            bytes < 1024 * 1024 * 1024 -> "${"%.2f".format(bytes / (1024.0 * 1024))} MB"
+            else -> "${"%.2f".format(bytes / (1024.0 * 1024 * 1024))} GB"
         }
     }
 }
