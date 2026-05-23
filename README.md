@@ -63,7 +63,52 @@ cd droidvisor
 
 # 清理后重新构建
 ./gradlew clean assembleDebug
+
+# 运行 lint 检查
+./gradlew lintDebug
+
+# 运行单元测试
+./gradlew testDebugUnitTest
+
+# 完整构建验证（lint + test + assemble）
+./gradlew clean assembleDebug lintDebug testDebugUnitTest
 ```
+
+### gradle.properties 可配置项
+
+项目根目录的 `gradle.properties` 文件提供以下可配置项：
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `android.downloadSources` | `false` | 实验级功能：下载依赖源码（启用方式：`-PdownloadSources=true`） |
+| `android.downloadJavadoc` | `false` | 实验级功能：下载依赖 Javadoc（启用方式：`-PdownloadJavadoc=true`） |
+| `org.gradle.jvmargs` | `-Xmx2048m -Dfile.encoding=UTF-8` | JVM 参数（内存 2GB，UTF-8 编码） |
+| `org.gradle.parallel` | `true` | 启用并行构建 |
+| `org.gradle.caching` | `true` | 启用构建缓存 |
+| `android.useAndroidX` | `true` | 使用 AndroidX |
+| `android.nonTransitiveRClass` | `true` | 非传递性 R 类 |
+| `kotlin.code.style` | `official` | Kotlin 代码风格 |
+
+### 实验级功能
+
+Android SDK 源码和 Javadoc 完整下载属于**实验级功能**，默认禁用：
+
+- 启用源码：`./gradlew -PdownloadSources=true assembleDebug`
+- 启用 Javadoc：`./gradlew -PdownloadJavadoc=true assembleDebug`
+- 默认关闭，不影响常规构建速度
+
+## CI/CD 流水线
+
+项目使用 GitHub Actions，包含以下 workflow 文件：
+
+| Workflow | 触发条件 | 说明 |
+|----------|----------|------|
+| `release.yml` | tag push 或手动触发 | 发布构建（包含 lint 和测试） |
+| `pr-preview.yml` | PR 打开/同步 | PR 预览构建（包含 lint 和测试） |
+| `security-scan.yml` | push / PR / schedule | 安全扫描 |
+| `ci.yml` | push / PR | 统一 CI 流水线 |
+
+所有 workflow 均包含超时设置和 lint/test 步骤。
 
 ## 项目结构
 
