@@ -12,7 +12,10 @@ data class Backup(
     val sizeBytes: Long,
     val createdTime: Long,
     val status: BackupStatus,
-    val type: BackupType = BackupType.FULL
+    val type: BackupType = BackupType.FULL,
+    val parentBackupId: String? = null,
+    val checksum: String? = null,
+    val verificationStatus: VerificationStatus = VerificationStatus.NOT_VERIFIED
 )
 
 @Serializable
@@ -28,4 +31,11 @@ enum class BackupStatus {
 enum class BackupType {
     FULL,
     INCREMENTAL
+}
+
+@Serializable
+enum class VerificationStatus {
+    NOT_VERIFIED,
+    VERIFIED,
+    VERIFICATION_FAILED
 }
