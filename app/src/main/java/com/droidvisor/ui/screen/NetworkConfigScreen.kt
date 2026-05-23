@@ -21,6 +21,8 @@ import com.droidvisor.vm.model.NetworkMode
 import com.droidvisor.vm.model.PortForwarding
 import com.droidvisor.vm.model.Protocol
 import java.util.UUID
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun NetworkConfigScreen(
@@ -37,6 +39,30 @@ fun NetworkConfigScreen(
     var portForwardings by remember { mutableStateOf(initialConfig.portForwardings) }
     var mtu by remember { mutableStateOf(initialConfig.mtu.toString()) }
     var showAddPortForwardingDialog by remember { mutableStateOf(false) }
+    var ipAddressError by remember { mutableStateOf<String?>(null) }
+    var gatewayError by remember { mutableStateOf<String?>(null) }
+    var dnsError by remember { mutableStateOf<String?>(null) }
+    var mtuError by remember { mutableStateOf<String?>(null) }
+
+    fun validateIpAddress(ip: String): Boolean {
+        if (ip.isBlank()) return false
+        val parts = ip.split(".")
+        if (parts.size != 4) return false
+        return parts.all { part ->
+            val num = part.toIntOrNull() ?: return false
+            num in 0..255
+        }
+    }
+
+    fun validateDns(dns: String): Boolean {
+        if (dns.isBlank()) return false
+        return validateIpAddress(dns)
+    }
+
+    fun validateMtu(value: String): Boolean {
+        val mtu = value.toIntOrNull() ?: return false
+        return mtu in 1280..1500
+    }
 
     Scaffold(
         topBar = {
@@ -49,6 +75,31 @@ fun NetworkConfigScreen(
                 },
                 actions = {
                     Button(onClick = {
+                        var hasError = false
+                        if (networkMode == NetworkMode.BRIDGE) {
+                            if (!validateIpAddress(ipv4Address)) {
+                                ipAddressError = "请输入有效的IP地址"
+                                hasError = true
+                            }
+                            if (!validateIpAddress(ipv4Gateway)) {
+                                gatewayError = "请输入有效的网关地址"
+                                hasError = true
+                            }
+                        }
+                        if (networkMode == NetworkMode.BRIDGE || networkMode == NetworkMode.NAT) {
+                            dnsServers.forEach { dns ->
+                                if (!validateIpAddress(dns)) {
+                                    dnsError = "DNS服务器地址格式无效"
+                                    hasError = true
+                                }
+                            }
+                        }
+                        if (!validateMtu(mtu) && mtu.isNotBlank()) {
+                            mtuError = "MTU必须在1280-1500范围内"
+                            hasError = true
+                        }
+                        if (hasError) return@Button
+
                         onSave(
                             NetworkConfig(
                                 vmId = vmId,
@@ -90,18 +141,30 @@ fun NetworkConfigScreen(
                         ipv4Address = ipv4Address,
                         ipv4Gateway = ipv4Gateway,
                         ipv4Netmask = ipv4Netmask,
-                        onAddressChange = { ipv4Address = it },
-                        onGatewayChange = { ipv4Gateway = it },
-                        onNetmaskChange = { ipv4Netmask = it }
+                        onAddressChange = {
+                            ipv4Address = it
+                            ipAddressError = if (it.isNotBlank() && !validateIpAddress(it)) "无效的IP地址格式" else null
+                        },
+                        onGatewayChange = {
+                            ipv4Gateway = it
+                            gatewayError = if (it.isNotBlank() && !validateIpAddress(it)) "无效的网关地址格式" else null
+                        },
+                        onNetmaskChange = { ipv4Netmask = it },
+                        addressError = ipAddressError,
+                        gatewayError = gatewayError
                     )
                 }
             }
 
-            item {
-                DnsConfigSection(
-                    dnsServers = dnsServers,
-                    onDnsServersChange = { dnsServers = it }
-                )
+            if (networkMode == NetworkMode.BRIDGE || networkMode == NetworkMode.NAT) {
+                item {
+                    DnsConfigSection(
+                        dnsServers = dnsServers,
+                        onDnsServersChange = { dnsServers = it },
+                        dnsError = dnsError,
+                        onDnsErrorChange = { dnsError = it }
+                    )
+                }
             }
 
             item {
@@ -117,7 +180,11 @@ fun NetworkConfigScreen(
             item {
                 AdvancedConfigSection(
                     mtu = mtu,
-                    onMtuChange = { mtu = it }
+                    onMtuChange = {
+                        mtu = it
+                        mtuError = if (it.isNotBlank() && !validateMtu(it)) "MTU必须在1280-1500范围内" else null
+                    },
+                    mtuError = mtuError
                 )
             }
         }
@@ -174,7 +241,9 @@ fun StaticIpConfigSection(
     ipv4Netmask: String,
     onAddressChange: (String) -> Unit,
     onGatewayChange: (String) -> Unit,
-    onNetmaskChange: (String) -> Unit
+    onNetmaskChange: (String) -> Unit,
+    addressError: String? = null,
+    gatewayError: String? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -189,7 +258,11 @@ fun StaticIpConfigSection(
                 onValueChange = onAddressChange,
                 label = { Text("IP 地址") },
                 placeholder = { Text("e.g., 192.168.1.100") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = addressError != null,
+                supportingText = addressError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -199,7 +272,11 @@ fun StaticIpConfigSection(
                 onValueChange = onGatewayChange,
                 label = { Text("网关") },
                 placeholder = { Text("e.g., 192.168.1.1") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = gatewayError != null,
+                supportingText = gatewayError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -209,16 +286,24 @@ fun StaticIpConfigSection(
                 onValueChange = onNetmaskChange,
                 label = { Text("子网掩码") },
                 placeholder = { Text("e.g., 255.255.255.0") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true
             )
         }
     }
 }
 
 @Composable
-fun DnsConfigSection(dnsServers: List<String>, onDnsServersChange: (List<String>) -> Unit) {
+fun DnsConfigSection(
+    dnsServers: List<String>,
+    onDnsServersChange: (List<String>) -> Unit,
+    dnsError: String? = null,
+    onDnsErrorChange: ((String?) -> Unit)? = null
+) {
     var showAddDnsDialog by remember { mutableStateOf(false) }
     var newDns by remember { mutableStateOf("") }
+    var newDnsError by remember { mutableStateOf<String?>(null) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -234,6 +319,10 @@ fun DnsConfigSection(dnsServers: List<String>, onDnsServersChange: (List<String>
                 IconButton(onClick = { showAddDnsDialog = true }) {
                     Icon(Icons.Default.Add, contentDescription = "添加 DNS")
                 }
+            }
+
+            dnsError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -277,10 +366,17 @@ fun DnsConfigSection(dnsServers: List<String>, onDnsServersChange: (List<String>
 
                     OutlinedTextField(
                         value = newDns,
-                        onValueChange = { newDns = it },
+                        onValueChange = {
+                            newDns = it
+                            newDnsError = if (it.isNotBlank() && !validateIpAddress(it)) "无效的DNS地址格式" else null
+                        },
                         label = { Text("DNS 地址") },
                         placeholder = { Text("e.g., 8.8.8.8") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = newDnsError != null,
+                        supportingText = newDnsError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -295,11 +391,22 @@ fun DnsConfigSection(dnsServers: List<String>, onDnsServersChange: (List<String>
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                if (newDns.isNotBlank()) {
-                                    onDnsServersChange(dnsServers + newDns)
-                                    newDns = ""
-                                    showAddDnsDialog = false
+                                if (newDns.isBlank()) {
+                                    newDnsError = "DNS地址不能为空"
+                                    return@Button
                                 }
+                                if (!validateIpAddress(newDns)) {
+                                    newDnsError = "无效的DNS地址格式"
+                                    return@Button
+                                }
+                                if (dnsServers.contains(newDns)) {
+                                    newDnsError = "DNS服务器已存在"
+                                    return@Button
+                                }
+                                onDnsServersChange(dnsServers + newDns)
+                                newDns = ""
+                                newDnsError = null
+                                showAddDnsDialog = false
                             }
                         ) {
                             Text("添加")
@@ -464,7 +571,7 @@ fun AddPortForwardingDialog(onDismiss: () -> Unit, onAdd: (PortForwarding) -> Un
 }
 
 @Composable
-fun AdvancedConfigSection(mtu: String, onMtuChange: (String) -> Unit) {
+fun AdvancedConfigSection(mtu: String, onMtuChange: (String) -> Unit, mtuError: String? = null) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -477,10 +584,25 @@ fun AdvancedConfigSection(mtu: String, onMtuChange: (String) -> Unit) {
                 value = mtu,
                 onValueChange = onMtuChange,
                 label = { Text("MTU (字节)") },
-                placeholder = { Text("默认: 1500") },
-                modifier = Modifier.fillMaxWidth()
+                placeholder = { Text("默认: 1500，范围: 1280-1500") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = mtuError != null,
+                supportingText = mtuError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } }
+                    ?: { Text("范围: 1280-1500", color = Color.Gray) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
             )
         }
+    }
+}
+
+private fun validateIpAddress(ip: String): Boolean {
+    if (ip.isBlank()) return false
+    val parts = ip.split(".")
+    if (parts.size != 4) return false
+    return parts.all { part ->
+        val num = part.toIntOrNull() ?: return false
+        num in 0..255
     }
 }
 
