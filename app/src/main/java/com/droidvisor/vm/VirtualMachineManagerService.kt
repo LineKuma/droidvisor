@@ -13,12 +13,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.File
 import java.lang.reflect.Method
 
 class VirtualMachineManagerService : Service() {
@@ -84,11 +82,7 @@ class VirtualMachineManagerService : Service() {
                 _status.value = VmStatus.STARTING
                 consoleOutputService?.appendOutput("Starting VM...")
 
-                if (isAvfAvailable) {
-                    startAvfVm()
-                } else {
-                    startSimulatedVm()
-                }
+                startAvfVm()
 
             } catch (e: VmError) {
                 Log.e(TAG, "Failed to start VM", e)
@@ -112,11 +106,7 @@ class VirtualMachineManagerService : Service() {
                 _status.value = VmStatus.STOPPING
                 consoleOutputService?.appendOutput("Stopping VM...")
 
-                if (isAvfAvailable) {
-                    stopAvfVm()
-                } else {
-                    stopSimulatedVm()
-                }
+                stopAvfVm()
 
                 _status.value = VmStatus.STOPPED
                 consoleOutputService?.appendOutput("VM stopped successfully")
@@ -141,9 +131,7 @@ class VirtualMachineManagerService : Service() {
                     stopVm()
                 }
 
-                if (isAvfAvailable) {
-                    closeAvfVm()
-                }
+                closeAvfVm()
 
                 vmInstance = null
                 _status.value = VmStatus.STOPPED
@@ -163,50 +151,41 @@ class VirtualMachineManagerService : Service() {
     }
 
     private fun startAvfVm() {
-        try {
-            val vmManager = avfVmManager ?: throw VmError.AvfNotSupportedError("VirtualMachineManager not initialized")
+        val vmManager = avfVmManager ?: throw VmError.AvfNotSupportedError("VirtualMachineManager not initialized")
 
-            val vmConfig = buildAvfVmConfig()
-            val vmName = "droidvisor_vm"
+        val vmConfig = buildAvfVmConfig()
+        val vmName = "droidvisor_vm"
 
-            val vmManagerClass = vmManager.javaClass
+        val vmManagerClass = vmManager.javaClass
 
-            val existingVm = try {
-                val getMethod = vmManagerClass.getMethod("get", String::class.java)
-                getMethod.invoke(vmManager, vmName)
-            } catch (e: Exception) {
-                null
-            }
-
-            val vm = if (existingVm != null) {
-                Log.d(TAG, "Using existing VM: $vmName")
-                existingVm
-            } else {
-                Log.d(TAG, "Creating new VM: $vmName")
-                val createMethod = vmManagerClass.getMethod("create", String::class.java, vmConfig.javaClass.superclass)
-                createMethod.invoke(vmManager, vmName, vmConfig)
-            }
-
-            vmInstance = vm
-
-            val vmClass = vm.javaClass
-            val runMethod = vmClass.getMethod("run")
-            runMethod.invoke(vm)
-
-            _status.value = VmStatus.RUNNING
-            consoleOutputService?.appendOutput("AVF VM started successfully")
-
-            setupAvfConsoleOutput(vm)
-
-            Log.d(TAG, "AVF VM started successfully")
-
-        } catch (e: VmError) {
-            throw e
+        val existingVm = try {
+            val getMethod = vmManagerClass.getMethod("get", String::class.java)
+            getMethod.invoke(vmManager, vmName)
         } catch (e: Exception) {
-            Log.e(TAG, "AVF VM start failed, falling back to simulation", e)
-            consoleOutputService?.appendOutput("AVF start failed: ${e.message}, using simulation mode")
-            startSimulatedVm()
+            null
         }
+
+        val vm = if (existingVm != null) {
+            Log.d(TAG, "Using existing VM: $vmName")
+            existingVm
+        } else {
+            Log.d(TAG, "Creating new VM: $vmName")
+            val createMethod = vmManagerClass.getMethod("create", String::class.java, vmConfig.javaClass.superclass)
+            createMethod.invoke(vmManager, vmName, vmConfig)
+        }
+
+        vmInstance = vm
+
+        val vmClass = vm.javaClass
+        val runMethod = vmClass.getMethod("run")
+        runMethod.invoke(vm)
+
+        _status.value = VmStatus.RUNNING
+        consoleOutputService?.appendOutput("AVF VM started successfully")
+
+        setupAvfConsoleOutput(vm)
+
+        Log.d(TAG, "AVF VM started successfully")
     }
 
     private fun buildAvfVmConfig(): Any {
@@ -331,62 +310,6 @@ class VirtualMachineManagerService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to connect vsock on port $port", e)
             null
-        }
-    }
-
-    private suspend fun startSimulatedVm() {
-        createVmInstance()
-        configureVm()
-
-        _status.value = VmStatus.RUNNING
-        consoleOutputService?.appendOutput("VM started (simulation mode)")
-
-        simulateVmBootSequence()
-    }
-
-    private fun stopSimulatedVm() {
-        stopVmInstance()
-    }
-
-    private fun createVmInstance() {
-        vmInstance = Any()
-        Log.d(TAG, "VM instance created (simulated)")
-    }
-
-    private fun configureVm() {
-        Log.d(TAG, "Configuring VM: ${config.memoryBytes / (1024 * 1024)}MB memory, ${config.cpuCores} cores")
-    }
-
-    private fun startVmInstance() {
-        Log.d(TAG, "Starting VM instance (simulated)")
-    }
-
-    private fun stopVmInstance() {
-        Log.d(TAG, "Stopping VM instance (simulated)")
-    }
-
-    private fun closeVmInstance() {
-        Log.d(TAG, "Closing VM instance (simulated)")
-    }
-
-    private suspend fun simulateVmBootSequence() {
-        val bootMessages = listOf(
-            "[    0.000000] Linux version 6.1.0 (build@localhost)",
-            "[    0.000000] CPU: ARMv8 Processor [411fd034] revision 4",
-            "[    0.000000] Memory: ${config.memoryBytes / (1024 * 1024)}MB available",
-            "[    0.010000] pKVM initialized",
-            "[    0.020000] VIRTIO console driver initialized",
-            "[    0.030000] vsock: enabled",
-            "[    0.100000] init: Starting system services...",
-            "[    0.200000] Starting Debian GNU/Linux 12 (bookworm)...",
-            "[    0.500000] Docker daemon starting...",
-            "[    1.000000] Docker is ready",
-            "[    1.500000] Welcome to droidvisor!"
-        )
-
-        bootMessages.forEach { message ->
-            delay(100)
-            consoleOutputService?.appendOutput(message)
         }
     }
 
