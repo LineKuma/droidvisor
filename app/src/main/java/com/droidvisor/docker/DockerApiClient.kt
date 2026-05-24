@@ -120,6 +120,12 @@ class DockerApiClient(private val httpClient: DockerHttpClient) {
             false
         }
     }
+
+    suspend fun getContainerLogs(containerId: String, stdout: Boolean = true, stderr: Boolean = true): String {
+        val sanitizedId = sanitizeContainerId(containerId)
+        val path = "/containers/$sanitizedId/logs?stdout=${if (stdout) "1" else "0"}&stderr=${if (stderr) "1" else "0"}&timestamps=1&tail=100"
+        return httpClient.get(sanitizePath(path))
+    }
 }
 
 @kotlinx.serialization.Serializable

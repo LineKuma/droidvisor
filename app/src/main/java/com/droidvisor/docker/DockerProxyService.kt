@@ -51,6 +51,7 @@ class DockerProxyService : Service() {
         this.vsockService = service
         httpClient = DockerHttpClient(service)
         apiClient = DockerApiClient(httpClient)
+        httpClient.enableVsockMode(true)
 
         coroutineScope.launch {
             service.connectionState.collect { state ->
@@ -153,10 +154,33 @@ class DockerProxyService : Service() {
 
     suspend fun getContainerLogs(containerId: String): List<ContainerLogEntry> {
         return try {
-            apiClient.getContainerLogs(containerId)
+            val rawLogs = apiClient.getContainerLogs(containerId)
+            parseContainerLogs(rawLogs)
         } catch (e: DockerError) {
             Log.e(TAG, "Failed to get container logs $containerId", e)
             emptyList()
+        }
+    }
+
+    private fun parseContainerLogs(rawLogs: String): List<ContainerLogEntry> {
+        if (rawLogs.isEmpty()) return emptyList()
+        return rawLogs.split("\n").filter { it.isNotEmpty() }.map { line ->
+            val isError = line.startsWith("\u0002") || line.contains(" ERROR ", ignoreCase = true)
+            val cleanLine = line.removePrefix("\u0002").removePrefix("\u0001")
+            val timestampEnd = cleanLine.indexOf(' ')
+            if (timestampEnd > 0 && timestampEnd < 32) {
+                ContainerLogEntry(
+                    timestamp = cleanLine.substring(0, timestampEnd),
+                    message = cleanLine.substring(timestampEnd + 1),
+                    isError = isError
+                )
+            } else {
+                ContainerLogEntry(
+                    timestamp = "",
+                    message = cleanLine,
+                    isError = isError
+                )
+            }
         }
     }
 
