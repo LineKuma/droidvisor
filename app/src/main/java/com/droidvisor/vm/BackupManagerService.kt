@@ -231,16 +231,52 @@ class BackupManagerService : Service() {
 
     private fun extractBackupArchive(backupFile: File, targetDir: File) {
         java.util.zip.ZipFile(backupFile).use { zipFile ->
-            val entry = zipFile.getEntry("disk.img")
-            if (entry != null) {
+            val metadataEntry = zipFile.getEntry("metadata")
+            var parentBackupId: String? = null
+            if (metadataEntry != null) {
+                val metadataContent = zipFile.getInputStream(metadataEntry).bufferedReader().readText()
+                parentBackupId = parseMetadataParentBackupId(metadataContent)
+            }
+
+            if (parentBackupId != null && parentBackupId.isNotEmpty()) {
+                val parentZipEntry = zipFile.getEntry("parent.zip")
+                if (parentZipEntry != null) {
+                    val tempParentFile = File(targetDir, "temp_parent_${parentBackupId}.zip")
+                    zipFile.getInputStream(parentZipEntry).use { input ->
+                        FileOutputStream(tempParentFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    try {
+                        extractBackupArchive(tempParentFile, targetDir)
+                    } finally {
+                        if (tempParentFile.exists()) {
+                            tempParentFile.delete()
+                        }
+                    }
+                }
+            }
+
+            val diskEntry = zipFile.getEntry("disk.img")
+            if (diskEntry != null) {
                 val outputFile = File(targetDir, "restored.img")
-                zipFile.getInputStream(entry).use { input ->
+                zipFile.getInputStream(diskEntry).use { input ->
                     FileOutputStream(outputFile).use { output ->
                         input.copyTo(output)
                     }
                 }
             }
         }
+    }
+
+    private fun parseMetadataParentBackupId(metadata: String): String? {
+        metadata.lines().forEach { line ->
+            if (line.startsWith("parentBackupId=")) {
+                val value = line.substringAfter("parentBackupId=").trim()
+                return if (value.isNotEmpty()) value else null
+            }
+        }
+        return null
     }
 
     private fun calculateFileChecksum(file: File): String {
