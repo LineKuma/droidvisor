@@ -1,5 +1,6 @@
 package com.droidvisor.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.droidvisor.vm.ConsoleOutputService
@@ -12,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.InputStream
+
+private const val TAG = "TerminalViewModel"
 
 data class TerminalState(
     val outputLines: List<String> = emptyList(),
@@ -121,52 +124,55 @@ class TerminalViewModel : ViewModel() {
                     try {
                         outputStream.write((command + "\n").toByteArray())
                         outputStream.flush()
+                        Log.d(TAG, "Command sent via Vsock: $command")
                         return@launch
                     } catch (e: Exception) {
                         appendOutputLine("[发送失败: ${e.message}]")
                     }
                 }
+            } else {
+                appendOutputLine("[未连接VM] 请先启动VM并建立Vsock连接")
             }
-
-            executeSimulatedCommand(command)
         }
     }
 
-    private suspend fun executeSimulatedCommand(command: String) {
-        val outputLines = _state.value.outputLines.toMutableList()
-        val trimmedCommand = command.trim()
+    fun startReceivingOutput() {
+        viewModelScope.launch {
+            val inputStream = vsockService?.getInputStream()
+            if (inputStream == null) {
+                Log.w(TAG, "No input stream available for receiving output")
+                return@launch
+            }
 
-        when (trimmedCommand) {
-            "ls" -> {
-                outputLines.addAll(listOf("Documents  Downloads  Pictures  Projects", _state.value.promptPrefix))
-            }
-            "pwd" -> {
-                outputLines.addAll(listOf("/home/user", _state.value.promptPrefix))
-            }
-            "whoami" -> {
-                outputLines.addAll(listOf("user", _state.value.promptPrefix))
-            }
-            "date" -> {
-                outputLines.addAll(listOf(java.time.LocalDateTime.now().toString(), _state.value.promptPrefix))
-            }
-            "echo \$PATH" -> {
-                outputLines.addAll(listOf("/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", _state.value.promptPrefix))
-            }
-            "uname -a" -> {
-                outputLines.addAll(listOf("Linux droidvisor 6.1.0 #1 SMP PREEMPT aarch64 GNU/Linux", _state.value.promptPrefix))
-            }
-            "docker --version" -> {
-                outputLines.addAll(listOf("Docker version 25.0.0, build abc123", _state.value.promptPrefix))
-            }
-            "docker ps" -> {
-                outputLines.addAll(listOf("CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES", _state.value.promptPrefix))
-            }
-            else -> {
-                outputLines.addAll(listOf("[模拟模式] Command executed: $command", _state.value.promptPrefix))
+            val buffer = ByteArray(4096)
+            try {
+                while (vsockService?.isConnected() == true) {
+                    val bytesRead = inputStream.read(buffer)
+                    if (bytesRead > 0) {
+                        val output = String(buffer, 0, bytesRead)
+                        appendOutput(output)
+                        Log.d(TAG, "Received ${bytesRead} bytes from VM: ${output.take(100)}")
+                    } else if (bytesRead == -1) {
+                        appendOutputLine("[VM连接已关闭]")
+                        break
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error receiving output from VM", e)
+                appendOutputLine("[接收输出错误: ${e.message}]")
             }
         }
+    }
 
-        _state.value = _state.value.copy(outputLines = outputLines)
+    private fun appendOutput(text: String) {
+        val lines = text.split("\r\n", "\n", "\r")
+        val currentLines = _state.value.outputLines.toMutableList()
+        lines.forEach { line ->
+            if (line.isNotEmpty()) {
+                currentLines.add(line)
+            }
+        }
+        _state.value = _state.value.copy(outputLines = currentLines)
     }
 
     private fun appendOutputLine(line: String) {

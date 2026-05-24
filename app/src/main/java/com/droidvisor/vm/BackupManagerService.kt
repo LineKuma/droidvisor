@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -16,8 +17,19 @@ import com.droidvisor.vm.model.Backup
 import com.droidvisor.vm.model.BackupStatus
 import com.droidvisor.vm.model.BackupType
 import com.droidvisor.vm.model.VerificationStatus
-import java.util.UUID
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 import java.security.MessageDigest
+import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+
+private const val TAG = "BackupManagerService"
+private const val BACKUP_DIR_NAME = "backups"
+private const val VM_DISK_DIR_NAME = "vm_disks"
+private const val BUFFER_SIZE = 8192
 
 sealed class BackupResult {
     data class Success(val backup: Backup) : BackupResult()
@@ -97,7 +109,25 @@ class BackupManagerService : Service() {
 
         coroutineScope.launch {
             try {
-                delay(2000)
+                val backupDir = getBackupDirectory()
+                val vmDiskDir = getVmDiskDirectory()
+                val backupFile = File(backupDir, "${backupId}.zip")
+
+                backupDir.mkdirs()
+                vmDiskDir.mkdirs()
+
+                val diskImageFile = findVmDiskImage(vmId, vmDiskDir)
+                val backupSize = if (diskImageFile != null && diskImageFile.exists()) {
+                    diskImageFile.length()
+                } else {
+                    calculateBackupSize(vmId, type, parentBackupId)
+                }
+
+                _backups.value = _backups.value.map {
+                    if (it.id == backupId) it.copy(sizeBytes = backupSize) else it
+                }
+
+                createBackupArchive(backupId, diskImageFile, backupFile, type, parentBackupId)
 
                 val currentBackup = _backups.value.find { it.id == backupId }
                 if (currentBackup != null) {
@@ -107,7 +137,8 @@ class BackupManagerService : Service() {
                     verifyBackup(backupId)
                 }
             } catch (e: Exception) {
-                _lastError.value = "Failed to create backup"
+                Log.e(TAG, "Failed to create backup", e)
+                _lastError.value = "Failed to create backup: ${e.message}"
                 _backups.value = _backups.value.map {
                     if (it.id == backupId) it.copy(status = BackupStatus.ERROR) else it
                 }
@@ -133,18 +164,128 @@ class BackupManagerService : Service() {
         }
     }
 
+    private fun getBackupDirectory(): File {
+        return File(filesDir, BACKUP_DIR_NAME)
+    }
+
+    private fun getVmDiskDirectory(): File {
+        return File(filesDir, VM_DISK_DIR_NAME)
+    }
+
+    private fun findVmDiskImage(vmId: String, vmDiskDir: File): File? {
+        val possibleFiles = listOf(
+            File(vmDiskDir, "${vmId}.qcow2"),
+            File(vmDiskDir, "${vmId}.img"),
+            File(vmDiskDir, "${vmId}.raw")
+        )
+        return possibleFiles.find { it.exists() }
+    }
+
+    private suspend fun createBackupArchive(
+        backupId: String,
+        diskImageFile: File?,
+        backupFile: File,
+        type: BackupType,
+        parentBackupId: String?
+    ) {
+        ZipOutputStream(FileOutputStream(backupFile)).use { zipOut ->
+            zipOut.setLevel(ZipOutputStream.STORED)
+
+            if (diskImageFile != null && diskImageFile.exists()) {
+                addFileToZip(zipOut, diskImageFile, "disk.img")
+            }
+
+            val metadata = buildMetadata(backupId, type, parentBackupId, diskImageFile)
+            zipOut.putNextEntry(ZipEntry("metadata"))
+            zipOut.write(metadata.toByteArray())
+            zipOut.closeEntry()
+
+            if (type == BackupType.INCREMENTAL && parentBackupId != null) {
+                val parentBackupFile = File(getBackupDirectory(), "${parentBackupId}.zip")
+                if (parentBackupFile.exists()) {
+                    addFileToZip(zipOut, parentBackupFile, "parent.zip")
+                }
+            }
+        }
+    }
+
+    private fun addFileToZip(zipOut: ZipOutputStream, file: File, entryName: String) {
+        FileInputStream(file).use { fis ->
+            val buffer = ByteArray(BUFFER_SIZE)
+            var length: Int
+            while (fis.read(buffer).also { length = it } > 0) {
+                zipOut.write(buffer, 0, length)
+            }
+        }
+    }
+
+    private fun buildMetadata(backupId: String, type: BackupType, parentBackupId: String?, diskImageFile: File?): String {
+        val sb = StringBuilder()
+        sb.appendLine("backupId=$backupId")
+        sb.appendLine("type=${type.name}")
+        sb.appendLine("parentBackupId=${parentBackupId ?: ""}")
+        sb.appendLine("diskImageFile=${diskImageFile?.name ?: ""}")
+        sb.appendLine("createdTime=${System.currentTimeMillis()}")
+        return sb.toString()
+    }
+
+    private fun extractBackupArchive(backupFile: File, targetDir: File) {
+        java.util.zip.ZipFile(backupFile).use { zipFile ->
+            val entry = zipFile.getEntry("disk.img")
+            if (entry != null) {
+                val outputFile = File(targetDir, "restored.img")
+                zipFile.getInputStream(entry).use { input ->
+                    FileOutputStream(outputFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun calculateFileChecksum(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { fis ->
+            val buffer = ByteArray(BUFFER_SIZE)
+            var bytesRead: Int
+            while (fis.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
     private suspend fun verifyBackup(backupId: String) {
         _isVerifyingBackup.value = true
         try {
-            delay(500)
-            val backup = _backups.value.find { it.id == backupId }
-            if (backup != null && backup.checksum != null) {
-                val isValid = verifyChecksum(backup)
+            val backupFile = File(getBackupDirectory(), "${backupId}.zip")
+            if (!backupFile.exists()) {
+                Log.w(TAG, "Backup file not found for verification: $backupId")
                 _backups.value = _backups.value.map {
-                    if (it.id == backupId) {
-                        it.copy(verificationStatus = if (isValid) VerificationStatus.VERIFIED else VerificationStatus.VERIFICATION_FAILED)
-                    } else it
+                    if (it.id == backupId) it.copy(verificationStatus = VerificationStatus.VERIFICATION_FAILED) else it
                 }
+                return
+            }
+
+            val computedChecksum = calculateFileChecksum(backupFile)
+            val backup = _backups.value.find { it.id == backupId }
+
+            val isValid = backup != null &&
+                         backup.checksum != null &&
+                         computedChecksum == backup.checksum
+
+            _backups.value = _backups.value.map {
+                if (it.id == backupId) {
+                    it.copy(
+                        verificationStatus = if (isValid) VerificationStatus.VERIFIED else VerificationStatus.VERIFICATION_FAILED,
+                        sizeBytes = backupFile.length()
+                    )
+                } else it
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to verify backup", e)
+            _backups.value = _backups.value.map {
+                if (it.id == backupId) it.copy(verificationStatus = VerificationStatus.VERIFICATION_FAILED) else it
             }
         } finally {
             _isVerifyingBackup.value = false
@@ -186,17 +327,21 @@ class BackupManagerService : Service() {
 
                 _restoreProgress.value = BackupProgress(backupId, 0f, "准备恢复...")
 
-                for (i in 1..5) {
-                    delay(300)
-                    _restoreProgress.value = BackupProgress(backupId, i * 0.2f, "正在恢复 ($i/5)...")
+                val backupFile = File(getBackupDirectory(), "${backupId}.zip")
+                if (backupFile.exists()) {
+                    val vmDiskDir = getVmDiskDirectory()
+                    vmDiskDir.mkdirs()
+                    extractBackupArchive(backupFile, vmDiskDir)
                 }
 
+                _restoreProgress.value = BackupProgress(backupId, 1f, "恢复完成")
                 _backups.value = _backups.value.map {
                     if (it.id == backupId) it.copy(status = BackupStatus.AVAILABLE) else it
                 }
                 _restoreProgress.value = null
             } catch (e: Exception) {
-                _lastError.value = "Failed to restore backup"
+                Log.e(TAG, "Failed to restore backup", e)
+                _lastError.value = "Failed to restore backup: ${e.message}"
                 _backups.value = _backups.value.map {
                     if (it.id == backupId) it.copy(status = BackupStatus.ERROR) else it
                 }
@@ -221,11 +366,17 @@ class BackupManagerService : Service() {
                     if (it.id == backupId) it.copy(status = BackupStatus.DELETING) else it
                 }
 
-                delay(500)
+                val backupFile = File(getBackupDirectory(), "${backupId}.zip")
+                if (backupFile.exists()) {
+                    if (!backupFile.delete()) {
+                        throw IOException("Failed to delete backup file: ${backupFile.absolutePath}")
+                    }
+                }
 
                 _backups.value = _backups.value.filter { it.id != backupId }
             } catch (e: Exception) {
-                _lastError.value = "Failed to delete backup"
+                Log.e(TAG, "Failed to delete backup", e)
+                _lastError.value = "Failed to delete backup: ${e.message}"
                 _backups.value = _backups.value.map {
                     if (it.id == backupId) it.copy(status = BackupStatus.AVAILABLE) else it
                 }
