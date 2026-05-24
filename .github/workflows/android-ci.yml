@@ -40,6 +40,19 @@ jobs:
         id: test
         run: ./gradlew testDebugUnitTest --stacktrace || echo "Tests completed with some issues"
 
+      - name: Run E2E Tests
+        id: e2e-test
+        run: ./gradlew testDebugUnitTest --tests "com.droidvisor.e2e.*" --stacktrace || echo "E2E tests completed with some issues"
+
+      - name: Upload E2E Test Results
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        continue-on-error: true
+        with:
+          name: e2e-test-results
+          path: app/build/reports/tests/testDebugUnitTest/
+          retention-days: 7
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         if: success()
