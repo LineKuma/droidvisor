@@ -234,4 +234,90 @@ class VmLifecycleTest {
         composeTestRule.onNodeWithText("删除").performClick()
         composeTestRule.onNodeWithText("确认").performClick()
     }
+
+    @Test
+    fun vmLifecycle_createStartStopDeleteComplete() {
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
+        composeTestRule.onNodeWithText("虚拟机名称").performTextInput("complete-lifecycle-vm")
+        composeTestRule.onNodeWithText("CPU").performTextInput("2")
+        composeTestRule.onNodeWithText("内存").performTextInput("2048")
+        composeTestRule.onNodeWithText("创建").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("complete-lifecycle-vm").assertExists()
+
+        composeTestRule.onNodeWithText("complete-lifecycle-vm").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("启动").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("运行中").assertExists()
+
+        composeTestRule.onNodeWithText("停止").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("已停止").assertExists()
+
+        composeTestRule.onNodeWithText("complete-lifecycle-vm").performClick()
+        composeTestRule.onNodeWithText("删除").performClick()
+        composeTestRule.onNodeWithText("确认").performClick()
+    }
+
+    @Test
+    fun vmLifecycle_createDefaultVm() {
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("虚拟机名称").performTextInput("default-vm")
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("创建").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("default-vm").assertExists()
+    }
+
+    @Test
+    fun vmLifecycle_vmSelectionAfterCreation() {
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
+        composeTestRule.onNodeWithText("虚拟机名称").performTextInput("selection-test-vm")
+        composeTestRule.onNodeWithText("创建").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("selection-test-vm").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("停止").assertExists()
+        composeTestRule.onNodeWithText("删除").assertExists()
+    }
+
+    @Test
+    fun vmLifecycle_longRunningVm() {
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
+        composeTestRule.onNodeWithText("虚拟机名称").performTextInput("long-running-vm")
+        composeTestRule.onNodeWithText("创建").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("long-running-vm").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("启动").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("运行中").assertExists()
+
+        composeTestRule.onNodeWithText("停止").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("已停止").assertExists()
+    }
+
+    @Test
+    fun vmLifecycle_templateBasedCreation() {
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
+        composeTestRule.onNodeWithText("虚拟机名称").performTextInput("template-vm")
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("创建").performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("template-vm").assertExists()
+    }
 }
