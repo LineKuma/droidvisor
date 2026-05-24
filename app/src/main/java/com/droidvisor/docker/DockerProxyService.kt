@@ -30,6 +30,12 @@ class DockerProxyService : Service() {
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
+    private val _daemonHealthy = MutableStateFlow(false)
+    val daemonHealthy: StateFlow<Boolean> = _daemonHealthy.asStateFlow()
+
+    private val _reconnecting = MutableStateFlow(false)
+    val reconnecting: StateFlow<Boolean> = _reconnecting.asStateFlow()
+
     private val _dockerVersion = MutableStateFlow<String?>(null)
     val dockerVersion: StateFlow<String?> = _dockerVersion.asStateFlow()
 
@@ -38,6 +44,9 @@ class DockerProxyService : Service() {
 
     private val _images = MutableStateFlow<List<Image>>(emptyList())
     val images: StateFlow<List<Image>> = _images.asStateFlow()
+
+    private var healthCheckJob: kotlinx.coroutines.Job? = null
+    private val HEALTH_CHECK_INTERVAL = 30_000L
 
     inner class LocalBinder : Binder() {
         fun getService(): DockerProxyService = this@DockerProxyService
@@ -57,9 +66,60 @@ class DockerProxyService : Service() {
             service.connectionState.collect { state ->
                 _isConnected.value = state.isConnected()
                 if (state.isConnected()) {
-                    checkDockerVersion()
+                    startHealthCheck()
+                } else {
+                    stopHealthCheck()
+                    _daemonHealthy.value = false
                 }
             }
+        }
+    }
+
+    private fun startHealthCheck() {
+        healthCheckJob?.cancel()
+        healthCheckJob = coroutineScope.launch {
+            while (true) {
+                checkDockerDaemonHealth()
+                delay(HEALTH_CHECK_INTERVAL)
+            }
+        }
+    }
+
+    private fun stopHealthCheck() {
+        healthCheckJob?.cancel()
+        healthCheckJob = null
+    }
+
+    private suspend fun checkDockerDaemonHealth() {
+        try {
+            val version = apiClient.getDockerVersion()
+            _daemonHealthy.value = true
+            _dockerVersion.value = version.Version
+            _reconnecting.value = false
+            Log.d(TAG, "Docker daemon healthy: ${version.Version}")
+        } catch (e: DockerError) {
+            Log.e(TAG, "Docker daemon unhealthy, attempting recovery", e)
+            _daemonHealthy.value = false
+            if (!_reconnecting.value && _isConnected.value) {
+                _reconnecting.value = true
+                attemptDaemonRecovery()
+            }
+        }
+    }
+
+    private suspend fun attemptDaemonRecovery() {
+        try {
+            vsockService?.let { service ->
+                val currentPort = VsockService.DEFAULT_DOCKER_PORT
+                Log.d(TAG, "Attempting to recover Docker daemon connection on port $currentPort")
+                service.disconnect()
+                delay(2000)
+                service.connect(currentPort)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to recover Docker daemon", e)
+        } finally {
+            _reconnecting.value = false
         }
     }
 
@@ -69,8 +129,10 @@ class DockerProxyService : Service() {
     }
 
     fun disconnectDocker() {
+        stopHealthCheck()
         vsockService?.disconnect()
         _isConnected.value = false
+        _daemonHealthy.value = false
         _dockerVersion.value = null
     }
 

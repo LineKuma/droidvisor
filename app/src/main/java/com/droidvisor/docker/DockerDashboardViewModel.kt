@@ -47,6 +47,12 @@ class DockerDashboardViewModel : ViewModel() {
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
+    private val _vsockConnected = MutableStateFlow(false)
+    val vsockConnected: StateFlow<Boolean> = _vsockConnected.asStateFlow()
+
+    private val _daemonHealthy = MutableStateFlow(false)
+    val daemonHealthy: StateFlow<Boolean> = _daemonHealthy.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -83,6 +89,20 @@ class DockerDashboardViewModel : ViewModel() {
                 }
             }
         }
+
+        viewModelScope.launch {
+            service.daemonHealthy.collect { healthy ->
+                _daemonHealthy.value = healthy
+            }
+        }
+
+        viewModelScope.launch {
+            service.reconnecting.collect { recon ->
+                if (recon) {
+                    _isLoading.value = true
+                }
+            }
+        }
     }
 
     fun detachDockerProxyService() {
@@ -96,6 +116,8 @@ class DockerDashboardViewModel : ViewModel() {
 
     private fun loadMockData() {
         _isConnected.value = true
+        _vsockConnected.value = true
+        _daemonHealthy.value = true
         _dockerInfo.value = DockerInfo(
             containersTotal = 5,
             containersRunning = 2,

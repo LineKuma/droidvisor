@@ -43,6 +43,9 @@ class VsockService : Service() {
     private val _error = MutableStateFlow<VsockError?>(null)
     val error: StateFlow<VsockError?> = _error.asStateFlow()
 
+    private val _reconnecting = MutableStateFlow(false)
+    val reconnecting: StateFlow<Boolean> = _reconnecting.asStateFlow()
+
     private var vsockChannel: VsockChannel? = null
 
     private var avfService: VirtualMachineManagerService? = null
@@ -93,11 +96,13 @@ class VsockService : Service() {
 
                 _connectionState.value = VsockConnectionState.CONNECTING
                 _error.value = null
+                _reconnecting.value = false
 
                 Log.d(TAG, "Connecting to Vsock port $port (Guest CID: $GUEST_CID)")
 
                 vsockChannel = createVsockChannel(port)
                 _connectionState.value = VsockConnectionState.CONNECTED
+                _reconnecting.value = false
 
                 Log.d(TAG, "Vsock connection established on port $port")
 
@@ -235,6 +240,7 @@ class VsockService : Service() {
     }
 
     private suspend fun scheduleReconnect() {
+        _reconnecting.value = true
         delay(DEFAULT_RECONNECT_DELAY)
         if (_connectionState.value == VsockConnectionState.DISCONNECTED && autoReconnect) {
             Log.d(TAG, "Attempting to reconnect to Vsock port $currentPort")
