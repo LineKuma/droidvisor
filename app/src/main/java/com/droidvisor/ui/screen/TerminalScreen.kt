@@ -263,10 +263,11 @@ fun executeCommand(
 ) {
     when {
         command == "\u0003" -> {
+            vsockService?.sendSpecialKey(VsockService.KEY_CTRL_C)
             outputLines.add("^C")
-            outputLines.add("user@droidvisor:~$ ")
         }
         command == "\u0004" -> {
+            vsockService?.sendSpecialKey(VsockService.KEY_CTRL_D)
             outputLines.add("^D")
             outputLines.add("Goodbye!")
         }
@@ -279,17 +280,9 @@ fun executeCommand(
             outputLines.add("user@droidvisor:~$ $command")
 
             if (vsockService != null && vsockService.isConnected()) {
-                val outputStream = vsockService.getOutputStream()
-                if (outputStream != null) {
-                    try {
-                        outputStream.write((command + "\n").toByteArray())
-                        outputStream.flush()
-                        historyIndex?.intValue = -1
-                        return
-                    } catch (e: Exception) {
-                        outputLines.add("[发送失败: ${e.message}]")
-                    }
-                }
+                vsockService.sendCommand(command)
+                historyIndex?.intValue = -1
+                return
             }
 
             executeSimulatedCommand(command, outputLines)

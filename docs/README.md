@@ -21,13 +21,31 @@
 
 ### 计划中的文档
 
-以下目录和文档类型已规划，将在项目进入相应阶段后创建：
+以下目录和文档类型已规划：
 
-| 目录 | 计划内容 | 预计创建时机 |
-|------|----------|-------------|
-| docs/design/ | 系统架构设计文档 (HLD)、详细设计文档 (LLD)、模块设计说明 | MVP 实现阶段 |
-| docs/api/ | API 参考文档、Vsock 通信协议说明、AVF API 调用指南 | MVP 实现阶段 |
-| docs/user-guide/ | 用户使用手册、安装指南、常见问题解答 (FAQ) | MVP 测试/发布阶段 |
+| 目录 | 计划内容 | 状态 |
+|------|----------|------|
+| docs/design/ | 系统架构设计文档 (HLD)、详细设计文档 (LLD)、模块设计说明 | ✅ 已创建 |
+| docs/api/ | API 参考文档、Vsock 通信协议说明、AVF API 调用指南 | ✅ 已创建 |
+| docs/user-guide/ | 用户使用手册、安装指南、常见问题解答 (FAQ) | ✅ 已创建 |
+
+### 架构设计文档 (docs/design/)
+
+| 文档 | 说明 | 版本 |
+|------|------|------|
+| [系统架构设计文档](design/architecture.md) | 系统架构、模块划分、数据流设计、安全设计 | v1.0.0 |
+
+### API 参考文档 (docs/api/)
+
+| 文档 | 说明 | 版本 |
+|------|------|------|
+| [API 参考文档](api/api-reference.md) | 虚拟机管理 API、Docker API、备份管理 API、网络配置 API | v1.0.0 |
+
+### 用户手册 (docs/user-guide/)
+
+| 文档 | 说明 | 版本 |
+|------|------|------|
+| [用户手册](user-guide/user-manual.md) | 快速入门、虚拟机管理、Docker 集成、备份管理、网络配置、故障排除 | v1.0.0 |
 
 ## 文档更新记录
 
@@ -36,6 +54,9 @@
 | [core/avf-analysis.md](core/avf-analysis.md) | 2026-05-13 | v1.0.0 |
 | [core/mvp-definition.md](core/mvp-definition.md) | 2026-05-13 | v0.1.0 |
 | [build-setup.md](build-setup.md) | 2026-05-13 | -- |
+| [design/architecture.md](design/architecture.md) | 2026-05-24 | v1.0.0 |
+| [api/api-reference.md](api/api-reference.md) | 2026-05-24 | v1.0.0 |
+| [user-guide/user-manual.md](user-guide/user-manual.md) | 2026-05-24 | v1.0.0 |
 
 ---
 

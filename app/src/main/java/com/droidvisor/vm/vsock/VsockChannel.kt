@@ -5,4 +5,5 @@ interface VsockChannel {
     fun receive(): ByteArray?
     fun close()
     fun isOpen(): Boolean
+    fun sendRaw(data: ByteArray) = send(data)
 }

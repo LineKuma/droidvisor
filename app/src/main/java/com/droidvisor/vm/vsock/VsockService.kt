@@ -136,7 +136,39 @@ class VsockService : Service() {
         }
     }
 
-    fun send(data: ByteArray) {
+    fun sendCommand(command: String) {
+        coroutineScope.launch {
+            try {
+                if (!_connectionState.value.isConnected()) {
+                    throw VsockError.NotConnectedError("Not connected to Vsock")
+                }
+
+                vsockChannel?.send((command + "\n").toByteArray())
+                Log.d(TAG, "Command sent: $command")
+            } catch (e: VsockError) {
+                Log.e(TAG, "Error sending command", e)
+                _error.value = e
+            }
+        }
+    }
+
+    fun sendSpecialKey(keyCode: Int) {
+        coroutineScope.launch {
+            try {
+                if (!_connectionState.value.isConnected()) {
+                    throw VsockError.NotConnectedError("Not connected to Vsock")
+                }
+
+                vsockChannel?.send(byteArrayOf(keyCode.toByte()))
+                Log.d(TAG, "Special key sent: $keyCode")
+            } catch (e: VsockError) {
+                Log.e(TAG, "Error sending special key", e)
+                _error.value = e
+            }
+        }
+    }
+
+    fun sendRaw(data: ByteArray) {
         coroutineScope.launch {
             try {
                 if (!_connectionState.value.isConnected()) {
@@ -144,15 +176,10 @@ class VsockService : Service() {
                 }
 
                 vsockChannel?.send(data)
-                Log.d(TAG, "Sent ${data.size} bytes via Vsock")
-
+                Log.d(TAG, "Raw data sent: ${data.size} bytes")
             } catch (e: VsockError) {
-                Log.e(TAG, "Error sending data", e)
+                Log.e(TAG, "Error sending raw data", e)
                 _error.value = e
-
-                if (autoReconnect) {
-                    scheduleReconnect()
-                }
             }
         }
     }
@@ -218,6 +245,12 @@ class VsockService : Service() {
     companion object {
         const val DEFAULT_DOCKER_PORT = 2375
         const val DEFAULT_TTY_PORT = 22
+
+        const val KEY_CTRL_C = 0x03
+        const val KEY_CTRL_D = 0x04
+        const val KEY_CTRL_Z = 0x1A
+        const val KEY_ESC = 0x1B
+        const val KEY_BACKSPACE = 0x7F
     }
 }
 
