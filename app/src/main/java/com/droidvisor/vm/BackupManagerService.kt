@@ -157,10 +157,12 @@ class BackupManagerService : Service() {
     }
 
     private fun calculateBackupSize(vmId: String, type: BackupType, parentBackupId: String?): Long {
-        return if (type == BackupType.INCREMENTAL && parentBackupId != null) {
-            (512L * 1024 * 1024)
+        val vmDiskDir = getVmDiskDirectory()
+        val diskImageFile = findVmDiskImage(vmId, vmDiskDir)
+        return if (diskImageFile != null && diskImageFile.exists()) {
+            diskImageFile.length()
         } else {
-            (2048L * 1024 * 1024)
+            0L
         }
     }
 
