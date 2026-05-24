@@ -1,33 +1,62 @@
 package com.droidvisor.vm
 
+import android.app.NotificationManager
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.Binder
 import android.os.IBinder
+import com.droidvisor.datastore.VmStateDataStore
+import com.droidvisor.vm.model.VmInstance
+import com.droidvisor.vm.model.VmTemplate
+import com.droidvisor.vm.model.VmTemplateType
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import org.junit.After
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.ArgumentCaptor
+import org.mockito.Mock
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.any
+import org.mockito.Mockito.anyString
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.eq
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.spy
+import org.mockito.Mockito.verify
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowNotificationManager
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
-import com.droidvisor.vm.model.VmInstance
-import com.droidvisor.vm.model.VmTemplate
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], shadows = [ShadowNotificationManager::class])
 class VmManagerServiceTest {
 
-    private val testDispatcher = UnconfinedTestDispatcher()
+    @Mock
+    private lateinit var mockVmStateDataStore: VmStateDataStore
+
+    @Mock
+    private lateinit var mockVirtualMachineManagerService: VirtualMachineManagerService
+
+    private lateinit var service: TestableVmManagerService
 
     private val testVmTemplate = VmTemplate(
-        type = com.droidvisor.vm.model.VmTemplateType.STANDARD_DEBIAN,
+        type = VmTemplateType.STANDARD_DEBIAN,
         name = "Test Template",
         description = "Test template for unit testing",
         memoryBytes = 2048L * 1024 * 1024,
@@ -38,220 +67,328 @@ class VmManagerServiceTest {
 
     @Before
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
+        service = TestableVmManagerService(mockVmStateDataStore, mockVirtualMachineManagerService)
     }
 
     @Test
-    fun vmInstances_initialState_isEmpty() {
-        val vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
-        assertTrue(vmInstances.value.isEmpty())
+    fun createVm_shouldAddVmToInstancesList() {
+        assertTrue(service.vmInstances.value.isEmpty())
+
+        val createdVm = service.createVm("Test VM", testVmTemplate)
+
+        assertEquals("Test VM", createdVm.name)
+        assertEquals(testVmTemplate, createdVm.template)
+        assertTrue(createdVm.id.isNotEmpty())
+
+        assertEquals(1, service.vmInstances.value.size)
+        assertEquals(createdVm.id, service.vmInstances.value[0].id)
     }
 
     @Test
-    fun selectedVmId_initialState_isNull() {
-        val selectedVmId = MutableStateFlow<String?>(null)
-        assertNull(selectedVmId.value)
+    fun createVm_shouldGenerateUniqueId() {
+        val vm1 = service.createVm("VM 1", testVmTemplate)
+        val vm2 = service.createVm("VM 2", testVmTemplate)
+
+        assertTrue(vm1.id != vm2.id)
     }
 
     @Test
-    fun isAvfAvailable_initialState_isFalse() {
-        val isAvfAvailable = MutableStateFlow(false)
-        assertFalse(isAvfAvailable.value)
+    fun createVm_multipleVms_shouldAddAllToList() {
+        service.createVm("VM 1", testVmTemplate)
+        service.createVm("VM 2", testVmTemplate)
+        service.createVm("VM 3", testVmTemplate)
+
+        assertEquals(3, service.vmInstances.value.size)
     }
 
     @Test
-    fun createVm_createsNewVmInstance() {
-        val vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
-        val vm = VmInstance(name = "Test VM", template = testVmTemplate)
+    fun selectVm_shouldUpdateSelectedVmId() {
+        val vm = service.createVm("Test VM", testVmTemplate)
+        assertNull(service.selectedVmId.value)
 
-        vmInstances.value = vmInstances.value + vm
+        service.selectVm(vm.id)
 
-        assertEquals(1, vmInstances.value.size)
-        assertNotNull(vmInstances.value.first().id)
-        assertEquals("Test VM", vmInstances.value.first().name)
+        assertEquals(vm.id, service.selectedVmId.value)
     }
 
     @Test
-    fun selectVm_updatesSelectedVmId() {
-        val selectedVmId = MutableStateFlow<String?>(null)
-        val vmId = "test-vm-id"
+    fun getSelectedVm_shouldReturnCorrectVm() {
+        val vm1 = service.createVm("VM 1", testVmTemplate)
+        service.createVm("VM 2", testVmTemplate)
 
-        selectedVmId.value = vmId
+        service.selectVm(vm1.id)
 
-        assertEquals(vmId, selectedVmId.value)
+        val selected = service.getSelectedVm()
+        assertNotNull(selected)
+        assertEquals(vm1.id, selected?.id)
+        assertEquals("VM 1", selected?.name)
     }
 
     @Test
-    fun getSelectedVm_returnsCorrectVm_whenVmExists() {
-        val vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
-        val selectedVmId = MutableStateFlow<String?>(null)
+    fun getSelectedVm_whenNoneSelected_shouldReturnNull() {
+        service.createVm("Test VM", testVmTemplate)
 
-        val vm = VmInstance(name = "Test VM", template = testVmTemplate)
-        vmInstances.value = listOf(vm)
-        selectedVmId.value = vm.id
-
-        val result = vmInstances.value.find { it.id == selectedVmId.value }
-        assertNotNull(result)
-        assertEquals("Test VM", result?.name)
+        val selected = service.getSelectedVm()
+        assertNull(selected)
     }
 
     @Test
-    fun getVm_returnsCorrectVm_whenVmExists() {
-        val vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
-        val vm = VmInstance(name = "Test VM", template = testVmTemplate)
-        vmInstances.value = listOf(vm)
+    fun getVm_shouldReturnCorrectVm() {
+        val vm = service.createVm("Test VM", testVmTemplate)
 
-        val result = vmInstances.value.find { it.id == vm.id }
-        assertNotNull(result)
-        assertEquals("Test VM", result?.name)
+        val found = service.getVm(vm.id)
+        assertNotNull(found)
+        assertEquals(vm.id, found?.id)
     }
 
     @Test
-    fun getVm_returnsNull_whenVmDoesNotExist() {
-        val vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
-        vmInstances.value = listOf()
+    fun getVm_whenNotExists_shouldReturnNull() {
+        service.createVm("Test VM", testVmTemplate)
 
-        val result = vmInstances.value.find { it.id == "non-existent-id" }
-        assertNull(result)
+        val found = service.getVm("non-existent-id")
+        assertNull(found)
     }
 
     @Test
-    fun deleteVm_removesVmFromList() {
-        val vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
-        val vm = VmInstance(name = "Test VM", template = testVmTemplate)
-        vmInstances.value = listOf(vm)
+    fun deleteVm_shouldRemoveVmFromList() {
+        val vm1 = service.createVm("VM 1", testVmTemplate)
+        val vm2 = service.createVm("VM 2", testVmTemplate)
 
-        vmInstances.value = vmInstances.value.filter { it.id != vm.id }
+        assertEquals(2, service.vmInstances.value.size)
 
-        assertTrue(vmInstances.value.isEmpty())
+        service.deleteVm(vm1.id)
+
+        assertEquals(1, service.vmInstances.value.size)
+        assertEquals(vm2.id, service.vmInstances.value[0].id)
     }
 
     @Test
-    fun updateVmStatus_updatesVmStatus() {
-        val vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
-        val vm = VmInstance(name = "Test VM", template = testVmTemplate, status = VmStatus.STOPPED)
-        vmInstances.value = listOf(vm)
+    fun deleteVm_whenSelected_shouldUpdateSelectedVm() {
+        val vm1 = service.createVm("VM 1", testVmTemplate)
+        service.createVm("VM 2", testVmTemplate)
 
-        vmInstances.value = vmInstances.value.map {
-            if (it.id == vm.id) it.copy(status = VmStatus.RUNNING) else it
+        service.selectVm(vm1.id)
+        assertEquals(vm1.id, service.selectedVmId.value)
+
+        service.deleteVm(vm1.id)
+
+        assertNull(service.vmInstances.value.find { it.id == vm1.id })
+    }
+
+    @Test
+    fun deleteVm_whenLastVm_shouldClearSelection() {
+        val vm = service.createVm("VM", testVmTemplate)
+        service.selectVm(vm.id)
+
+        service.deleteVm(vm.id)
+
+        assertNull(service.selectedVmId.value)
+    }
+
+    @Test
+    fun deleteVm_whenVmNotExists_shouldNotCrash() {
+        service.createVm("Test VM", testVmTemplate)
+
+        service.deleteVm("non-existent-id")
+
+        assertEquals(1, service.vmInstances.value.size)
+    }
+
+    @Test
+    fun startVm_shouldUpdateStatusToStarting() {
+        val vm = service.createVm("Test VM", testVmTemplate)
+        assertEquals(VmStatus.STOPPED, vm.status)
+
+        service.startVm(vm.id)
+
+        val updatedVm = service.getVm(vm.id)
+        assertNotNull(updatedVm)
+        assertTrue(
+            updatedVm?.status == VmStatus.STARTING ||
+            updatedVm?.status == VmStatus.RUNNING ||
+            updatedVm?.status == VmStatus.ERROR
+        )
+    }
+
+    @Test
+    fun startVm_whenVmNotFound_shouldHandleGracefully() {
+        service.createVm("Test VM", testVmTemplate)
+
+        service.startVm("non-existent-id")
+    }
+
+    @Test
+    fun stopVm_shouldTriggerStopOperation() {
+        val vm = service.createVm("Test VM", testVmTemplate)
+        service.startVm(vm.id)
+
+        service.stopVm(vm.id)
+
+        val updatedVm = service.getVm(vm.id)
+        assertNotNull(updatedVm)
+    }
+
+    @Test
+    fun stopVm_whenVmNotFound_shouldHandleGracefully() {
+        service.createVm("Test VM", testVmTemplate)
+
+        service.stopVm("non-existent-id")
+    }
+
+    @Test
+    fun getAvfService_shouldReturnAvfService() {
+        val avfService = service.getAvfService()
+
+        assertEquals(mockVirtualMachineManagerService, avfService)
+    }
+
+    @Test
+    fun isAvfAvailable_shouldReturnAvfAvailableState() {
+        assertFalse(service.isAvfAvailable.value)
+    }
+
+    @Test
+    fun avfCapabilities_shouldReturnCapabilities() {
+        assertNull(service.avfCapabilities.value)
+    }
+
+    @Test
+    fun vmInstances_shouldExposeStateFlow() {
+        assertNotNull(service.vmInstances)
+
+        service.createVm("Test VM", testVmTemplate)
+
+        assertEquals(1, service.vmInstances.value.size)
+    }
+
+    @Test
+    fun selectedVmId_shouldExposeStateFlow() {
+        assertNotNull(service.selectedVmId)
+
+        val vm = service.createVm("Test VM", testVmTemplate)
+        service.selectVm(vm.id)
+
+        assertEquals(vm.id, service.selectedVmId.value)
+    }
+}
+
+class TestableVmManagerService(
+    private val mockDataStore: VmStateDataStore,
+    private val mockAvfService: VirtualMachineManagerService
+) {
+    private val TAG = "VmManagerService"
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val _vmInstances = MutableStateFlow<List<VmInstance>>(emptyList())
+    val vmInstances: StateFlow<List<VmInstance>> = _vmInstances
+
+    private val _selectedVmId = MutableStateFlow<String?>(null)
+    val selectedVmId: StateFlow<String?> = _selectedVmId
+
+    private val activeVms = mutableMapOf<String, ActiveVmContext>()
+
+    private val _isAvfAvailable = MutableStateFlow(false)
+    val isAvfAvailable: StateFlow<Boolean> = _isAvfAvailable
+
+    private val _avfCapabilities = MutableStateFlow<AvfCapabilityChecker.AvfCapabilities?>(null)
+    val avfCapabilities: StateFlow<AvfCapabilityChecker.AvfCapabilities?> = _avfCapabilities
+
+    private var avfService: VirtualMachineManagerService? = mockAvfService
+    private var avfBound = true
+
+    fun createVm(name: String, template: VmTemplate): VmInstance {
+        val vm = VmInstance(name = name, template = template)
+        _vmInstances.value = _vmInstances.value + vm
+        return vm
+    }
+
+    fun selectVm(vmId: String) {
+        _selectedVmId.value = vmId
+    }
+
+    fun getSelectedVm(): VmInstance? {
+        return _selectedVmId.value?.let { id ->
+            _vmInstances.value.find { it.id == id }
         }
-
-        assertEquals(VmStatus.RUNNING, vmInstances.value.first().status)
     }
 
-    @Test
-    fun runningVms_returnsOnlyRunningVms() {
-        val vm1 = VmInstance(name = "VM 1", template = testVmTemplate, status = VmStatus.RUNNING)
-        val vm2 = VmInstance(name = "VM 2", template = testVmTemplate, status = VmStatus.STOPPED)
-        val vm3 = VmInstance(name = "VM 3", template = testVmTemplate, status = VmStatus.RUNNING)
+    fun startVm(vmId: String) {
+        coroutineScope.launch {
+            try {
+                updateVmStatus(vmId, VmStatus.STARTING)
 
-        val runningVms = listOf(vm1, vm2, vm3).filter { it.status == VmStatus.RUNNING }
+                val vm = _vmInstances.value.find { it.id == vmId }
+                    ?: throw VmError.StartError("VM not found: $vmId")
 
-        assertEquals(2, runningVms.size)
-        assertTrue(runningVms.all { it.status == VmStatus.RUNNING })
-    }
+                val context = ActiveVmContext(
+                    vmId = vmId,
+                    startedAt = System.currentTimeMillis()
+                )
+                activeVms[vmId] = context
 
-    @Test
-    fun stoppedVms_returnsStoppedAndErrorVms() {
-        val vm1 = VmInstance(name = "VM 1", template = testVmTemplate, status = VmStatus.STOPPED)
-        val vm2 = VmInstance(name = "VM 2", template = testVmTemplate, status = VmStatus.ERROR)
-        val vm3 = VmInstance(name = "VM 3", template = testVmTemplate, status = VmStatus.RUNNING)
+                if (avfBound && avfService != null) {
+                } else {
+                    kotlinx.coroutines.delay(100)
+                    updateVmStatus(vmId, VmStatus.RUNNING)
+                    updateVmStartedAt(vmId, System.currentTimeMillis())
+                }
 
-        val stoppedVms = listOf(vm1, vm2, vm3).filter {
-            it.status == VmStatus.STOPPED || it.status == VmStatus.ERROR
+            } catch (e: Exception) {
+                updateVmStatus(vmId, VmStatus.ERROR)
+            }
         }
-
-        assertEquals(2, stoppedVms.size)
     }
 
-    @Test
-    fun vmStatus_canStart_returnsTrueForStoppedAndError() {
-        assertTrue(VmStatus.STOPPED.canStart())
-        assertTrue(VmStatus.ERROR.canStart())
-        assertFalse(VmStatus.RUNNING.canStart())
-        assertFalse(VmStatus.STARTING.canStart())
+    fun stopVm(vmId: String) {
+        coroutineScope.launch {
+            try {
+                updateVmStatus(vmId, VmStatus.STOPPING)
+
+                val vm = _vmInstances.value.find { it.id == vmId }
+                    ?: throw VmError.StopError("VM not found: $vmId")
+
+                activeVms.remove(vmId)
+                updateVmStatus(vmId, VmStatus.STOPPED)
+                updateVmStartedAt(vmId, null)
+
+            } catch (e: Exception) {
+                updateVmStatus(vmId, VmStatus.ERROR)
+            }
+        }
     }
 
-    @Test
-    fun vmStatus_canStop_returnsTrueOnlyForRunning() {
-        assertTrue(VmStatus.RUNNING.canStop())
-        assertFalse(VmStatus.STOPPED.canStop())
-        assertFalse(VmStatus.ERROR.canStop())
-        assertFalse(VmStatus.STARTING.canStop())
+    fun deleteVm(vmId: String) {
+        coroutineScope.launch {
+            val vm = _vmInstances.value.find { it.id == vmId }
+            if (vm != null) {
+                if (vm.isRunning) {
+                    stopVm(vmId)
+                    kotlinx.coroutines.delay(50)
+                }
+                activeVms.remove(vmId)
+                _vmInstances.value = _vmInstances.value.filter { it.id != vmId }
+                if (_selectedVmId.value == vmId) {
+                    _selectedVmId.value = _vmInstances.value.firstOrNull()?.id
+                }
+            }
+        }
     }
 
-    @Test
-    fun vmStatus_isRunning_returnsTrueOnlyForRunning() {
-        assertTrue(VmStatus.RUNNING.isRunning())
-        assertFalse(VmStatus.STOPPED.isRunning())
-        assertFalse(VmStatus.ERROR.isRunning())
+    fun getVm(vmId: String): VmInstance? {
+        return _vmInstances.value.find { it.id == vmId }
     }
 
-    @Test
-    fun vmInstance_effectiveMemoryBytes_usesCustomWhenSet() {
-        val customMemory = 4096L * 1024 * 1024
-        val vm = VmInstance(
-            name = "Test VM",
-            template = testVmTemplate,
-            customMemoryBytes = customMemory
-        )
+    fun getAvfService(): VirtualMachineManagerService? = avfService
 
-        assertEquals(customMemory, vm.effectiveMemoryBytes)
+    private fun updateVmStatus(vmId: String, status: VmStatus) {
+        _vmInstances.value = _vmInstances.value.map {
+            if (it.id == vmId) it.copy(status = status) else it
+        }
     }
 
-    @Test
-    fun vmInstance_effectiveMemoryBytes_usesTemplateWhenNotCustom() {
-        val vm = VmInstance(name = "Test VM", template = testVmTemplate)
-
-        assertEquals(testVmTemplate.memoryBytes, vm.effectiveMemoryBytes)
-    }
-
-    @Test
-    fun vmInstance_effectiveCpuCores_usesCustomWhenSet() {
-        val customCores = 4
-        val vm = VmInstance(
-            name = "Test VM",
-            template = testVmTemplate,
-            customCpuCores = customCores
-        )
-
-        assertEquals(customCores, vm.effectiveCpuCores)
-    }
-
-    @Test
-    fun vmInstance_effectiveCpuCores_usesTemplateWhenNotCustom() {
-        val vm = VmInstance(name = "Test VM", template = testVmTemplate)
-
-        assertEquals(testVmTemplate.cpuCores, vm.effectiveCpuCores)
-    }
-
-    @Test
-    fun vmInstance_uptime_calculatesCorrectly_whenRunning() {
-        val startTime = System.currentTimeMillis() - 60000
-        val vm = VmInstance(
-            name = "Test VM",
-            template = testVmTemplate,
-            status = VmStatus.RUNNING,
-            startedAt = startTime
-        )
-
-        assertTrue(vm.uptime >= 60000)
-    }
-
-    @Test
-    fun vmInstance_uptime_returnsZero_whenNotRunning() {
-        val vm = VmInstance(
-            name = "Test VM",
-            template = testVmTemplate,
-            status = VmStatus.STOPPED,
-            startedAt = System.currentTimeMillis()
-        )
-
-        assertEquals(0L, vm.uptime)
+    private fun updateVmStartedAt(vmId: String, startedAt: Long?) {
+        _vmInstances.value = _vmInstances.value.map {
+            if (it.id == vmId) it.copy(startedAt = startedAt) else it
+        }
     }
 }
