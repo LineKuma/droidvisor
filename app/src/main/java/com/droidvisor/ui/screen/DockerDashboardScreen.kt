@@ -91,13 +91,16 @@ fun DockerDashboardScreen(viewModel: DockerDashboardViewModel) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val isLoading by viewModel.isLoading.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
+    val vsockConnected by viewModel.vsockConnected.collectAsState()
+    val daemonHealthy by viewModel.daemonHealthy.collectAsState()
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            if (!isConnected) {
-                SimulationModeBanner(
-                    message = "Docker 未连接",
-                    detail = "虚拟机未运行或 Vsock 通道不可用，数据为演示用途"
+            if (!isConnected || !daemonHealthy) {
+                ConnectionStatusBanner(
+                    isConnected = isConnected,
+                    daemonHealthy = daemonHealthy,
+                    vsockConnected = vsockConnected
                 )
             }
 
@@ -120,6 +123,65 @@ fun DockerDashboardScreen(viewModel: DockerDashboardViewModel) {
                     2 -> DockerImagesTab(viewModel)
                     3 -> DockerVolumesTab()
                     4 -> DockerNetworksTab()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ConnectionStatusBanner(
+    isConnected: Boolean,
+    daemonHealthy: Boolean,
+    vsockConnected: Boolean
+) {
+    val statusMessage = when {
+        !vsockConnected -> "Vsock 未连接"
+        !isConnected -> "Docker 未连接"
+        !daemonHealthy -> "Docker Daemon 异常"
+        else -> null
+    }
+    val statusDetail = when {
+        !vsockConnected -> "虚拟机未运行或 Vsock 通道不可用"
+        !isConnected -> "无法建立 Docker 连接"
+        !daemonHealthy -> "Docker Daemon 无响应，正在尝试恢复..."
+        else -> null
+    }
+    val statusColor = when {
+        !daemonHealthy -> Color.Yellow
+        !vsockConnected -> Color.Red
+        else -> Color.Gray
+    }
+
+    if (statusMessage != null) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = statusColor.copy(alpha = 0.1f)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = statusMessage,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
+                    Text(
+                        text = statusDetail ?: "",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+                if (!daemonHealthy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp
+                    )
                 }
             }
         }
