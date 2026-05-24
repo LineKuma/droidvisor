@@ -1,5 +1,6 @@
 package com.droidvisor.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
@@ -37,7 +38,8 @@ class VmManagementViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = VmManagementViewModel()
+        val savedStateHandle = SavedStateHandle()
+        viewModel = VmManagementViewModel(savedStateHandle)
     }
 
     @After

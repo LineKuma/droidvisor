@@ -11,6 +11,7 @@ import android.content.ServiceConnection
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import com.droidvisor.datastore.VmStateDataStore
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +21,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class VmManagerService : Service() {
@@ -45,6 +47,8 @@ class VmManagerService : Service() {
     private val _avfCapabilities = MutableStateFlow<AvfCapabilityChecker.AvfCapabilities?>(null)
     val avfCapabilities: StateFlow<AvfCapabilityChecker.AvfCapabilities?> = _avfCapabilities.asStateFlow()
 
+    private lateinit var vmStateDataStore: VmStateDataStore
+
     private val avfConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as VirtualMachineManagerService.LocalBinder
@@ -68,8 +72,27 @@ class VmManagerService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        vmStateDataStore = VmStateDataStore(this)
+        restoreState()
         checkAvfCapabilities()
         bindAvfService()
+    }
+
+    private fun restoreState() {
+        coroutineScope.launch {
+            val savedInstances = vmStateDataStore.vmInstancesFlow.first()
+            if (savedInstances.isNotEmpty()) {
+                _vmInstances.value = savedInstances
+                Log.d(TAG, "Restored ${savedInstances.size} VM instances from state")
+            }
+        }
+        coroutineScope.launch {
+            val savedVmId = vmStateDataStore.selectedVmIdFlow.first()
+            if (savedVmId != null) {
+                _selectedVmId.value = savedVmId
+                Log.d(TAG, "Restored selected VM id: $savedVmId")
+            }
+        }
     }
 
     private fun checkAvfCapabilities() {
@@ -108,12 +131,14 @@ class VmManagerService : Service() {
     fun createVm(name: String, template: VmTemplate): VmInstance {
         val vm = VmInstance(name = name, template = template)
         _vmInstances.value = _vmInstances.value + vm
+        saveState()
         Log.d(TAG, "Created VM: ${vm.name} (${vm.id})")
         return vm
     }
 
     fun selectVm(vmId: String) {
         _selectedVmId.value = vmId
+        saveState()
     }
 
     fun getSelectedVm(): VmInstance? {
@@ -227,6 +252,7 @@ class VmManagerService : Service() {
                 if (_selectedVmId.value == vmId) {
                     _selectedVmId.value = _vmInstances.value.firstOrNull()?.id
                 }
+                saveState()
                 Log.d(TAG, "Deleted VM: ${vm.name}")
             }
         }
@@ -242,11 +268,20 @@ class VmManagerService : Service() {
         _vmInstances.value = _vmInstances.value.map {
             if (it.id == vmId) it.copy(status = status) else it
         }
+        saveState()
     }
 
     private fun updateVmStartedAt(vmId: String, startedAt: Long?) {
         _vmInstances.value = _vmInstances.value.map {
             if (it.id == vmId) it.copy(startedAt = startedAt) else it
+        }
+        saveState()
+    }
+
+    private fun saveState() {
+        coroutineScope.launch {
+            vmStateDataStore.saveVmInstances(_vmInstances.value)
+            vmStateDataStore.saveSelectedVmId(_selectedVmId.value)
         }
     }
 

@@ -1,5 +1,6 @@
 package com.droidvisor.ui.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.droidvisor.vm.VmManagerService
@@ -28,12 +29,24 @@ data class VmManagementState(
         get() = vmInstances.filter { it.status == VmStatus.STOPPED || it.status == VmStatus.ERROR }
 }
 
-class VmManagementViewModel : ViewModel() {
+class VmManagementViewModel(
+    private val savedStateHandle: SavedStateHandle
+) : ViewModel() {
+
+    companion object {
+        private const val KEY_SELECTED_VM_ID = "selected_vm_id"
+    }
 
     private val _state = MutableStateFlow(VmManagementState())
     val state: StateFlow<VmManagementState> = _state.asStateFlow()
 
     private var vmManagerService: VmManagerService? = null
+
+    init {
+        savedStateHandle.get<String>(KEY_SELECTED_VM_ID)?.let { savedVmId ->
+            _state.value = _state.value.copy(selectedVmId = savedVmId)
+        }
+    }
 
     fun bindService(service: VmManagerService) {
         vmManagerService = service
@@ -65,6 +78,7 @@ class VmManagementViewModel : ViewModel() {
     fun selectVm(vmId: String) {
         vmManagerService?.selectVm(vmId)
         _state.value = _state.value.copy(selectedVmId = vmId)
+        savedStateHandle[KEY_SELECTED_VM_ID] = vmId
     }
 
     fun createVm(name: String, template: VmTemplate) {
