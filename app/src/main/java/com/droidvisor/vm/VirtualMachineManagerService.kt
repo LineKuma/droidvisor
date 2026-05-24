@@ -37,6 +37,10 @@ class VirtualMachineManagerService : Service() {
     private var avfVmManager: Any? = null
     private var isAvfAvailable = false
 
+    private var vmStartRetryCount = 0
+    private val maxRetries = 3
+    private val baseRetryDelayMs = 2000L
+
     inner class LocalBinder : Binder() {
         fun getService(): VirtualMachineManagerService = this@VirtualMachineManagerService
     }
@@ -82,7 +86,7 @@ class VirtualMachineManagerService : Service() {
                 _status.value = VmStatus.STARTING
                 consoleOutputService?.appendOutput("Starting VM...")
 
-                startAvfVm()
+                attemptStartAvfVmWithRetry()
 
             } catch (e: VmError) {
                 Log.e(TAG, "Failed to start VM", e)
@@ -94,6 +98,32 @@ class VirtualMachineManagerService : Service() {
                 _status.value = VmStatus.STOPPED
             }
         }
+    }
+
+    private suspend fun attemptStartAvfVmWithRetry() {
+        vmStartRetryCount = 0
+        var lastException: Exception? = null
+
+        while (vmStartRetryCount <= maxRetries) {
+            try {
+                startAvfVm()
+                return
+            } catch (e: Exception) {
+                lastException = e
+                vmStartRetryCount++
+                if (vmStartRetryCount <= maxRetries) {
+                    val delayMs = baseRetryDelayMs * (1 shl (vmStartRetryCount - 1))
+                    Log.w(TAG, "VM start attempt $vmStartRetryCount failed, retrying in ${delayMs}ms", e)
+                    consoleOutputService?.appendOutput("VM start failed, retry ${vmStartRetryCount}/${maxRetries} in ${delayMs}ms...")
+                    kotlinx.coroutines.delay(delayMs)
+                } else {
+                    Log.e(TAG, "VM start failed after $vmStartRetryCount attempts", e)
+                    consoleOutputService?.appendOutput("VM start failed after $vmStartRetryCount attempts: ${e.message}")
+                    throw e
+                }
+            }
+        }
+        throw lastException ?: VmError.StartError("VM start failed after $maxRetries retries")
     }
 
     fun stopVm() {
@@ -274,7 +304,10 @@ class VirtualMachineManagerService : Service() {
                 }
             }
 
-            Log.d(TAG, "AVF VM stopped successfully")
+            Log.d(TAG, "AVF VM stopped successfully, releasing resources...")
+            Log.d(TAG, "Memory release: VM instance cleared, preparing for garbage collection")
+            vmInstance = null
+            System.gc()
         } catch (e: VmError) {
             throw e
         } catch (e: Exception) {
@@ -295,7 +328,11 @@ class VirtualMachineManagerService : Service() {
                 Log.w(TAG, "close() not available on VM", e)
             }
 
-            Log.d(TAG, "AVF VM closed")
+            Log.d(TAG, "AVF VM closed, cleaning up resources")
+            Log.d(TAG, "Memory cleanup: vmInstance=null, consoleOutputService cleanup triggered")
+            vmInstance = null
+            consoleOutputService = null
+            System.gc()
         } catch (e: Exception) {
             Log.e(TAG, "Error closing AVF VM", e)
         }
