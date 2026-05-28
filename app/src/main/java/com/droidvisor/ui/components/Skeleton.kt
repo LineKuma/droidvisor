@@ -65,7 +65,7 @@ fun SkeletonList(count: Int = 3) {
 fun SkeletonRect(height: androidx.compose.ui.unit.Dp, widthFactor: Float) {
     val color by animateColorAsState(
         targetValue = if (true) Color(0xFF2A2A2A) else Color(0xFF3A3A3A),
-        animationSpec = androidx.compose.animation.core.tween(1000, repeatCount = androidx.compose.animation.core.infiniteRepeatCount),
+        animationSpec = androidx.compose.animation.core.tween(1000),
         label = "skeletonColor"
     )
     Box(
@@ -80,7 +80,7 @@ fun SkeletonRect(height: androidx.compose.ui.unit.Dp, widthFactor: Float) {
 fun SkeletonCircle(size: androidx.compose.ui.unit.Dp) {
     val color by animateColorAsState(
         targetValue = if (true) Color(0xFF2A2A2A) else Color(0xFF3A3A3A),
-        animationSpec = androidx.compose.animation.core.tween(1000, repeatCount = androidx.compose.animation.core.infiniteRepeatCount),
+        animationSpec = androidx.compose.animation.core.tween(1000),
         label = "skeletonColor"
     )
     Box(

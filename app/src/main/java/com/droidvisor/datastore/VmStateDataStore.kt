@@ -9,6 +9,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
+import com.droidvisor.vm.model.VmTemplateType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
@@ -88,6 +89,7 @@ private data class VmInstanceData(
 ) {
     fun toVmInstance(): VmInstance {
         val template = VmTemplate(
+            type = VmTemplateType.CUSTOM,
             name = templateName,
             payloadBinaryName = templatePayloadBinaryName,
             memoryBytes = 0L,

@@ -29,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.droidvisor.ui.components.SimulationModeBanner
 import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.vsock.VsockService
+import com.droidvisor.vm.vsock.isConnected
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -64,7 +67,7 @@ fun TerminalScreen(
     val inputText = remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val commandHistory = remember { mutableStateListOf<String>() }
-    val historyIndex = remember { mutableIntStateOf(-1) }
+    val historyIndex = remember { mutableStateOf(-1) }
     val isVmRunning = remember { mutableStateOf(false) }
     var fontSize by remember { mutableIntStateOf(DEFAULT_FONT_SIZE) }
     val clipboardManager = LocalClipboardManager.current
@@ -78,15 +81,6 @@ fun TerminalScreen(
     LaunchedEffect(consoleOutputService) {
         consoleOutputService?.outputFlow?.collect { line ->
             outputLines.add(line)
-        }
-    }
-
-    LaunchedEffect(vsockService) {
-        if (vsockService != null) {
-            vsockService.connect(VsockService.DEFAULT_TTY_PORT, autoReconnect = true)
-            vsockService.connectionState.collect { state ->
-                isVmRunning.value = state.isConnected()
-            }
         }
     }
 
@@ -109,6 +103,15 @@ fun TerminalScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    LaunchedEffect(vsockService) {
+        if (vsockService != null) {
+            vsockService.connect(VsockService.DEFAULT_TTY_PORT, autoReconnect = true)
+            vsockService.connectionState.collect { state ->
+                isVmRunning.value = state.isConnected()
             }
         }
     }
@@ -194,7 +197,7 @@ fun TerminalScreen(
                                 vsockService
                             )
                             inputText.value = ""
-                            historyIndex.intValue = -1
+                            historyIndex.value = -1
                         }
                     }
                 ),
@@ -253,12 +256,13 @@ fun TerminalToolbar(
     )
 }
 
+@Suppress("UNUSED_PARAMETER")
 fun executeCommand(
     command: String,
     outputLines: MutableList<String>,
     history: MutableList<String>,
     vsockService: VsockService? = null,
-    historyIndex: MutableIntState? = null,
+    historyIndex: MutableState<Int>? = null,
     inputText: MutableState<String>? = null
 ) {
     when {
@@ -281,12 +285,12 @@ fun executeCommand(
 
             if (vsockService != null && vsockService.isConnected()) {
                 vsockService.sendCommand(command)
-                historyIndex?.intValue = -1
+                historyIndex?.value = -1
                 return
             }
 
             executeSimulatedCommand(command, outputLines)
-            historyIndex?.intValue = -1
+            historyIndex?.value = -1
         }
     }
 }

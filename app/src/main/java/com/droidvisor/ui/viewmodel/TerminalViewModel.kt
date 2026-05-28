@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.vsock.VsockConnectionState
 import com.droidvisor.vm.vsock.VsockService
+import com.droidvisor.vm.vsock.isConnected
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

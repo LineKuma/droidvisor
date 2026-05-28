@@ -19,10 +19,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.droidvisor.vm.BackupManagerService
+import com.droidvisor.vm.BackupProgress
 import com.droidvisor.vm.model.Backup
 import com.droidvisor.vm.model.BackupStatus
 import com.droidvisor.vm.model.BackupType
 import com.droidvisor.vm.model.VerificationStatus
+import com.droidvisor.ui.components.StatusBadge
 import java.text.SimpleDateFormat
 import java.util.*
 

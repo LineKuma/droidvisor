@@ -20,15 +20,16 @@ import com.droidvisor.vm.VmStatus
 @Composable
 fun AnimatedStatusIndicator(status: VmStatus) {
     val (color, progress, isRotating) = when (status) {
-        VmStatus.STOPPED -> Color.Gray to 1f to false
-        VmStatus.STARTING -> Color.Yellow to 0.5f to true
-        VmStatus.RUNNING -> Color.Green to 1f to false
-        VmStatus.STOPPING -> Color.Orange to 0.5f to true
+        VmStatus.STOPPED -> Triple(Color.Gray, 1f, false)
+        VmStatus.STARTING -> Triple(Color.Yellow, 0.5f, true)
+        VmStatus.RUNNING -> Triple(Color.Green, 1f, false)
+        VmStatus.STOPPING -> Triple(Color(0xFFFF9800), 0.5f, true)
+        VmStatus.ERROR -> Triple(Color.Red, 1f, false)
     }
 
     val rotation by animateFloatAsState(
         targetValue = if (isRotating) 360f else 0f,
-        animationSpec = tween(1000, repeatCount = if (isRotating) Int.MAX_VALUE else 0),
+        animationSpec = tween(1000),
         label = "rotation"
     )
 
@@ -39,8 +40,7 @@ fun AnimatedStatusIndicator(status: VmStatus) {
         CircularProgressIndicator(
             modifier = Modifier.fillMaxSize(),
             color = color,
-            strokeWidth = 8.dp,
-            progress = progress
+            strokeWidth = 8.dp
         )
         Icon(
             imageVector = Icons.Default.PowerSettingsNew,

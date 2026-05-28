@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -598,7 +599,16 @@ private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabi
 
             Text(
                 text = if (capabilities != null && capabilities.avfUnavailableReasons.isNotEmpty()) {
-                    capabilities.avfUnavailableReasons.firstOrNull()?.displayText ?: "AVF 不可用"
+                    val reason = capabilities.avfUnavailableReasons.firstOrNull()
+                    when (reason) {
+                        AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "系统版本过低，需要 Android 13+"
+                        AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "设备不支持 Android 虚拟化框架 (AVF)"
+                        AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "AVF 框架初始化失败，可能缺少系统权限"
+                        AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "设备不支持受保护虚拟机 (pKVM)"
+                        AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "设备不支持 Vsock 通信"
+                        AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "未知原因"
+                        null -> "AVF 不可用"
+                    }
                 } else {
                     "此设备不支持 Android 虚拟化框架"
                 },

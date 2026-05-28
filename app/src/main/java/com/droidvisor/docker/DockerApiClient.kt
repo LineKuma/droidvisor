@@ -139,7 +139,7 @@ data class CreateContainerRequest(
         Cmd = command?.split(" ")?.filter { it.isNotEmpty() },
         HostConfig = ports?.let { HostConfigRequest(PortBindings = it.mapValues { (_, hostPort) ->
             listOf(PortBindingRequest(HostPort = hostPort.toString()))
-        }) }
+        }.mapKeys { (port, _) -> port.toString() }) }
     )
 }
 
