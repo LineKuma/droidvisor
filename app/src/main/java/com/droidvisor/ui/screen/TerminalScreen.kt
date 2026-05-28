@@ -57,6 +57,7 @@ private const val MAX_FONT_SIZE = 24
 private const val DEFAULT_FONT_SIZE = 14
 private const val FONT_SIZE_STEP = 2
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalScreen(
     consoleOutputService: ConsoleOutputService?,
@@ -215,6 +216,7 @@ fun TerminalScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalToolbar(
     onClear: () -> Unit,

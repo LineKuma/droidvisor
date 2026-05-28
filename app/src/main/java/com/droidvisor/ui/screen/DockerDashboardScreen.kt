@@ -3,7 +3,7 @@ package com.droidvisor.ui.screen
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -939,10 +939,8 @@ fun ContainerLogsDialog(containerId: String, viewModel: DockerDashboardViewModel
                         }
                         IconButton(onClick = {
                             val exportedLogs = viewModel.exportLogs()
-                            android.content.ClipboardManager().let { clipboard ->
-                                val clip = android.content.ClipData.newPlainText("Docker Logs", exportedLogs)
-                                clipboard.setPrimaryClip(clip)
-                            }
+                            val clipboardManager = LocalClipboardManager.current
+                            clipboardManager.setText(exportedLogs)
                         }) {
                             Icon(Icons.Default.FileDownload, contentDescription = "导出")
                         }

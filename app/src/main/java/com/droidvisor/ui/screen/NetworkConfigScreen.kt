@@ -25,6 +25,7 @@ import java.util.UUID
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NetworkConfigScreen(
     vmId: String,

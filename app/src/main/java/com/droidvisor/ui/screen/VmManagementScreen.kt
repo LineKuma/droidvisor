@@ -75,6 +75,7 @@ import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService: BackupManagerService?) {
     val vmInstances by vmManagerService?.vmInstances?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
