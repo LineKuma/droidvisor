@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.TextDecrease
 import androidx.compose.material.icons.filled.TextIncrease
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -57,7 +58,8 @@ private const val MAX_FONT_SIZE = 24
 private const val DEFAULT_FONT_SIZE = 14
 private const val FONT_SIZE_STEP = 2
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Suppress("OPT_IN_MARKER")
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalScreen(
     consoleOutputService: ConsoleOutputService?,
@@ -216,7 +218,8 @@ fun TerminalScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Suppress("OPT_IN_MARKER")
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalToolbar(
     onClear: () -> Unit,

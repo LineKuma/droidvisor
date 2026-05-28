@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,6 +74,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -296,11 +298,12 @@ fun StatCard(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(CircleShape)
-                        .background(color.copy(alpha = 0.2f)),
+                        .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+                    Surface(color = color.copy(alpha = 0.2f), modifier = Modifier.size(40.dp)) {
+                        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+                    }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -401,12 +404,7 @@ fun RunningContainerItem(container: Container) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(Color.Green)
-            )
+            Surface(color = Color.Green, modifier = Modifier.size(8.dp), shape = CircleShape) {}
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(container.name, fontWeight = FontWeight.Medium)
@@ -937,10 +935,10 @@ fun ContainerLogsDialog(containerId: String, viewModel: DockerDashboardViewModel
                         IconButton(onClick = { showFilterInput = !showFilterInput }) {
                             Icon(Icons.Default.FilterList, contentDescription = "过滤")
                         }
+                        val clipboardManager = LocalClipboardManager.current
                         IconButton(onClick = {
                             val exportedLogs = viewModel.exportLogs()
-                            val clipboardManager = LocalClipboardManager.current
-                            clipboardManager.setText(exportedLogs)
+                            clipboardManager.setText(AnnotatedString(exportedLogs))
                         }) {
                             Icon(Icons.Default.FileDownload, contentDescription = "导出")
                         }
