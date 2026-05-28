@@ -8,6 +8,8 @@ import android.util.Log
 import com.droidvisor.docker.model.Container
 import com.droidvisor.docker.model.Image
 import com.droidvisor.vm.vsock.VsockService
+import com.droidvisor.vm.vsock.isConnected
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

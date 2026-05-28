@@ -536,7 +536,7 @@ class DockerDashboardViewModel : ViewModel() {
         return buildString {
             appendLine("Docker Container Logs - Export")
             appendLine("Exported at: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date())}")
-            appendLine("="".padEnd(50, '='))
+            appendLine("=".padEnd(50, '='))
             logs.forEach { log ->
                 val prefix = if (log.isError) "[ERROR]" else "[INFO]"
                 appendLine("${log.timestamp} $prefix ${log.message}")
