@@ -230,8 +230,9 @@ fun DroidvisorApp(
             }
         }
 
+        val context = LocalContext.current
         val settingsViewModel: SettingsViewModel = viewModel {
-            SettingsViewModel(LocalContext.current.dataStore)
+            SettingsViewModel(context.dataStore)
         }
 
         val navItems = listOf(
