@@ -165,7 +165,7 @@ run_unit_tests() {
     cd "${PROJECT_ROOT}"
 
     docker exec droidvisor-android-test \
-        gradlew testDebugUnitTest \
+        /workspace/gradlew testDebugUnitTest \
         --no-daemon \
         --info 2>&1 | tee -a "${BUILD_LOG}"
 
@@ -187,7 +187,7 @@ run_integration_tests() {
     cd "${PROJECT_ROOT}"
 
     docker exec droidvisor-android-test \
-        gradlew testDebugUnitTest \
+        /workspace/gradlew testDebugUnitTest \
         --tests "*IntegrationTest" \
         --no-daemon \
         --info 2>&1 | tee -a "${BUILD_LOG}"
