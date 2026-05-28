@@ -44,6 +44,9 @@ RUN chmod +x /workspace/gradlew
 # 设置环境变量
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
+# 清理可能的损坏缓存
+RUN rm -rf /root/.gradle /workspace/.gradle 2>/dev/null || true
+
 # 复制项目源码（测试时挂载）
 COPY app /workspace/app
 COPY build.gradle /workspace/build.gradle
