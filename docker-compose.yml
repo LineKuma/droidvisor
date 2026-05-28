@@ -9,17 +9,8 @@ services:
       dockerfile: Dockerfile
     container_name: droidvisor-android-test
     volumes:
-      # 挂载项目源码目录（只读）
-      - ./app:/workspace/app:ro
-      # 挂载项目根目录（只读）
-      - ./build.gradle:/workspace/build.gradle:ro
-      - ./settings.gradle:/workspace/settings.gradle:ro
-      - ./gradle:/workspace/gradle:ro
-      - ./gradlew:/workspace/gradlew:ro
-      - ./gradle.properties:/workspace/gradle.properties:ro
-      # 挂载测试报告目录（读写）
-      - ./app/build/reports/tests:/workspace/app/build/reports/tests
-      - ./app/build/test-results:/workspace/app/build/test-results
+      # 挂载项目目录（读写，以便测试运行）
+      - .:/workspace
     working_dir: /workspace
     environment:
       - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
