@@ -138,6 +138,83 @@ com.droidvisor/
     └── vsock/               # Vsock 通信
 ```
 
+## Docker Testing
+
+项目支持通过 Docker 容器运行测试，确保测试环境一致性和可移植性。
+
+### 环境要求
+
+- Docker 24+
+- Docker Compose 2.0+
+
+### 快速开始
+
+```bash
+# 启动测试环境（包含 Android SDK 测试环境和 Docker-in-Docker 服务）
+docker-compose up --build
+
+# 在后台运行
+docker-compose up --build -d
+```
+
+### 运行测试
+
+测试脚本位于 `scripts/test-docker.sh`，支持以下运行模式：
+
+```bash
+# 运行所有测试（单元测试 + 集成测试）
+./scripts/test-docker.sh
+
+# 仅运行单元测试
+./scripts/test-docker.sh --unit-only
+
+# 仅运行集成测试
+./scripts/test-docker.sh --integration-only
+
+# 查看帮助
+./scripts/test-docker.sh --help
+```
+
+### 手动运行测试
+
+在 Docker 环境中手动运行测试：
+
+```bash
+# 进入测试容器
+docker-compose exec android-test bash
+
+# 运行单元测试
+./gradlew testDebugUnitTest
+
+# 运行集成测试
+./gradlew testDebugUnitTest --tests "*IntegrationTest*"
+```
+
+### 测试报告
+
+测试报告生成在以下位置：
+
+| 类型 | 路径 |
+|------|------|
+| 测试报告（HTML） | `app/build/reports/tests/testDebugUnitTest/index.html` |
+| 测试结果（XML） | `app/build/test-results/testDebugUnitTest/` |
+| 日志文件 | `app/build/output/logs/` |
+
+通过 Docker Compose 运行时，报告目录挂载到宿主机 `app/build/` 目录下，可直接在宿主机访问。
+
+### 清理环境
+
+```bash
+# 停止并移除容器
+docker-compose down
+
+# 移除测试数据（包括报告）
+docker-compose down -v
+
+# 清理未使用的 Docker 资源
+docker system prune -f
+```
+
 ## 许可证
 
 AGPL-3.0
