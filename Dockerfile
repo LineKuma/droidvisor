@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     openjdk-17-jdk \
+    ca-certificates \
+    ca-certificates-java \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 下载并安装 Android SDK command line tools
