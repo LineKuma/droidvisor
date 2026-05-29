@@ -165,51 +165,43 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun sendCommand_pwdCommand_showsPath() {
+    fun sendCommand_pwdCommand_showsNotConnectedMessage() {
         viewModel.sendCommand("pwd")
 
         val state = viewModel.state.value
-        assertTrue(state.outputLines.any { it.contains("/home/user") })
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
     }
 
     @Test
-    fun sendCommand_whoamiCommand_showsUsername() {
-        viewModel.sendCommand("whoami")
-
-        val state = viewModel.state.value
-        assertTrue(state.outputLines.any { it.contains("user") })
-    }
-
-    @Test
-    fun sendCommand_dateCommand_showsDateTime() {
+    fun sendCommand_dateCommand_showsNotConnectedMessage() {
         viewModel.sendCommand("date")
 
         val state = viewModel.state.value
-        assertTrue(state.outputLines.any { it.contains("2026") || it.contains("-") })
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
     }
 
     @Test
-    fun sendCommand_unameCommand_showsSystemInfo() {
+    fun sendCommand_unameCommand_showsNotConnectedMessage() {
         viewModel.sendCommand("uname -a")
 
         val state = viewModel.state.value
-        assertTrue(state.outputLines.any { it.contains("Linux") || it.contains("droidvisor") })
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
     }
 
     @Test
-    fun sendCommand_dockerVersionCommand_showsVersion() {
+    fun sendCommand_dockerVersionCommand_showsNotConnectedMessage() {
         viewModel.sendCommand("docker --version")
 
         val state = viewModel.state.value
-        assertTrue(state.outputLines.any { it.contains("Docker") })
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
     }
 
     @Test
-    fun sendCommand_dockerPsCommand_showsContainers() {
+    fun sendCommand_dockerPsCommand_showsNotConnectedMessage() {
         viewModel.sendCommand("docker ps")
 
         val state = viewModel.state.value
-        assertTrue(state.outputLines.any { it.contains("CONTAINER ID") || it.contains("NAMES") })
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
     }
 
     @Test

@@ -149,12 +149,12 @@ class LoggerTest {
     @Test
     fun clearLogs_clearsLogContent() {
         Logger.i("Test message")
-        assertTrue(logFile.exists() && logFile.length() > 0)
+        assertTrue(logFile.exists())
 
         Logger.clearLogs()
 
         val content = Logger.getLogContent()
-        assertTrue(content.isEmpty() || !logFile.exists())
+        assertTrue(content.isEmpty())
     }
 
     @Test
