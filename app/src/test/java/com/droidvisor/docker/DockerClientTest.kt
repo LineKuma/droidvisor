@@ -11,24 +11,22 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
-import org.mockito.junit.MockitoJUnitRunner
 
-@RunWith(MockitoJUnitRunner::class)
 class DockerClientTest {
 
-    @Mock
     private lateinit var mockHttpClient: DockerHttpClient
 
     private lateinit var dockerClient: DockerApiClient
 
     @Before
     fun setup() {
+        mockHttpClient = mock(DockerHttpClient::class.java)
         dockerClient = DockerApiClient(mockHttpClient)
     }
 

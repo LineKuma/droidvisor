@@ -213,7 +213,7 @@ class ImageTest {
             Size = 50000000L
         )
 
-        val jsonString = json.encodeToString(Image.serializer(), image)
+        val jsonString = json.encodeToString(image)
         assertTrue(jsonString.contains("\"Id\":\"sha256:test123\""))
         assertTrue(jsonString.contains("\"RepoTags\":[\"test:1.0\"]"))
     }
@@ -230,7 +230,7 @@ class ImageTest {
             }
         """.trimIndent()
 
-        val image = json.decodeFromString(Image.serializer(), jsonString)
+        val image = json.decodeFromString<Image>(jsonString)
         assertEquals("sha256:newimage", image.Id)
         assertEquals("custom:2.0", image.RepoTags[0])
         assertEquals(1716000000L, image.Created)
