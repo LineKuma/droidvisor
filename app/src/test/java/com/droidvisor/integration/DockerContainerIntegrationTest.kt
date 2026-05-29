@@ -54,9 +54,9 @@ class DockerContainerIntegrationTest {
     @Test
     fun testContainerStatusQuery() {
         val containers = listOf(
-            createTestContainer("container-1", "nginx", "running"),
-            createTestContainer("container-2", "redis", "exited"),
-            createTestContainer("container-3", "postgres", "paused")
+            createTestContainer("container-1", "nginx", "running", image = "nginx"),
+            createTestContainer("container-2", "redis", "exited", image = "redis"),
+            createTestContainer("container-3", "postgres", "paused", image = "postgres")
         )
         containerList.value = containers
 

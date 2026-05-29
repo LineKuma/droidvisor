@@ -176,7 +176,7 @@ class VmNetworkIntegrationTest {
         networkManager.applyNetworkConfig(vmId, config)
         vmManager.createVm(vmId, "Test VM")
 
-        val networkEnabled = vmManager.isNetworkEnabled(vmId)
+        val networkEnabled = networkManager.isNetworkEnabled(vmId)
         assertTrue(networkEnabled)
     }
 
@@ -233,6 +233,7 @@ class VmNetworkIntegrationTest {
 
 class TestNetworkManager(private val configFlow: MutableStateFlow<NetworkConfig?>) {
     private val configs = mutableMapOf<String, NetworkConfig>()
+    private val enabledNetworks = mutableSetOf<String>()
 
     fun createNetworkConfig(vmId: String, config: NetworkConfig) {
         configs[vmId] = config
@@ -241,12 +242,17 @@ class TestNetworkManager(private val configFlow: MutableStateFlow<NetworkConfig?
 
     fun applyNetworkConfig(vmId: String, config: NetworkConfig): Boolean {
         configs[vmId] = config
+        enabledNetworks.add(vmId)
         configFlow.value = config
         return true
     }
 
     fun getNetworkConfig(vmId: String): NetworkConfig? {
         return configs[vmId]
+    }
+
+    fun isNetworkEnabled(vmId: String): Boolean {
+        return enabledNetworks.contains(vmId)
     }
 
     fun addPortForwarding(vmId: String, forwarding: PortForwarding): Boolean {

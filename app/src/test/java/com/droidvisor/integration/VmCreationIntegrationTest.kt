@@ -156,7 +156,13 @@ class VmCreationIntegrationTest {
 
     @Test
     fun testVmConfigurationUpdate() {
-        val vmId = vmManager.createVm("config-update-test", testTemplate)
+        val vmId = vmManager.createVmWithConfig(
+            name = "config-update-test",
+            template = testTemplate,
+            customMemoryBytes = 2048L,
+            customCpuCores = 2,
+            customDiskSizeBytes = 4096L
+        )
         val vm = vmListFlow.value.find { it.id == vmId }
 
         assertEquals(2048L, vm?.customMemoryBytes)

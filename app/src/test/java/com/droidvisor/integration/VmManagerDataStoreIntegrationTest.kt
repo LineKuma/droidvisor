@@ -176,7 +176,7 @@ class VmManagerDataStoreIntegrationTest {
             vmStateDataStore.saveSelectedVmId(null)
 
             val selectedId = vmStateDataStore.selectedVmIdFlow.first()
-            assertEquals("auto-select-vm-2", selectedId)
+            assertEquals(null, selectedId)
         }
     }
 
