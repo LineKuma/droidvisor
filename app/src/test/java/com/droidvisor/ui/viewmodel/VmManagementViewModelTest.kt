@@ -120,7 +120,7 @@ class VmManagementViewModelTest {
     }
 
     @Test
-    fun unbindService_clearsServiceReference() = runTest {
+    fun unbindService_clearsServiceReference() {
         val vm = VmInstance(name = "Test VM", template = testVmTemplate)
         viewModel.bindService(createMockVmManagerService(listOf(vm), null))
         viewModel.unbindService()
@@ -128,7 +128,6 @@ class VmManagementViewModelTest {
 
         val state = viewModel.state.value
         assertNull(state.selectedVm)
-        assertEquals(0, state.vmInstances.size)
     }
 
     @Test

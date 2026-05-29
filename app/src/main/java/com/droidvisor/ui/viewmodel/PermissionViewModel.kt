@@ -38,8 +38,8 @@ data class PermissionState(
 
     val avfWarnings: List<String>
         get() = buildList {
-            if (!protectedVmSupported && avfSupported) add("受保护虚拟机 (pKVM) 不可用")
-            if (!vsockSupported && avfSupported) add("Vsock 通信不可用")
+            if (!protectedVmSupported) add("受保护虚拟机 (pKVM) 不可用")
+            if (!vsockSupported) add("Vsock 通信不可用")
         }
 
     val avfUnavailableSuggestions: List<String>
