@@ -18,6 +18,9 @@ class DockerHttpClient(private val vsockService: VsockService) {
     private var baseUrl: String = "http://localhost:2375"
     private var useVsock: Boolean = false
 
+    val isVsockEnabled: Boolean
+        get() = useVsock
+
     fun setPort(port: Int) {
         baseUrl = "http://localhost:$port"
     }

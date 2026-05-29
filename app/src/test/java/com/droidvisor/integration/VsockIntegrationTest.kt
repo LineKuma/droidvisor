@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.Mockito.`when`
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.Mockito.`when`
 
@@ -31,6 +32,7 @@ class VsockIntegrationTest {
         connectionStateFlow = MutableStateFlow(VsockConnectionState.DISCONNECTED)
         errorFlow = MutableStateFlow(null)
         reconnectingFlow = MutableStateFlow(false)
+        `when`(mockVsockService.isConnected()).thenReturn(false)
     }
 
     @Test
@@ -42,6 +44,7 @@ class VsockIntegrationTest {
 
     @Test
     fun testVsockConnectionToDocker() {
+        `when`(mockVsockService.isConnected()).thenReturn(true)
         connectionStateFlow.value = VsockConnectionState.CONNECTED
 
         `when`(mockVsockService.isConnected()).thenReturn(true)
@@ -52,15 +55,18 @@ class VsockIntegrationTest {
 
     @Test
     fun testVsockDisconnection() {
+        `when`(mockVsockService.isConnected()).thenReturn(true)
         connectionStateFlow.value = VsockConnectionState.CONNECTED
         assertTrue(connectionStateFlow.value.isConnected())
 
+        `when`(mockVsockService.isConnected()).thenReturn(false)
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
         assertFalse(connectionStateFlow.value.isConnected())
     }
 
     @Test
     fun testVsockReconnectionFlow() {
+        `when`(mockVsockService.isConnected()).thenReturn(false)
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
         reconnectingFlow.value = true
 
@@ -73,6 +79,7 @@ class VsockIntegrationTest {
 
     @Test
     fun testVsockErrorHandling() {
+        `when`(mockVsockService.isConnected()).thenReturn(true)
         connectionStateFlow.value = VsockConnectionState.CONNECTED
         val error = VsockError.ConnectionError("Connection refused")
         errorFlow.value = error
@@ -80,6 +87,7 @@ class VsockIntegrationTest {
         assertNotNull(errorFlow.value)
         assertTrue(errorFlow.value is VsockError.ConnectionError)
 
+        `when`(mockVsockService.isConnected()).thenReturn(false)
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
         assertFalse(connectionStateFlow.value.isConnected())
     }

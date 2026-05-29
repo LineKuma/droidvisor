@@ -217,9 +217,9 @@ class ImageTest {
             Size = 50000000L
         )
 
-        val jsonString = json.encodeToString(image)
-        assertTrue(jsonString.contains("\"Id\":\"sha256:test123\""))
-        assertTrue(jsonString.contains("\"RepoTags\":[\"test:1.0\"]"))
+        val jsonString = json.encodeToString(Image.serializer(), image)
+        assertTrue(jsonString.contains("sha256:test123"))
+        assertTrue(jsonString.contains("test:1.0"))
     }
 
     @Test

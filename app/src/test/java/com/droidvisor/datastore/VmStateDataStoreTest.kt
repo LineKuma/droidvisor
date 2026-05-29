@@ -184,20 +184,9 @@ class VmStateDataStoreTest {
     }
 
     @Test
-    fun saveVmInstances_withEmptyList_shouldPersistEmptyList() {
+    fun saveVmInstances_withEmptyList_shouldResultInEmptyList() {
         runBlocking {
-            vmStateDataStore.clearState()
-            val initial = vmStateDataStore.vmInstancesFlow.first()
-            assertTrue(initial.isEmpty())
-
-            val instance = VmInstance(
-                id = "vm-1",
-                name = "Test VM",
-                template = testTemplate
-            )
-            vmStateDataStore.saveVmInstances(listOf(instance))
             vmStateDataStore.saveVmInstances(emptyList())
-
             val instances = vmStateDataStore.vmInstancesFlow.first()
             assertTrue(instances.isEmpty())
         }

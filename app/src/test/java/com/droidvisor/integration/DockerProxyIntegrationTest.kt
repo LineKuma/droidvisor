@@ -13,6 +13,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.Mockito.`when`
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.Mockito.`when`
 
@@ -35,6 +36,7 @@ class DockerProxyIntegrationTest {
         daemonHealthyFlow = MutableStateFlow(false)
         reconnectingFlow = MutableStateFlow(false)
         dockerVersionFlow = MutableStateFlow(null)
+        `when`(mockVsockService.isConnected()).thenReturn(false)
     }
 
     @Test
@@ -47,6 +49,7 @@ class DockerProxyIntegrationTest {
 
     @Test
     fun testDockerConnectionStateIntegration() {
+        `when`(mockVsockService.isConnected()).thenReturn(true)
         connectionStateFlow.value = VsockConnectionState.CONNECTED
         daemonHealthyFlow.value = true
         dockerVersionFlow.value = "25.0.0"
@@ -60,9 +63,11 @@ class DockerProxyIntegrationTest {
 
     @Test
     fun testDockerDisconnectionIntegration() {
+        `when`(mockVsockService.isConnected()).thenReturn(true)
         connectionStateFlow.value = VsockConnectionState.CONNECTED
         daemonHealthyFlow.value = true
 
+        `when`(mockVsockService.isConnected()).thenReturn(false)
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
         daemonHealthyFlow.value = false
 
