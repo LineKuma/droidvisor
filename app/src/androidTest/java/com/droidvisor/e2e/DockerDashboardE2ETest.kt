@@ -1,10 +1,12 @@
 package com.droidvisor.e2e
 
-import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.createAndroidComposeRule
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.waitForIdle
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.droidvisor.MainActivity
 import org.junit.Rule
@@ -13,9 +15,7 @@ import org.junit.Test
 class DockerDashboardE2ETest {
 
     @get:Rule
-    val composeTestRule = AndroidComposeTestRule<MainActivity>(
-        ActivityScenarioRule(MainActivity::class.java)
-    )
+    val composeTestRule = createAndroidComposeRule<MainActivity>()
 
     @Test
     fun dockerDashboard_containerAndImageManagement() {

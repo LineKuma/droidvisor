@@ -1,6 +1,6 @@
 package com.droidvisor.e2e
 
-import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -16,9 +16,7 @@ import org.junit.Test
 class VmLifecycleTest {
 
     @get:Rule
-    val composeTestRule = AndroidComposeTestRule<MainActivity>(
-        ActivityScenarioRule(MainActivity::class.java)
-    )
+    val composeTestRule = createAndroidComposeRule<MainActivity>()
 
     @Test
     fun vmLifecycle_createStartStopDelete() {

@@ -304,6 +304,140 @@ class VmConfigValidatorTest {
 
         assertTrue(result.isValid)
     }
+
+    @Test
+    fun validate_memoryBytes_withZero_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = 0L,
+            cpuCores = 2
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+        assertTrue(result.errorMessage!!.contains("Memory"))
+    }
+
+    @Test
+    fun validate_memoryBytes_withNegative_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = -1L,
+            cpuCores = 2
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+        assertTrue(result.errorMessage!!.contains("Memory"))
+    }
+
+    @Test
+    fun validate_memoryBytes_withOverflow_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = Long.MAX_VALUE,
+            cpuCores = 2
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+    }
+
+    @Test
+    fun validate_cpuCores_withZero_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = 2L * 1024 * 1024 * 1024,
+            cpuCores = 0
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+        assertTrue(result.errorMessage!!.contains("CPU"))
+    }
+
+    @Test
+    fun validate_cpuCores_withNegative_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = 2L * 1024 * 1024 * 1024,
+            cpuCores = -1
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+        assertTrue(result.errorMessage!!.contains("CPU"))
+    }
+
+    @Test
+    fun validate_cpuCores_withOverflow_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = 2L * 1024 * 1024 * 1024,
+            cpuCores = Int.MAX_VALUE
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+    }
+
+    @Test
+    fun validate_cpuCores_withNegativeOverflow_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = 2L * 1024 * 1024 * 1024,
+            cpuCores = Integer.MIN_VALUE
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+    }
+
+    @Test
+    fun validate_memoryBytes_withJustBelowMinimum_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = 512L * 1024 * 1024 - 1,
+            cpuCores = 2
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+    }
+
+    @Test
+    fun validate_cpuCores_withJustBelowMinimum_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = 2L * 1024 * 1024 * 1024,
+            cpuCores = 1 - 1
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+    }
+
+    @Test
+    fun validate_memoryBytes_withLongMaxMinusOne_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = Long.MAX_VALUE - 1,
+            cpuCores = 2
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+    }
 }
 
 class VmConfigValidator {
