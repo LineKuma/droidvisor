@@ -23,12 +23,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.lenient
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.junit.jupiter.MockitoSettings
-import org.mockito.quality.Strictness
+import org.mockito.`when`
 
 @RunWith(MockitoJUnitRunner::class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class DockerProxyIntegrationTest {
 
     @Mock
@@ -48,8 +47,8 @@ class DockerProxyIntegrationTest {
         reconnectingFlow = MutableStateFlow(false)
         dockerVersionFlow = MutableStateFlow(null)
 
-        `when`(mockVsockService.connectionState).thenReturn(connectionStateFlow.asStateFlow())
-        `when`(mockVsockService.isConnected()).thenAnswer { connectionStateFlow.value.isConnected() }
+        lenient().`when`(mockVsockService.connectionState).thenReturn(connectionStateFlow.asStateFlow())
+        lenient().`when`(mockVsockService.isConnected()).thenAnswer { connectionStateFlow.value.isConnected() }
     }
 
     @Test
