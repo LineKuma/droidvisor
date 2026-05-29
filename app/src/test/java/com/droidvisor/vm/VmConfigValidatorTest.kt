@@ -145,6 +145,7 @@ class VmConfigValidatorTest {
         val config = VmConfig(
             memoryBytes = 2L * 1024 * 1024 * 1024,
             cpuCores = 2,
+            diskSizeBytes = 256L * 1024 * 1024,
             diskPath = "/data/vm/small.img"
         )
 
@@ -160,6 +161,7 @@ class VmConfigValidatorTest {
         val config = VmConfig(
             memoryBytes = 2L * 1024 * 1024 * 1024,
             cpuCores = 2,
+            diskSizeBytes = 300L * 1024 * 1024 * 1024,
             diskPath = "/data/vm/huge.img"
         )
 
