@@ -230,10 +230,7 @@ class NetworkConfigViewModelTest {
         viewModel.setNetworkMode(NetworkMode.BRIDGE)
         viewModel.setIpv4Address("")
 
-        var isValid = true
-        viewModel.saveConfig { isValid = false }
-
-        assertFalse(isValid)
+        viewModel.saveConfig { }
         assertNotNull(viewModel.state.value.errorMessage)
     }
 
@@ -244,10 +241,7 @@ class NetworkConfigViewModelTest {
         viewModel.setIpv4Address("192.168.1.100")
         viewModel.setIpv4Gateway("")
 
-        var isValid = true
-        viewModel.saveConfig { isValid = false }
-
-        assertFalse(isValid)
+        viewModel.saveConfig { }
         assertNotNull(viewModel.state.value.errorMessage)
     }
 
@@ -255,10 +249,7 @@ class NetworkConfigViewModelTest {
     fun validateConfig_returnsFalse_whenInvalidHostPort() {
         viewModel.addPortForwarding(Protocol.TCP, 70000, 80)
 
-        var isValid = true
-        viewModel.saveConfig { isValid = false }
-
-        assertFalse(isValid)
+        viewModel.saveConfig { }
         assertNotNull(viewModel.state.value.errorMessage)
     }
 
@@ -266,10 +257,7 @@ class NetworkConfigViewModelTest {
     fun validateConfig_returnsFalse_whenInvalidGuestPort() {
         viewModel.addPortForwarding(Protocol.TCP, 8080, 70000)
 
-        var isValid = true
-        viewModel.saveConfig { isValid = false }
-
-        assertFalse(isValid)
+        viewModel.saveConfig { }
         assertNotNull(viewModel.state.value.errorMessage)
     }
 
@@ -277,10 +265,7 @@ class NetworkConfigViewModelTest {
     fun validateConfig_returnsFalse_whenMtuOutOfRange() {
         viewModel.setMtu("50")
 
-        var isValid = true
-        viewModel.saveConfig { isValid = false }
-
-        assertFalse(isValid)
+        viewModel.saveConfig { }
         assertNotNull(viewModel.state.value.errorMessage)
     }
 

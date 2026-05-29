@@ -9,11 +9,11 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -193,9 +193,7 @@ class VmStateDataStoreTest {
                 template = testTemplate
             )
             vmStateDataStore.saveVmInstances(listOf(instance))
-            delay(100)
             vmStateDataStore.saveVmInstances(emptyList())
-            delay(100)
 
             val instances = vmStateDataStore.vmInstancesFlow.first()
             assertTrue(instances.isEmpty())

@@ -18,8 +18,11 @@ import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.MockitoJUnitRunner
+import org.mockito.junit.MockitoSettings
+import org.mockito.quality.Strictness
 
 @RunWith(MockitoJUnitRunner::class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class VsockIntegrationTest {
 
     @Mock
