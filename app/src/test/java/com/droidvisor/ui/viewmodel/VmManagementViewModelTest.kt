@@ -124,7 +124,7 @@ class VmManagementViewModelTest {
 
         val state = viewModel.state.value
         assertNull(state.selectedVm)
-        assertTrue(state.vmInstances.isEmpty())
+        assertEquals(0, state.vmInstances.size)
     }
 
     @Test

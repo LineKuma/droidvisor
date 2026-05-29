@@ -2,6 +2,9 @@ package com.droidvisor.vm
 
 import android.content.Context
 import android.os.Binder
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -213,7 +216,7 @@ class BackupManagerServiceTest {
     @Test
     fun backups_exposesStateFlow() {
         assertNotNull(service.backups)
-        assertTrue(service.backups.isEmpty())
+        assertTrue(service.backups.value.isEmpty())
 
         service.createBackup(
             vmId = "vm-123",
@@ -222,7 +225,7 @@ class BackupManagerServiceTest {
             type = com.droidvisor.vm.model.BackupType.FULL
         )
 
-        assertEquals(1, service.backups.size)
+        assertEquals(1, service.backups.value.size)
     }
 
     @Test
@@ -233,8 +236,10 @@ class BackupManagerServiceTest {
 
 class TestableBackupManagerService {
     private val _backups = java.util.concurrent.ConcurrentHashMap<String, com.droidvisor.vm.model.Backup>()
-    val backups: List<com.droidvisor.vm.model.Backup>
-        get() = _backups.values.toList()
+    private val _backupsFlow = MutableStateFlow<List<com.droidvisor.vm.model.Backup>>(emptyList())
+    val backups: StateFlow<List<com.droidvisor.vm.model.Backup>>
+        get() = _backupsFlow.asStateFlow()
+
     val lastError = java.util.concurrent.atomic.AtomicReference<String?>()
     val isCreatingBackup = java.util.concurrent.atomic.AtomicBoolean(false)
 
@@ -274,6 +279,7 @@ class TestableBackupManagerService {
         )
 
         _backups[backupId] = backup
+        _backupsFlow.value = _backups.values.toList()
         return BackupResult.Success(backup)
     }
 
@@ -307,6 +313,7 @@ class TestableBackupManagerService {
             return BackupResult.Error("Backup not found")
         }
         _backups.remove(backupId)
+        _backupsFlow.value = _backups.values.toList()
         return BackupResult.Success(backup)
     }
 
