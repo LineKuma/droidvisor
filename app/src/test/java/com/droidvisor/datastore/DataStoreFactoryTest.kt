@@ -19,7 +19,7 @@ class DataStoreFactoryTest {
         val context = mockContext
         `when`(context.dataStore).thenReturn(mock(DataStore::class.java))
 
-        val dataStore: DataStore<Preferences> = context.dataStore
+        val dataStore: DataStore<*> = context.dataStore
         assertNotNull(dataStore)
     }
 

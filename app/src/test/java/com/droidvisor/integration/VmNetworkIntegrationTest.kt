@@ -196,7 +196,7 @@ class VmNetworkIntegrationTest {
     }
 
     @Test
-    fun host networkMode_disablesNetworkIsolation() {
+    fun hostNetworkMode_disablesNetworkIsolation() {
         val vmId = "vm-host-mode"
         val config = NetworkConfig(vmId = vmId, mode = NetworkMode.HOST)
 

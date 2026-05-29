@@ -27,8 +27,9 @@ class VmManagementViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private val testVmTemplate = VmTemplate(
-        id = "template-1",
+        type = com.droidvisor.vm.model.VmTemplateType.CUSTOM,
         name = "Test Template",
+        description = "Test template for unit tests",
         memoryBytes = 2048L * 1024 * 1024,
         cpuCores = 2,
         diskSizeBytes = 10L * 1024 * 1024 * 1024,

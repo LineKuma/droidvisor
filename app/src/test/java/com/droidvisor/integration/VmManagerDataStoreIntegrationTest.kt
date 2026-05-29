@@ -26,6 +26,7 @@ class VmManagerDataStoreIntegrationTest {
     private lateinit var vmStateDataStore: VmStateDataStore
 
     private val testTemplate = VmTemplate(
+        type = com.droidvisor.vm.model.VmTemplateType.CUSTOM,
         name = "integration-test-template",
         payloadBinaryName = "test_payload.bin",
         memoryBytes = 2048L,

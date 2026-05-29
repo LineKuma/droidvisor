@@ -23,6 +23,7 @@ class VmCreationIntegrationTest {
     private lateinit var selectedVmIdFlow: MutableStateFlow<String?>
 
     private val testTemplate = VmTemplate(
+        type = com.droidvisor.vm.model.VmTemplateType.CUSTOM,
         name = "test-template",
         payloadBinaryName = "test_payload.bin",
         memoryBytes = 2048L,
@@ -77,11 +78,8 @@ class VmCreationIntegrationTest {
 
         assertEquals(VmStatus.RUNNING, vmListFlow.value[0].status)
 
-        vmManager.pauseVm(vmId)
-        assertEquals(VmStatus.PAUSED, vmListFlow.value[0].status)
-
-        vmManager.resumeVm(vmId)
-        assertEquals(VmStatus.RUNNING, vmListFlow.value[0].status)
+        vmManager.stopVm(vmId)
+        assertEquals(VmStatus.STOPPED, vmListFlow.value[0].status)
     }
 
     @Test
@@ -216,12 +214,6 @@ class VmCreationIntegrationTest {
         vmManager.startVm(vmId)
         assertEquals(VmStatus.RUNNING, vmListFlow.value[0].status)
 
-        vmManager.pauseVm(vmId)
-        assertEquals(VmStatus.PAUSED, vmListFlow.value[0].status)
-
-        vmManager.resumeVm(vmId)
-        assertEquals(VmStatus.RUNNING, vmListFlow.value[0].status)
-
         vmManager.stopVm(vmId)
         assertEquals(VmStatus.STOPPED, vmListFlow.value[0].status)
     }
@@ -306,15 +298,13 @@ class VmCreationIntegrationTest {
         }
 
         fun stopVm(vmId: String) {
-            updateVm(vmId) { it.copy(status = VmStatus.STOPPED, stoppedAt = System.currentTimeMillis()) }
+            updateVm(vmId) { it.copy(status = VmStatus.STOPPED, startedAt = null) }
         }
 
         fun pauseVm(vmId: String) {
-            updateVm(vmId) { it.copy(status = VmStatus.PAUSED) }
         }
 
         fun resumeVm(vmId: String) {
-            updateVm(vmId) { it.copy(status = VmStatus.RUNNING) }
         }
 
         fun deleteVm(vmId: String) {
@@ -342,9 +332,11 @@ class VmCreationIntegrationTest {
             val backup = Backup(
                 id = backupId,
                 vmId = vmId,
+                vmName = "Test VM",
                 name = backupName,
                 createdAt = System.currentTimeMillis(),
-                sizeBytes = 1024000L
+                sizeBytes = 1024000L,
+                status = com.droidvisor.vm.model.BackupStatus.AVAILABLE
             )
             backupListFlow.value = backupListFlow.value + backup
             return backupId

@@ -32,6 +32,7 @@ class VmStateDataStoreTest {
     private lateinit var vmStateDataStore: VmStateDataStore
 
     private val testTemplate = VmTemplate(
+        type = com.droidvisor.vm.model.VmTemplateType.CUSTOM,
         name = "test-template",
         payloadBinaryName = "test.bin",
         memoryBytes = 2048L,

@@ -11,25 +11,25 @@ class DockerApiClient(private val httpClient: DockerHttpClient) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private fun sanitizePath(path: String): String {
+    internal fun sanitizePath(path: String): String {
         return path
             .replace(Regex("[^a-zA-Z0-9/_?=&-]"), "")
             .take(256)
     }
 
-    private fun sanitizeContainerId(containerId: String): String {
+    internal fun sanitizeContainerId(containerId: String): String {
         return containerId
             .replace(Regex("[^a-fA-F0-9]"), "")
             .take(64)
     }
 
-    private fun sanitizeImageName(imageName: String): String {
+    internal fun sanitizeImageName(imageName: String): String {
         return imageName
             .replace(Regex("[^a-zA-Z0-9/_.:-]"), "")
             .take(256)
     }
 
-    private fun sanitizeContainerName(name: String): String {
+    internal fun sanitizeContainerName(name: String): String {
         return name
             .replace(Regex("[^a-zA-Z0-9_.-]"), "")
             .take(64)
