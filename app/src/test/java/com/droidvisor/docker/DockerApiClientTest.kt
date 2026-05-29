@@ -11,10 +11,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.`when`
 import org.mockito.Mockito.anyString
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when` as whenMock
+import org.mockito.Mockito.`when`
 
 class DockerApiClientTest {
 
@@ -138,7 +139,7 @@ class DockerApiClientTest {
 
     @Test
     fun ping_returnsFalseOnError() = runBlocking {
-        `when`(mockHttpClient.get("/_ping")).thenThrow(DockerError.ConnectionError("Connection failed"))
+        doThrow(DockerError.ConnectionError("Connection failed")).`when`(mockHttpClient.get(anyString()))
 
         val result = apiClient.ping()
 

@@ -17,11 +17,15 @@ import kotlinx.serialization.json.Json
 
 private val Context.vmStateDataStore: DataStore<Preferences> by preferencesDataStore(name = "vm_state")
 
-class VmStateDataStore(private val context: Context) {
+class VmStateDataStore(private val context: Context, private val customDataStore: DataStore<Preferences>? = null) {
 
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+    }
+
+    private val dataStore: DataStore<Preferences> by lazy {
+        customDataStore ?: context.vmStateDataStore
     }
 
     companion object {
@@ -29,7 +33,7 @@ class VmStateDataStore(private val context: Context) {
         private val SELECTED_VM_ID_KEY = stringPreferencesKey("selected_vm_id")
     }
 
-    val vmInstancesFlow: Flow<List<VmInstance>> = context.vmStateDataStore.data
+    val vmInstancesFlow: Flow<List<VmInstance>> = dataStore.data
         .map { preferences ->
             val instancesJson = preferences[VM_INSTANCES_KEY]
             if (instancesJson.isNullOrEmpty()) {
@@ -43,20 +47,20 @@ class VmStateDataStore(private val context: Context) {
             }
         }
 
-    val selectedVmIdFlow: Flow<String?> = context.vmStateDataStore.data
+    val selectedVmIdFlow: Flow<String?> = dataStore.data
         .map { preferences ->
             preferences[SELECTED_VM_ID_KEY]
         }
 
     suspend fun saveVmInstances(instances: List<VmInstance>) {
-        context.vmStateDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             val dataList = instances.map { VmInstanceData.fromVmInstance(it) }
             preferences[VM_INSTANCES_KEY] = json.encodeToString(dataList)
         }
     }
 
     suspend fun saveSelectedVmId(vmId: String?) {
-        context.vmStateDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             if (vmId != null) {
                 preferences[SELECTED_VM_ID_KEY] = vmId
             } else {
@@ -66,7 +70,7 @@ class VmStateDataStore(private val context: Context) {
     }
 
     suspend fun clearState() {
-        context.vmStateDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences.remove(VM_INSTANCES_KEY)
             preferences.remove(SELECTED_VM_ID_KEY)
         }

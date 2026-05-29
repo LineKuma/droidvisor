@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.testing.FakeDataStore
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
@@ -22,6 +23,8 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+
+private val Context.testVmStateDataStore: DataStore<Preferences> by preferencesDataStore(name = "test_vm_state")
 
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
@@ -44,7 +47,8 @@ class VmStateDataStoreTest {
     @Before
     fun setup() {
         context = Robolectric.setupActivity(android.app.Activity::class.java)
-        vmStateDataStore = VmStateDataStore(context)
+        dataStore = FakeDataStore()
+        vmStateDataStore = VmStateDataStore(context, dataStore)
     }
 
     @Test
