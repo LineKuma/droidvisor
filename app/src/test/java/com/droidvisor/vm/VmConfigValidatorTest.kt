@@ -47,7 +47,7 @@ class VmConfigValidatorTest {
 
         assertFalse(result.isValid)
         assertNotNull(result.errorMessage)
-        assertTrue(result.errorMessage!!.contains("memory"))
+        assertTrue(result.errorMessage!!.contains("Memory"))
     }
 
     @Test
@@ -61,7 +61,7 @@ class VmConfigValidatorTest {
 
         assertFalse(result.isValid)
         assertNotNull(result.errorMessage)
-        assertTrue(result.errorMessage!!.contains("memory"))
+        assertTrue(result.errorMessage!!.contains("Memory"))
     }
 
     @Test
