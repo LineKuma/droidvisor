@@ -6,11 +6,8 @@ import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -124,7 +121,6 @@ class VmManagementViewModelTest {
         val vm = VmInstance(name = "Test VM", template = testVmTemplate)
         viewModel.bindService(createMockVmManagerService(listOf(vm), null))
         viewModel.unbindService()
-        advanceUntilIdle()
 
         val state = viewModel.state.value
         assertNull(state.selectedVm)
