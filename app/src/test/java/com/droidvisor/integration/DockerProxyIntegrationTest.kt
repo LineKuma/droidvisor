@@ -1,0 +1,121 @@
+package com.droidvisor.integration
+
+import com.droidvisor.docker.DockerApiClient
+import com.droidvisor.docker.DockerError
+import com.droidvisor.docker.DockerHttpClient
+import com.droidvisor.docker.DockerProxyService
+import com.droidvisor.docker.model.Container
+import com.droidvisor.docker.model.DockerInfo
+import com.droidvisor.docker.model.Image
+import com.droidvisor.vm.vsock.VsockConnectionState
+import com.droidvisor.vm.vsock.VsockService
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.Mock
+import org.mockito.Mockito.`when`
+import org.mockito.junit.MockitoJUnitRunner
+
+@RunWith(MockitoJUnitRunner::class)
+class DockerProxyIntegrationTest {
+
+    @Mock
+    private lateinit var mockVsockService: VsockService
+
+    private lateinit var connectionStateFlow: MutableStateFlow<VsockConnectionState>
+    private lateinit var isConnectedFlow: MutableStateFlow<Boolean>
+    private lateinit var daemonHealthyFlow: MutableStateFlow<Boolean>
+    private lateinit var reconnectingFlow: MutableStateFlow<Boolean>
+    private lateinit var dockerVersionFlow: MutableStateFlow<String?>
+
+    private lateinit var proxyService: DockerProxyService
+
+    @Before
+    fun setup() {
+        connectionStateFlow = MutableStateFlow(VsockConnectionState.DISCONNECTED)
+        isConnectedFlow = MutableStateFlow(false)
+        daemonHealthyFlow = MutableStateFlow(false)
+        reconnectingFlow = MutableStateFlow(false)
+        dockerVersionFlow = MutableStateFlow(null)
+
+        `when`(mockVsockService.connectionState).thenReturn(connectionStateFlow.asStateFlow())
+        `when`(mockVsockService.isConnected()).thenAnswer { connectionStateFlow.value.isConnected() }
+    }
+
+    @Test
+    fun testDockerProxyServiceInitialState() {
+        assertFalse(isConnectedFlow.value)
+        assertFalse(daemonHealthyFlow.value)
+        assertFalse(reconnectingFlow.value)
+        assertNull(dockerVersionFlow.value)
+    }
+
+    @Test
+    fun testDockerConnectionStateIntegration() {
+        connectionStateFlow.value = VsockConnectionState.CONNECTED
+        isConnectedFlow.value = true
+        daemonHealthyFlow.value = true
+        dockerVersionFlow.value = "25.0.0"
+
+        assertTrue(isConnectedFlow.value)
+        assertTrue(daemonHealthyFlow.value)
+        assertEquals("25.0.0", dockerVersionFlow.value)
+    }
+
+    @Test
+    fun testDockerDisconnectionIntegration() {
+        connectionStateFlow.value = VsockConnectionState.CONNECTED
+        isConnectedFlow.value = true
+        daemonHealthyFlow.value = true
+
+        connectionStateFlow.value = VsockConnectionState.DISCONNECTED
+        isConnectedFlow.value = false
+        daemonHealthyFlow.value = false
+
+        assertFalse(isConnectedFlow.value)
+        assertFalse(daemonHealthyFlow.value)
+    }
+
+    @Test
+    fun testDockerReconnectionFlow() {
+        connectionStateFlow.value = VsockConnectionState.DISCONNECTED
+        isConnectedFlow.value = false
+        reconnectingFlow.value = true
+
+        assertFalse(isConnectedFlow.value)
+        assertTrue(reconnectingFlow.value)
+
+        connectionStateFlow.value = VsockConnectionState.CONNECTING
+        reconnectingFlow.value = false
+
+        assertEquals(VsockConnectionState.CONNECTING, connectionStateFlow.value)
+    }
+
+    @Test
+    fun testDockerErrorRecoveryIntegration() {
+        connectionStateFlow.value = VsockConnectionState.CONNECTED
+        isConnectedFlow.value = true
+        daemonHealthyFlow.value = true
+
+        daemonHealthyFlow.value = false
+        reconnectingFlow.value = true
+
+        assertTrue(isConnectedFlow.value)
+        assertFalse(daemonHealthyFlow.value)
+        assertTrue(reconnectingFlow.value)
+
+        daemonHealthyFlow.value = true
+        reconnectingFlow.value = false
+
+        assertTrue(daemonHealthyFlow.value)
+        assertFalse(reconnectingFlow.value)
+    }
+}
