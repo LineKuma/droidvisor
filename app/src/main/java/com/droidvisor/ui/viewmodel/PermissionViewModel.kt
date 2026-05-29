@@ -31,7 +31,7 @@ data class PermissionState(
     val missingPermissions: List<String>
         get() = buildList {
             if (!hasInternetPermission) add("网络访问")
-            if (!storagePermissionText.isNotEmpty()) add(storagePermissionText)
+            if (storagePermissionText.isNotEmpty()) add(storagePermissionText)
             if (!meetsMinSdk) add("Android 13+")
             if (!avfSupported) add("虚拟化框架 (AVF)")
         }
