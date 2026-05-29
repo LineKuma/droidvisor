@@ -5,21 +5,15 @@ import com.droidvisor.vm.vsock.VsockError
 import com.droidvisor.vm.vsock.VsockService
 import com.droidvisor.vm.vsock.isConnected
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
-import org.mockito.Mockito.`when`
-import org.mockito.Mockito.lenient
 import org.mockito.junit.MockitoJUnitRunner
-import org.mockito.`when`
 
 @RunWith(MockitoJUnitRunner::class)
 class VsockIntegrationTest {
@@ -36,9 +30,6 @@ class VsockIntegrationTest {
         connectionStateFlow = MutableStateFlow(VsockConnectionState.DISCONNECTED)
         errorFlow = MutableStateFlow(null)
         reconnectingFlow = MutableStateFlow(false)
-
-        lenient().`when`(mockVsockService.connectionState).thenReturn(connectionStateFlow.asStateFlow())
-        lenient().`when`(mockVsockService.isConnected()).thenAnswer { connectionStateFlow.value.isConnected() }
     }
 
     @Test
