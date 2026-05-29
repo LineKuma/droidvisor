@@ -1,7 +1,6 @@
 package com.droidvisor.integration
 
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.droidvisor.datastore.VmStateDataStore
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
@@ -37,7 +36,7 @@ class VmManagerDataStoreIntegrationTest {
 
     @Before
     fun setup() {
-        context = ApplicationProvider.getApplicationContext()
+        context = org.robolectric.Robolectric.setupActivity(android.app.Activity::class.java)
         vmStateDataStore = VmStateDataStore(context)
     }
 

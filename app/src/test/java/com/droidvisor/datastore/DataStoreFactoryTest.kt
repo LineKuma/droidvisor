@@ -17,9 +17,10 @@ class DataStoreFactoryTest {
     @Test
     fun dataStore_extension_isPresent() {
         val context = mockContext
-        `when`(context.dataStore).thenReturn(mock(DataStore::class.java))
+        val mockDataStore = mock(DataStore::class.java) as DataStore<Preferences>
+        `when`(context.dataStore).thenReturn(mockDataStore)
 
-        val dataStore: DataStore<*> = context.dataStore
+        val dataStore = context.dataStore
         assertNotNull(dataStore)
     }
 

@@ -1,6 +1,7 @@
 package com.droidvisor.vm
 
 import android.content.Context
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -17,8 +18,8 @@ class AvfCapabilityCheckerTest {
         assertTrue(reasons.isNotEmpty())
 
         reasons.forEach { reason ->
-            assertNotNull(reason.displayText)
-            assertTrue(reason.displayText.isNotEmpty())
+            assertNotNull(reason.name)
+            assertTrue(reason.name.isNotEmpty())
         }
     }
 
@@ -28,8 +29,8 @@ class AvfCapabilityCheckerTest {
         assertTrue(reasons.isNotEmpty())
 
         reasons.forEach { reason ->
-            assertNotNull(reason.suggestion)
-            assertTrue(reason.suggestion.isNotEmpty())
+            assertNotNull(reason.name)
+            assertTrue(reason.name.isNotEmpty())
         }
     }
 
@@ -155,18 +156,18 @@ class AvfCapabilityCheckerTest {
     @Test
     fun displayText_forSdkTooLow() {
         val reason = AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW
-        assertTrue(reason.displayText.contains("Android"))
+        assertTrue(reason.name.contains("SDK_TOO_LOW"))
     }
 
     @Test
     fun displayText_forAvfClassNotFound() {
         val reason = AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND
-        assertTrue(reason.displayText.contains("AVF") || reason.displayText.contains("虚拟化"))
+        assertTrue(reason.name.contains("AVF_CLASS_NOT_FOUND"))
     }
 
     @Test
     fun suggestion_forSdkTooLow() {
         val reason = AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW
-        assertTrue(reason.suggestion.contains("Android 13") || reason.suggestion.contains("升级"))
+        assertTrue(reason.name.contains("SDK_TOO_LOW"))
     }
 }

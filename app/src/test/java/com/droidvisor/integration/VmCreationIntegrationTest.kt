@@ -334,7 +334,7 @@ class VmCreationIntegrationTest {
                 vmId = vmId,
                 vmName = "Test VM",
                 name = backupName,
-                createdAt = System.currentTimeMillis(),
+                createdTime = System.currentTimeMillis(),
                 sizeBytes = 1024000L,
                 status = com.droidvisor.vm.model.BackupStatus.AVAILABLE
             )

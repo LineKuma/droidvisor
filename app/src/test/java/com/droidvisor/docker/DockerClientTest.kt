@@ -292,7 +292,7 @@ class DockerClientTest {
         val responses = dockerClient.pullImage("nginx:latest")
 
         assertEquals(3, responses.size)
-        assertEquals("Pulling from library/nginx:latest", responses[0].Status)
+        assertEquals("Pulling from library/nginx:latest", responses[0].status)
     }
 
     @Test

@@ -206,16 +206,16 @@ class BackupManagerServiceTest {
             type = com.droidvisor.vm.model.BackupType.FULL
         )
 
-        assertNotNull(service.lastError.value)
+        assertNotNull(service.lastError.get())
 
         service.clearLastError()
-        assertNull(service.lastError.value)
+        assertNull(service.lastError.get())
     }
 
     @Test
     fun backups_exposesStateFlow() {
         assertNotNull(service.backups)
-        assertTrue(service.backups.value.isEmpty())
+        assertTrue(service.backups.isEmpty())
 
         service.createBackup(
             vmId = "vm-123",
@@ -224,12 +224,12 @@ class BackupManagerServiceTest {
             type = com.droidvisor.vm.model.BackupType.FULL
         )
 
-        assertEquals(1, service.backups.value.size)
+        assertEquals(1, service.backups.size)
     }
 
     @Test
     fun isCreatingBackup_reflectsCreationState() {
-        assertFalse(service.isCreatingBackup.value)
+        assertFalse(service.isCreatingBackup.get())
     }
 }
 

@@ -207,9 +207,9 @@ class SettingsViewModelTest {
             val prefs = mock(Preferences::class.java)
             preferences.forEach { (key, value) ->
                 when (value) {
-                    is Long -> `when`(prefs[longPreferencesKey(key.name)]).thenReturn(value)
-                    is Int -> `when`(prefs[intPreferencesKey(key.name)]).thenReturn(value)
-                    is String -> `when`(prefs[stringPreferencesKey(key.name)]).thenReturn(value)
+                    is Long -> `when`(prefs[androidx.datastore.preferences.core.longPreferencesKey(key.name)]).thenReturn(value)
+                    is Int -> `when`(prefs[androidx.datastore.preferences.core.intPreferencesKey(key.name)]).thenReturn(value)
+                    is String -> `when`(prefs[androidx.datastore.preferences.core.stringPreferencesKey(key.name)]).thenReturn(value)
                 }
             }
             return prefs
@@ -218,26 +218,25 @@ class SettingsViewModelTest {
         override val data: Flow<Preferences>
             get() = kotlinx.coroutines.flow.flowOf(getPreferences())
 
-        override suspend fun <T> updateData(transform: suspend (t: Preferences) -> T): T {
+        override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
             val current = getPreferences()
             val mockPrefs = mock(MutablePreferences::class.java)
-            `when`(mockPrefs[longPreferencesKey("vm_memory_mb")]).thenReturn(preferences[longPreferencesKey("vm_memory_mb")] as? Long ?: 512L)
-            `when`(mockPrefs[intPreferencesKey("vm_cpu_cores")]).thenReturn(preferences[intPreferencesKey("vm_cpu_cores")] as? Int ?: 2)
-            `when`(mockPrefs[intPreferencesKey("docker_port")]).thenReturn(preferences[intPreferencesKey("docker_port")] as? Int ?: 2375)
-            `when`(mockPrefs[stringPreferencesKey("image_registry")]).thenReturn(preferences[stringPreferencesKey("image_registry")] as? String ?: "")
-            @Suppress("UNCHECKED_CAST")
-            return transform(mockPrefs as Preferences)
+            `when`(mockPrefs[androidx.datastore.preferences.core.longPreferencesKey("vm_memory_mb")]).thenReturn(preferences[androidx.datastore.preferences.core.longPreferencesKey("vm_memory_mb")] as? Long ?: 512L)
+            `when`(mockPrefs[androidx.datastore.preferences.core.intPreferencesKey("vm_cpu_cores")]).thenReturn(preferences[androidx.datastore.preferences.core.intPreferencesKey("vm_cpu_cores")] as? Int ?: 2)
+            `when`(mockPrefs[androidx.datastore.preferences.core.intPreferencesKey("docker_port")]).thenReturn(preferences[androidx.datastore.preferences.core.intPreferencesKey("docker_port")] as? Int ?: 2375)
+            `when`(mockPrefs[androidx.datastore.preferences.core.stringPreferencesKey("image_registry")]).thenReturn(preferences[androidx.datastore.preferences.core.stringPreferencesKey("image_registry")] as? String ?: "")
+            return transform(mockPrefs)
         }
 
-        suspend fun putLong(key: longPreferencesKey, value: Long) {
+        suspend fun putLong(key: androidx.datastore.preferences.core.Preferences.Key<Long>, value: Long) {
             preferences[key] = value
         }
 
-        suspend fun putInt(key: intPreferencesKey, value: Int) {
+        suspend fun putInt(key: androidx.datastore.preferences.core.Preferences.Key<Int>, value: Int) {
             preferences[key] = value
         }
 
-        suspend fun putString(key: stringPreferencesKey, value: String) {
+        suspend fun putString(key: androidx.datastore.preferences.core.Preferences.Key<String>, value: String) {
             preferences[key] = value
         }
     }
