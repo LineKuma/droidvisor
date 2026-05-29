@@ -275,7 +275,7 @@ class NetworkConfigViewModelTest {
 
     @Test
     fun validateConfig_returnsFalse_whenMtuOutOfRange() {
-        viewModel.setMtu("100")
+        viewModel.setMtu("50")
 
         var isValid = true
         viewModel.saveConfig { isValid = false }

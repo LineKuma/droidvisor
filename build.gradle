@@ -10,11 +10,3 @@ plugins {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
-
-allprojects {
-    repositories {
-        maven { url 'http://maven.aliyun.com/repository/central' ; allowInsecureProtocol = true }
-        maven { url 'http://maven.aliyun.com/repository/google' ; allowInsecureProtocol = true }
-        maven { url 'http://maven.aliyun.com/repository/public' ; allowInsecureProtocol = true }
-    }
-}

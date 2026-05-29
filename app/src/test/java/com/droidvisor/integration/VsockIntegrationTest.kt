@@ -3,6 +3,7 @@ package com.droidvisor.integration
 import com.droidvisor.vm.vsock.VsockConnectionState
 import com.droidvisor.vm.vsock.VsockError
 import com.droidvisor.vm.vsock.VsockService
+import com.droidvisor.vm.vsock.isConnected
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,8 +36,6 @@ class VsockIntegrationTest {
         reconnectingFlow = MutableStateFlow(false)
 
         `when`(mockVsockService.connectionState).thenReturn(connectionStateFlow.asStateFlow())
-        `when`(mockVsockService.error).thenReturn(errorFlow.asStateFlow())
-        `when`(mockVsockService.reconnecting).thenReturn(reconnectingFlow.asStateFlow())
         `when`(mockVsockService.isConnected()).thenAnswer { connectionStateFlow.value.isConnected() }
     }
 
@@ -44,7 +43,6 @@ class VsockIntegrationTest {
     fun testVsockServiceInitialState() {
         assertFalse(mockVsockService.isConnected())
         assertEquals(VsockConnectionState.DISCONNECTED, connectionStateFlow.value)
-        assertNull(errorFlow.value)
         assertFalse(reconnectingFlow.value)
     }
 

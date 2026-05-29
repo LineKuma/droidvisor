@@ -293,7 +293,7 @@ private class RealVsockChannel(
     override fun isOpen(): Boolean = open
 }
 
-private class SimulationVsockChannel(
+internal class SimulationVsockChannel(
     private val port: Int
 ) : VsockChannel {
 

@@ -9,6 +9,7 @@ import com.droidvisor.docker.model.DockerInfo
 import com.droidvisor.docker.model.Image
 import com.droidvisor.vm.vsock.VsockConnectionState
 import com.droidvisor.vm.vsock.VsockService
+import com.droidvisor.vm.vsock.isConnected
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +32,6 @@ class DockerProxyIntegrationTest {
     private lateinit var mockVsockService: VsockService
 
     private lateinit var connectionStateFlow: MutableStateFlow<VsockConnectionState>
-    private lateinit var isConnectedFlow: MutableStateFlow<Boolean>
     private lateinit var daemonHealthyFlow: MutableStateFlow<Boolean>
     private lateinit var reconnectingFlow: MutableStateFlow<Boolean>
     private lateinit var dockerVersionFlow: MutableStateFlow<String?>
@@ -41,7 +41,6 @@ class DockerProxyIntegrationTest {
     @Before
     fun setup() {
         connectionStateFlow = MutableStateFlow(VsockConnectionState.DISCONNECTED)
-        isConnectedFlow = MutableStateFlow(false)
         daemonHealthyFlow = MutableStateFlow(false)
         reconnectingFlow = MutableStateFlow(false)
         dockerVersionFlow = MutableStateFlow(null)
@@ -52,7 +51,7 @@ class DockerProxyIntegrationTest {
 
     @Test
     fun testDockerProxyServiceInitialState() {
-        assertFalse(isConnectedFlow.value)
+        assertFalse(mockVsockService.isConnected())
         assertFalse(daemonHealthyFlow.value)
         assertFalse(reconnectingFlow.value)
         assertNull(dockerVersionFlow.value)
@@ -61,11 +60,10 @@ class DockerProxyIntegrationTest {
     @Test
     fun testDockerConnectionStateIntegration() {
         connectionStateFlow.value = VsockConnectionState.CONNECTED
-        isConnectedFlow.value = true
         daemonHealthyFlow.value = true
         dockerVersionFlow.value = "25.0.0"
 
-        assertTrue(isConnectedFlow.value)
+        assertTrue(mockVsockService.isConnected())
         assertTrue(daemonHealthyFlow.value)
         assertEquals("25.0.0", dockerVersionFlow.value)
     }
@@ -73,24 +71,21 @@ class DockerProxyIntegrationTest {
     @Test
     fun testDockerDisconnectionIntegration() {
         connectionStateFlow.value = VsockConnectionState.CONNECTED
-        isConnectedFlow.value = true
         daemonHealthyFlow.value = true
 
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
-        isConnectedFlow.value = false
         daemonHealthyFlow.value = false
 
-        assertFalse(isConnectedFlow.value)
+        assertFalse(mockVsockService.isConnected())
         assertFalse(daemonHealthyFlow.value)
     }
 
     @Test
     fun testDockerReconnectionFlow() {
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
-        isConnectedFlow.value = false
         reconnectingFlow.value = true
 
-        assertFalse(isConnectedFlow.value)
+        assertFalse(mockVsockService.isConnected())
         assertTrue(reconnectingFlow.value)
 
         connectionStateFlow.value = VsockConnectionState.CONNECTING
@@ -102,13 +97,12 @@ class DockerProxyIntegrationTest {
     @Test
     fun testDockerErrorRecoveryIntegration() {
         connectionStateFlow.value = VsockConnectionState.CONNECTED
-        isConnectedFlow.value = true
         daemonHealthyFlow.value = true
 
         daemonHealthyFlow.value = false
         reconnectingFlow.value = true
 
-        assertTrue(isConnectedFlow.value)
+        assertTrue(mockVsockService.isConnected())
         assertFalse(daemonHealthyFlow.value)
         assertTrue(reconnectingFlow.value)
 

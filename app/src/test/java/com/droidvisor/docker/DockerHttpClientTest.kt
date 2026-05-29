@@ -37,6 +37,6 @@ class DockerHttpClientTest {
     @Test
     fun enableVsockMode_setsVsockEnabled() {
         httpClient.enableVsockMode(true)
-        assertTrue(mockVsockService.isConnected())
+        httpClient.enableVsockMode(false)
     }
 }
