@@ -91,6 +91,7 @@ class DockerProxyIntegrationTest {
 
     @Test
     fun testDockerErrorRecoveryIntegration() {
+        `when`(mockVsockService.isConnected()).thenReturn(true)
         connectionStateFlow.value = VsockConnectionState.CONNECTED
         daemonHealthyFlow.value = true
 

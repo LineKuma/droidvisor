@@ -100,6 +100,7 @@ class VsockIntegrationTest {
         assertEquals(VsockConnectionState.CONNECTING, connectionStateFlow.value)
         assertFalse(connectionStateFlow.value.isConnected())
 
+        `when`(mockVsockService.isConnected()).thenReturn(true)
         connectionStateFlow.value = VsockConnectionState.CONNECTED
         assertEquals(VsockConnectionState.CONNECTED, connectionStateFlow.value)
         assertTrue(connectionStateFlow.value.isConnected())
@@ -107,6 +108,7 @@ class VsockIntegrationTest {
         connectionStateFlow.value = VsockConnectionState.DISCONNECTING
         assertEquals(VsockConnectionState.DISCONNECTING, connectionStateFlow.value)
 
+        `when`(mockVsockService.isConnected()).thenReturn(false)
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
         assertEquals(VsockConnectionState.DISCONNECTED, connectionStateFlow.value)
         assertFalse(connectionStateFlow.value.isConnected())
