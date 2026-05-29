@@ -13,8 +13,8 @@ task clean(type: Delete) {
 
 allprojects {
     repositories {
-        maven { url 'http://maven.aliyun.com/repository/central' }
-        maven { url 'http://maven.aliyun.com/repository/google' }
-        maven { url 'http://maven.aliyun.com/repository/public' }
+        maven { url 'http://maven.aliyun.com/repository/central' ; allowInsecureProtocol = true }
+        maven { url 'http://maven.aliyun.com/repository/google' ; allowInsecureProtocol = true }
+        maven { url 'http://maven.aliyun.com/repository/public' ; allowInsecureProtocol = true }
     }
 }
