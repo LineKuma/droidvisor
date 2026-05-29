@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runBlocking
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -118,11 +117,11 @@ class VmManagementViewModelTest {
     }
 
     @Test
-    fun unbindService_clearsServiceReference() = runBlocking {
+    fun unbindService_clearsServiceReference() {
         val vm = VmInstance(name = "Test VM", template = testVmTemplate)
         viewModel.bindService(createMockVmManagerService(listOf(vm), null))
         viewModel.unbindService()
-        kotlinx.coroutines.delay(100)
+        testDispatcher.apply { advanceUntilIdle() }
 
         val state = viewModel.state.value
         assertNull(state.selectedVm)
