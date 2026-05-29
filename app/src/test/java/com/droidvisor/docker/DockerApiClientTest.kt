@@ -142,7 +142,7 @@ class DockerApiClientTest {
 
     @Test
     fun ping_returnsFalseOnError() = runBlocking {
-        doThrow(DockerError.ConnectionError("Connection failed")).`when`(mockHttpClient).get(anyString())
+        `when`(mockHttpClient.get(anyString())).thenThrow(DockerError.ConnectionError("Connection failed"))
 
         val result = apiClient.ping()
         assertFalse(result)
