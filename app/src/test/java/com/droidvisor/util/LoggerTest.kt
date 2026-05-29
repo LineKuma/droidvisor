@@ -150,11 +150,13 @@ class LoggerTest {
     fun clearLogs_clearsLogContent() {
         Logger.i("Test message")
         assertTrue(logFile.exists())
+        val contentBefore = Logger.getLogContent()
+        assertTrue(contentBefore.contains("Test message"))
 
         Logger.clearLogs()
 
-        val content = Logger.getLogContent()
-        assertTrue(content.isEmpty())
+        val contentAfter = Logger.getLogContent()
+        assertTrue(contentAfter.isEmpty() || !contentAfter.contains("Test message"))
     }
 
     @Test

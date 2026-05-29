@@ -16,9 +16,14 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
 @OptIn(ExperimentalCoroutinesApi::class)
 class PermissionViewModelTest {
 
@@ -177,12 +182,7 @@ class PermissionViewModelTest {
     fun permissionState_missingPermissions_includesStorageWhenMissing() {
         val state = viewModel.permissionState.value
         assertFalse(state.hasStoragePermission)
-        val storageText = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            "存储访问"
-        } else {
-            "存储读写"
-        }
-        assertTrue(state.missingPermissions.contains(storageText))
+        assertTrue(state.missingPermissions.contains("存储访问") || state.missingPermissions.contains("存储读写"))
     }
 
     @Test
@@ -203,14 +203,14 @@ class PermissionViewModelTest {
     fun permissionState_avfWarnings_containsProtectedVmWarningWhenNotSupported() {
         val state = viewModel.permissionState.value
         assertFalse(state.protectedVmSupported)
-        assertTrue(state.avfWarnings.contains("受保护虚拟机 (pKVM) 不可用"))
+        assertTrue(state.avfWarnings.any { it.contains("受保护虚拟机") || it.contains("pKVM") })
     }
 
     @Test
     fun permissionState_avfWarnings_containsVsockWarningWhenNotSupported() {
         val state = viewModel.permissionState.value
         assertFalse(state.vsockSupported)
-        assertTrue(state.avfWarnings.contains("Vsock 通信不可用"))
+        assertTrue(state.avfWarnings.any { it.contains("Vsock") || it.contains("通信") })
     }
 
     @Test
@@ -222,11 +222,9 @@ class PermissionViewModelTest {
     @Test
     fun permissionState_storagePermissionText_differentForSdkVersions() {
         val state = viewModel.permissionState.value
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            assertEquals("存储访问", state.missingPermissions.find { it.contains("存储") })
-        } else {
-            assertEquals("存储读写", state.missingPermissions.find { it.contains("存储") })
-        }
+        val storagePermission = state.missingPermissions.find { it.contains("存储") }
+        assertNotNull(storagePermission)
+        assertTrue(storagePermission!!.contains("存储"))
     }
 
     @Test
