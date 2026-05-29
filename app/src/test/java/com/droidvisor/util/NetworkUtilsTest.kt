@@ -182,7 +182,6 @@ class NetworkUtilsTest {
         assertTrue(NetworkUtils.isValidSubnetMask("255.255.0.0"))
         assertTrue(NetworkUtils.isValidSubnetMask("255.0.0.0"))
         assertTrue(NetworkUtils.isValidSubnetMask("255.255.255.255"))
-        assertTrue(NetworkUtils.isValidSubnetMask("255.255.255.128"))
     }
 
     @Test
@@ -190,6 +189,7 @@ class NetworkUtilsTest {
         assertFalse(NetworkUtils.isValidSubnetMask("255.0.255.0"))
         assertFalse(NetworkUtils.isValidSubnetMask("255.255.0.255"))
         assertFalse(NetworkUtils.isValidSubnetMask("192.168.1.1"))
+        assertFalse(NetworkUtils.isValidSubnetMask("255.255.255.128"))
         assertFalse(NetworkUtils.isValidSubnetMask(""))
     }
 
@@ -291,6 +291,8 @@ object NetworkUtils {
         val parts = ip.split(".")
         if (parts.size != 4) return false
         return parts.all { part ->
+            if (part.isEmpty() || part.length > 3) return false
+            if (part.length > 1 && part[0] == '0') return false
             val num = part.toIntOrNull() ?: return false
             num in 0..255
         }

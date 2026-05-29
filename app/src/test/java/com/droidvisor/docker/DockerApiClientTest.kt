@@ -29,7 +29,7 @@ class DockerApiClientTest {
 
     @Test
     fun listContainers_returnsParsedContainers() = runBlocking {
-        val jsonResponse = """[{"Id":"container1","Names":["/test"],"Image":"nginx","State":"running","Status":"Up"}]"""
+        val jsonResponse = """[{"Id":"container1","Names":["/test"],"Image":"nginx","ImageID":"sha256:test","Command":"test","Created":1609459200,"State":"running","Status":"Up"}]"""
         `when`(mockHttpClient.get("/containers/json?all=false")).thenReturn(jsonResponse)
 
         val containers = apiClient.listContainers(all = false)
@@ -41,7 +41,7 @@ class DockerApiClientTest {
 
     @Test
     fun listContainers_withAllTrue_returnsAllContainers() = runBlocking {
-        val jsonResponse = """[{"Id":"container1","Names":["/test1"],"Image":"nginx","State":"exited","Status":"Exited"}]"""
+        val jsonResponse = """[{"Id":"container1","Names":["/test1"],"Image":"nginx","ImageID":"sha256:test","Command":"test","Created":1609459200,"State":"exited","Status":"Exited"}]"""
         `when`(mockHttpClient.get("/containers/json?all=true")).thenReturn(jsonResponse)
 
         val containers = apiClient.listContainers(all = true)
@@ -108,7 +108,7 @@ class DockerApiClientTest {
 
     @Test
     fun pullImage_returnsImageCreateResponses() = runBlocking {
-        val jsonResponse = """{"status":"Pulling from library/nginx"}"""
+        val jsonResponse = """{"status":"Pulling from library/nginx:latest","progress":null,"progressDetail":null}"""
         `when`(mockHttpClient.post(anyString(), anyString())).thenReturn(jsonResponse)
 
         val responses = apiClient.pullImage("nginx:latest")
@@ -118,7 +118,7 @@ class DockerApiClientTest {
 
     @Test
     fun getDockerVersion_returnsVersionResponse() = runBlocking {
-        val jsonResponse = """{"Version":"20.10.0","ApiVersion":"1.41","GoVersion":"go1.16"}"""
+        val jsonResponse = """{"Version":"20.10.0","ApiVersion":"1.41","GitCommit":"abc123","GoVersion":"go1.16","Os":"linux","Arch":"amd64","KernelVersion":"5.4.0","BuildTime":"2021-01-01T00:00:00Z"}"""
         `when`(mockHttpClient.get("/version")).thenReturn(jsonResponse)
 
         val version = apiClient.getDockerVersion()
@@ -164,7 +164,7 @@ class DockerApiClientTest {
     @Test
     fun sanitizeContainerId_removesNonHexCharacters() {
         val result = apiClient.sanitizeContainerId("abc123defg")
-        assertEquals("abc123defg", result)
+        assertEquals("abc123def", result)
     }
 
     @Test

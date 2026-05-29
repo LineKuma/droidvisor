@@ -19,6 +19,7 @@ import org.junit.Test
 class DockerContainerIntegrationTest {
 
     private lateinit var containerManager: TestContainerManager
+    private lateinit var imageManager: ImageManager
     private lateinit var containerList: MutableStateFlow<List<Container>>
     private lateinit var imageList: MutableStateFlow<List<Image>>
     private lateinit var connectionState: MutableStateFlow<Boolean>
@@ -29,6 +30,7 @@ class DockerContainerIntegrationTest {
         imageList = MutableStateFlow(emptyList())
         connectionState = MutableStateFlow(false)
         containerManager = TestContainerManager(containerList, imageList, connectionState)
+        imageManager = ImageManager(imageList)
     }
 
     @Test
@@ -338,6 +340,4 @@ class DockerContainerIntegrationTest {
             imagesFlow.value = images
         }
     }
-
-    private val imageManager = ImageManager(imageList)
 }

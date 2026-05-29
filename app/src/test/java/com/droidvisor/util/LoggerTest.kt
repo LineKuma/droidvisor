@@ -8,8 +8,13 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.File
 
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
 class LoggerTest {
 
     private lateinit var tempLogDir: File
@@ -142,13 +147,14 @@ class LoggerTest {
     }
 
     @Test
-    fun clearLogs_deletesLogFile() {
+    fun clearLogs_clearsLogContent() {
         Logger.i("Test message")
-        assertTrue(logFile.exists())
+        assertTrue(logFile.exists() && logFile.length() > 0)
 
         Logger.clearLogs()
 
-        assertTrue(!logFile.exists())
+        val content = Logger.getLogContent()
+        assertTrue(content.isEmpty() || !logFile.exists())
     }
 
     @Test

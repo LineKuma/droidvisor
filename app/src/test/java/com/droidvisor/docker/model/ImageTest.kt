@@ -19,7 +19,7 @@ class ImageTest {
             Created = 1715000000L,
             Size = 142000000L,
             VirtualSize = 142000000L,
-            Labels = mapOf("maintainer" to "NGINX"),
+            Labels = mapOf("maintainer" to "nginx"),
             Containers = 5
         )
 

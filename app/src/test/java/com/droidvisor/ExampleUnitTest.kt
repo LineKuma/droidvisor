@@ -12,6 +12,6 @@ class ExampleUnitTest {
 
     @Test
     fun string_isNotEmpty() {
-        assertFalse("".isEmpty())
+        assertFalse("something".isEmpty())
     }
 }

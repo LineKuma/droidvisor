@@ -10,8 +10,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
 
 class BackupManagerServiceTest {
 
@@ -235,7 +233,8 @@ class BackupManagerServiceTest {
 
 class TestableBackupManagerService {
     private val _backups = java.util.concurrent.ConcurrentHashMap<String, com.droidvisor.vm.model.Backup>()
-    val backups = _backups.values.toList()
+    val backups: List<com.droidvisor.vm.model.Backup>
+        get() = _backups.values.toList()
     val lastError = java.util.concurrent.atomic.AtomicReference<String?>()
     val isCreatingBackup = java.util.concurrent.atomic.AtomicBoolean(false)
 

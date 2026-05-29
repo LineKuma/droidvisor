@@ -117,11 +117,51 @@ class TerminalViewModelTest {
     }
 
     @Test
-    fun sendCommand_lsCommand_showsDirectoryList() {
+    fun sendCommand_lsCommand_showsNotConnectedMessage() {
         viewModel.sendCommand("ls")
 
         val state = viewModel.state.value
-        assertTrue(state.outputLines.any { it.contains("Documents") || it.contains("Downloads") })
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
+    }
+
+    @Test
+    fun sendCommand_pwdCommand_showsNotConnectedMessage() {
+        viewModel.sendCommand("pwd")
+
+        val state = viewModel.state.value
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
+    }
+
+    @Test
+    fun sendCommand_dateCommand_showsNotConnectedMessage() {
+        viewModel.sendCommand("date")
+
+        val state = viewModel.state.value
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
+    }
+
+    @Test
+    fun sendCommand_unameCommand_showsNotConnectedMessage() {
+        viewModel.sendCommand("uname -a")
+
+        val state = viewModel.state.value
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
+    }
+
+    @Test
+    fun sendCommand_dockerVersionCommand_showsNotConnectedMessage() {
+        viewModel.sendCommand("docker --version")
+
+        val state = viewModel.state.value
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
+    }
+
+    @Test
+    fun sendCommand_dockerPsCommand_showsNotConnectedMessage() {
+        viewModel.sendCommand("docker ps")
+
+        val state = viewModel.state.value
+        assertTrue(state.outputLines.any { it.contains("[未连接VM]") })
     }
 
     @Test

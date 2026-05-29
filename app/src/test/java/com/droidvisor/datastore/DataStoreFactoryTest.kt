@@ -5,40 +5,43 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
+import org.junit.Before
 import org.junit.Test
-import org.mockito.Mock
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
 class DataStoreFactoryTest {
 
-    private val mockContext = mock(Context::class.java)
+    private lateinit var context: Context
+
+    @Before
+    fun setup() {
+        context = Robolectric.setupActivity(android.app.Activity::class.java)
+    }
 
     @Test
     fun dataStore_extension_isPresent() {
-        val context = mockContext
-        val mockDataStore = mock(DataStore::class.java) as DataStore<Preferences>
-        `when`(context.dataStore).thenReturn(mockDataStore)
-
         val dataStore = context.dataStore
         assertNotNull(dataStore)
     }
 
     @Test
     fun dataStore_returnsSameInstance() {
-        val context = mockContext
         val dataStore1 = context.dataStore
         val dataStore2 = context.dataStore
 
         assertNotNull(dataStore1)
         assertNotNull(dataStore2)
+        assertSame(dataStore1, dataStore2)
     }
 
     @Test
     fun dataStore_canBeUsedForPreferences() {
-        val context = mockContext
-        val dataStore = context.dataStore
-
+        val dataStore: DataStore<Preferences> = context.dataStore
         assertNotNull(dataStore)
     }
 }
