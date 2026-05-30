@@ -2,25 +2,15 @@ package com.droidvisor.docker
 
 import com.droidvisor.docker.model.Container
 import com.droidvisor.docker.model.Image
+import io.mockk.coEvery
+import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mock
-import org.mockito.Mockito.anyString
-import org.mockito.Mockito.doAnswer
-import org.mockito.Mockito.doThrow
-import org.mockito.Mockito.lenient
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
-import org.junit.runner.RunWith
-import org.mockito.junit.MockitoJUnitRunner
 
-@RunWith(MockitoJUnitRunner::class)
 class DockerApiClientTest {
 
     private lateinit var mockHttpClient: DockerHttpClient
@@ -30,17 +20,17 @@ class DockerApiClientTest {
 
     @Before
     fun setup() {
-        mockHttpClient = mock(DockerHttpClient::class.java)
-        mockErrorHttpClient = mock(DockerHttpClient::class.java)
+        mockHttpClient = mockk()
+        mockErrorHttpClient = mockk()
         apiClient = DockerApiClient(mockHttpClient)
         errorApiClient = DockerApiClient(mockErrorHttpClient)
-        lenient().`when`(mockErrorHttpClient.get(anyString())).thenAnswer { throw DockerError.ConnectionError("Connection failed") }
+        coEvery { mockErrorHttpClient.get(any()) } throws DockerError.ConnectionError("Connection failed")
     }
 
     @Test
     fun listContainers_returnsParsedContainers() = runBlocking {
         val jsonResponse = """[{"Id":"container1","Names":["/test"],"Image":"nginx","ImageID":"sha256:test","Command":"test","Created":1609459200,"State":"running","Status":"Up"}]"""
-        `when`(mockHttpClient.get("/containers/json?all=false")).thenReturn(jsonResponse)
+        coEvery { mockHttpClient.get("/containers/json?all=false") } returns jsonResponse
 
         val containers = apiClient.listContainers(all = false)
 
@@ -52,7 +42,7 @@ class DockerApiClientTest {
     @Test
     fun listContainers_withAllTrue_returnsAllContainers() = runBlocking {
         val jsonResponse = """[{"Id":"container1","Names":["/test1"],"Image":"nginx","ImageID":"sha256:test","Command":"test","Created":1609459200,"State":"exited","Status":"Exited"}]"""
-        `when`(mockHttpClient.get("/containers/json?all=true")).thenReturn(jsonResponse)
+        coEvery { mockHttpClient.get("/containers/json?all=true") } returns jsonResponse
 
         val containers = apiClient.listContainers(all = true)
 
@@ -63,7 +53,7 @@ class DockerApiClientTest {
     @Test
     fun createContainer_sendsCorrectRequest() = runBlocking {
         val jsonResponse = """{"Id":"new-container-id","Warnings":[]}"""
-        `when`(mockHttpClient.post(anyString(), anyString())).thenReturn(jsonResponse)
+        coEvery { mockHttpClient.post(any(), any()) } returns jsonResponse
 
         val response = apiClient.createContainer(
             name = "test-container",
@@ -78,7 +68,7 @@ class DockerApiClientTest {
     @Test
     fun createContainer_withPorts_sendsCorrectRequest() = runBlocking {
         val jsonResponse = """{"Id":"new-container-id","Warnings":[]}"""
-        `when`(mockHttpClient.post(anyString(), anyString())).thenReturn(jsonResponse)
+        coEvery { mockHttpClient.post(any(), any()) } returns jsonResponse
 
         val response = apiClient.createContainer(
             name = "test-container",
@@ -91,23 +81,26 @@ class DockerApiClientTest {
 
     @Test
     fun startContainer_sendsCorrectRequest() = runBlocking {
+        coEvery { mockHttpClient.post(any(), any()) } returns ""
         apiClient.startContainer("container123")
     }
 
     @Test
     fun stopContainer_sendsCorrectRequest() = runBlocking {
+        coEvery { mockHttpClient.post(any(), any()) } returns ""
         apiClient.stopContainer("container123", timeout = 10)
     }
 
     @Test
     fun removeContainer_sendsCorrectRequest() = runBlocking {
+        coEvery { mockHttpClient.delete(any()) } returns ""
         apiClient.removeContainer("container123", force = false)
     }
 
     @Test
     fun listImages_returnsParsedImages() = runBlocking {
         val jsonResponse = """[{"Id":"sha256:abc123","RepoTags":["nginx:latest"],"Size":142000000,"Created":1609459200}]"""
-        `when`(mockHttpClient.get("/images/json")).thenReturn(jsonResponse)
+        coEvery { mockHttpClient.get("/images/json") } returns jsonResponse
 
         val images = apiClient.listImages()
 
@@ -119,7 +112,7 @@ class DockerApiClientTest {
     @Test
     fun pullImage_returnsImageCreateResponses() = runBlocking {
         val jsonResponse = """{"status":"Pulling from library/nginx:latest","progress":null,"progressDetail":null}"""
-        `when`(mockHttpClient.post(anyString(), anyString())).thenReturn(jsonResponse)
+        coEvery { mockHttpClient.post(any(), any()) } returns jsonResponse
 
         val responses = apiClient.pullImage("nginx:latest")
 
@@ -129,7 +122,7 @@ class DockerApiClientTest {
     @Test
     fun getDockerVersion_returnsVersionResponse() = runBlocking {
         val jsonResponse = """{"Version":"20.10.0","ApiVersion":"1.41","GitCommit":"abc123","GoVersion":"go1.16","Os":"linux","Arch":"amd64","KernelVersion":"5.4.0","BuildTime":"2021-01-01T00:00:00Z"}"""
-        `when`(mockHttpClient.get("/version")).thenReturn(jsonResponse)
+        coEvery { mockHttpClient.get("/version") } returns jsonResponse
 
         val version = apiClient.getDockerVersion()
 
@@ -139,7 +132,7 @@ class DockerApiClientTest {
 
     @Test
     fun ping_returnsTrueWhenSuccessful() = runBlocking {
-        `when`(mockHttpClient.get("/_ping")).thenReturn("OK")
+        coEvery { mockHttpClient.get("/_ping") } returns "OK"
 
         val result = apiClient.ping()
 
@@ -159,7 +152,7 @@ class DockerApiClientTest {
     @Test
     fun getContainerLogs_returnsLogs() = runBlocking {
         val logResponse = "2021-01-01T00:00:00.000000000Z Test log message"
-        `when`(mockHttpClient.get(anyString())).thenReturn(logResponse)
+        coEvery { mockHttpClient.get(any()) } returns logResponse
 
         val logs = apiClient.getContainerLogs("container123")
 
