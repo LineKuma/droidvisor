@@ -6,8 +6,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.anyString
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 
@@ -34,26 +37,24 @@ class DockerClientTest {
         }
     }
 
-    @Test
-    fun ping_whenDockerUnavailable_shouldReturnFalse() {
-        runBlocking {
-            `when`(mockHttpClient.get("/_ping")).thenThrow(DockerError.ConnectionError("Connection refused"))
+@Test
+    fun ping_whenDockerUnavailable_shouldReturnFalse() = runBlocking {
+        doAnswer { throw DockerError.ConnectionError("Connection refused") }.`when`(mockHttpClient).get("/_ping")
 
-            val result = dockerClient.ping()
+        val result = dockerClient.ping()
 
-            assertFalse(result)
-        }
+        assertFalse(result)
+    }
     }
 
-    @Test
-    fun ping_whenTimeout_shouldReturnFalse() {
-        runBlocking {
-            `when`(mockHttpClient.get("/_ping")).thenThrow(DockerError.TimeoutError("Request timeout"))
+@Test
+    fun ping_whenTimeout_shouldReturnFalse() = runBlocking {
+        doAnswer { throw DockerError.TimeoutError("Request timeout") }.`when`(mockHttpClient).get("/_ping")
 
-            val result = dockerClient.ping()
+        val result = dockerClient.ping()
 
-            assertFalse(result)
-        }
+        assertFalse(result)
+    }
     }
 
     @Test

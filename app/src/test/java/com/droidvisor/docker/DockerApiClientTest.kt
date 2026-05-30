@@ -14,6 +14,7 @@ import org.mockito.Mock
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.lenient
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.junit.runner.RunWith
@@ -23,12 +24,17 @@ import org.mockito.junit.MockitoJUnitRunner
 class DockerApiClientTest {
 
     private lateinit var mockHttpClient: DockerHttpClient
+    private lateinit var mockErrorHttpClient: DockerHttpClient
     private lateinit var apiClient: DockerApiClient
+    private lateinit var errorApiClient: DockerApiClient
 
     @Before
     fun setup() {
         mockHttpClient = mock(DockerHttpClient::class.java)
+        mockErrorHttpClient = mock(DockerHttpClient::class.java)
         apiClient = DockerApiClient(mockHttpClient)
+        errorApiClient = DockerApiClient(mockErrorHttpClient)
+        lenient().`when`(mockErrorHttpClient.get(anyString())).thenAnswer { throw DockerError.ConnectionError("Connection failed") }
     }
 
     @Test
