@@ -9,41 +9,21 @@ services:
       dockerfile: Dockerfile
     container_name: droidvisor-android-test
     volumes:
-      # 挂载项目目录（读写，以便测试运行）
       - .:/workspace
     working_dir: /workspace
     environment:
       - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
       - ANDROID_HOME=/opt/android-sdk
+      - ANDROID_SDK_ROOT=/opt/android-sdk
       - GRADLE_USER_HOME=/workspace/.gradle
     networks:
       - droidvisor-test-network
-    # 健康检查配置
     healthcheck:
       test: ["CMD", "bash", "-c", "ps aux | grep -v grep | grep gradle"]
       interval: 5s
       timeout: 5s
       retries: 3
       start_period: 30s
-
-  # Docker-in-Docker 服务（用于集成测试）
-  dind:
-    image: docker:24-dind
-    container_name: droidvisor-dind
-    privileged: true
-    volumes:
-      # 挂载Docker socket以访问宿主机Docker守护进程
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - DOCKER_TLS_CERTDIR=
-    networks:
-      - droidvisor-test-network
-    healthcheck:
-      test: ["CMD", "docker", "info"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
 networks:
   droidvisor-test-network:

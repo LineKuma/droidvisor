@@ -44,6 +44,9 @@ RUN chmod +x /workspace/gradlew
 # 设置环境变量
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
+# 设置Gradle JVM参数允许TLS协议降级
+ENV JAVA_TOOL_OPTIONS="-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2"
+
 # 清理可能的损坏缓存
 RUN rm -rf /root/.gradle /workspace/.gradle 2>/dev/null || true
 
@@ -55,5 +58,5 @@ COPY settings.gradle /workspace/settings.gradle
 # 创建测试报告目录
 RUN mkdir -p /workspace/app/build/reports/tests
 
-# 启动命令 - 运行单元测试
-CMD ["/workspace/gradlew", "testDebugUnitTest"]
+# 启动命令 - 保持容器运行
+CMD ["tail", "-f", "/dev/null"]
