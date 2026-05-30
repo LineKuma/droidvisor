@@ -368,5 +368,5 @@ class DockerClientTest {
                 org.mockito.ArgumentMatchers.contains("stderr=0")
             )
         }
-    }
+}
 }
