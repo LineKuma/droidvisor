@@ -20,7 +20,7 @@ data class PermissionState(
     val avfUnavailableReasons: List<AvfCapabilityChecker.AvfUnavailableReason> = emptyList()
 ) {
     val allPermissionsGranted: Boolean
-        get() = hasInternetPermission && hasStoragePermission && meetsMinSdk && avfSupported
+        get() = hasInternetPermission && hasStoragePermission && meetsMinSdk
 
     val isAvfFullyAvailable: Boolean
         get() = avfSupported && protectedVmSupported && meetsMinSdk

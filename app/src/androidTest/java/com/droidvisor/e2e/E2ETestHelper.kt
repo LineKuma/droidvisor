@@ -1,6 +1,8 @@
 package com.droidvisor.e2e
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.rules.ActivityScenarioRule
@@ -11,19 +13,30 @@ object E2ETestHelper {
     fun dismissPermissionScreen(
         composeTestRule: AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
     ) {
+        composeTestRule.waitUntil(10000L) {
+            try {
+                val continueNodes = composeTestRule.onAllNodesWithText("继续使用")
+                continueNodes.fetchSemanticsNodes().isNotEmpty()
+            } catch (_: Exception) {
+                false
+            } || try {
+                val startNodes = composeTestRule.onAllNodesWithText("开始使用")
+                startNodes.fetchSemanticsNodes().isNotEmpty()
+            } catch (_: Exception) {
+                false
+            }
+        }
+
         try {
-            val continueButton = composeTestRule.onNodeWithText("继续使用")
-            continueButton.performClick()
-            composeTestRule.waitForIdle()
-            Thread.sleep(1000)
+            composeTestRule.onNodeWithText("继续使用").performClick()
         } catch (_: Exception) {
             try {
-                val startButton = composeTestRule.onNodeWithText("开始使用")
-                startButton.performClick()
-                composeTestRule.waitForIdle()
-                Thread.sleep(1000)
+                composeTestRule.onNodeWithText("开始使用").performClick()
             } catch (_: Exception) {
             }
         }
+
+        composeTestRule.waitForIdle()
+        Thread.sleep(1500)
     }
 }

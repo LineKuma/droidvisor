@@ -69,7 +69,12 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics
           disable-animations: true
           script: |
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.package=com.droidvisor.e2e --stacktrace
+            ./gradlew assembleDebug assembleDebugAndroidTest
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true
+            adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true
+            adb shell am instrument -w -e package com.droidvisor.e2e com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
 
       - name: Upload E2E Test Results
         uses: actions/upload-artifact@v4
