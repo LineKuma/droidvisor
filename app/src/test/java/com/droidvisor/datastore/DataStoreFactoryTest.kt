@@ -3,6 +3,7 @@ package com.droidvisor.datastore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.PreferenceDataStoreFactory
+import okio.Path.Companion.toPath
 import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
@@ -18,8 +19,8 @@ class DataStoreFactoryTest {
     @Before
     fun setup() {
         tempFile = File.createTempFile("test_datastore_factory", ".preferences_pb")
-        testDataStore = PreferenceDataStoreFactory.create(
-            produceFile = { tempFile }
+        testDataStore = PreferenceDataStoreFactory.createWithPath(
+            producePath = { tempFile.absolutePath.toPath() }
         )
     }
 

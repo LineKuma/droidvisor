@@ -9,6 +9,7 @@ import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import okio.Path.Companion.toPath
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -39,8 +40,8 @@ class VmStateDataStoreTest {
     fun setup() {
         context = mock(Context::class.java)
         tempFile = File.createTempFile("test_vm_state", ".preferences_pb")
-        dataStore = PreferenceDataStoreFactory.create(
-            produceFile = { tempFile }
+        dataStore = PreferenceDataStoreFactory.createWithPath(
+            producePath = { tempFile.absolutePath.toPath() }
         )
         vmStateDataStore = VmStateDataStore(context, dataStore)
     }
