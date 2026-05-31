@@ -4,9 +4,7 @@ package com.droidvisor.vm
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
-import android.system.virtualmachine.VirtualMachineManager
 import android.util.Log
 import androidx.annotation.RequiresApi
 
@@ -72,7 +70,7 @@ class AvfCapabilityChecker(private val context: Context) {
 
     private fun checkAvfSupport(reasons: MutableList<AvfUnavailableReason>): Boolean {
         return try {
-            val hasFeature = context.packageManager.hasSystemFeature(PackageManager.FEATURE_VIRTUALIZATION_FRAMEWORK)
+            val hasFeature = context.packageManager.hasSystemFeature(FEATURE_VIRTUALIZATION_FRAMEWORK)
             if (hasFeature) {
                 Log.d(TAG, "AVF is supported")
                 true
@@ -88,16 +86,29 @@ class AvfCapabilityChecker(private val context: Context) {
         }
     }
 
+    private fun getVirtualMachineManager(): Any? {
+        val vmmClass = Class.forName(VMM_CLASS_NAME)
+        val method = Context::class.java.getMethod("getSystemService", Class::class.java)
+        return method.invoke(context, vmmClass)
+    }
+
+    private fun getCapabilitiesValue(vmManager: Any): Int {
+        val method = vmManager.javaClass.getMethod("getCapabilities")
+        return method.invoke(vmManager) as Int
+    }
+
     private fun checkProtectedVmSupport(reasons: MutableList<AvfUnavailableReason>): Boolean {
         return try {
-            val vmManager = context.getSystemService(VirtualMachineManager::class.java)
+            val vmmClass = Class.forName(VMM_CLASS_NAME)
+            val vmManager = getVirtualMachineManager()
             if (vmManager == null) {
                 reasons.add(AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED)
                 return false
             }
 
-            val capabilities = vmManager.capabilities
-            val hasProtectedVm = (capabilities and VirtualMachineManager.CAPABILITY_PROTECTED_VM) != 0
+            val capabilities = getCapabilitiesValue(vmManager)
+            val capabilityProtectedVm = vmmClass.getField("CAPABILITY_PROTECTED_VM").getInt(null)
+            val hasProtectedVm = (capabilities and capabilityProtectedVm) != 0
 
             if (!hasProtectedVm) {
                 reasons.add(AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED)
@@ -114,14 +125,16 @@ class AvfCapabilityChecker(private val context: Context) {
 
     private fun checkNonProtectedVmSupport(reasons: MutableList<AvfUnavailableReason>): Boolean {
         return try {
-            val vmManager = context.getSystemService(VirtualMachineManager::class.java)
+            val vmmClass = Class.forName(VMM_CLASS_NAME)
+            val vmManager = getVirtualMachineManager()
             if (vmManager == null) {
                 reasons.add(AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED)
                 return false
             }
 
-            val capabilities = vmManager.capabilities
-            val hasNonProtectedVm = (capabilities and VirtualMachineManager.CAPABILITY_NON_PROTECTED_VM) != 0
+            val capabilities = getCapabilitiesValue(vmManager)
+            val capabilityNonProtectedVm = vmmClass.getField("CAPABILITY_NON_PROTECTED_VM").getInt(null)
+            val hasNonProtectedVm = (capabilities and capabilityNonProtectedVm) != 0
 
             if (!hasNonProtectedVm) {
                 reasons.add(AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED)
@@ -138,7 +151,7 @@ class AvfCapabilityChecker(private val context: Context) {
 
     private fun checkVsockSupport(reasons: MutableList<AvfUnavailableReason>): Boolean {
         return try {
-            val vmManager = context.getSystemService(VirtualMachineManager::class.java)
+            val vmManager = getVirtualMachineManager()
             if (vmManager != null) {
                 Log.d(TAG, "Vsock is supported (AVF present)")
                 true
@@ -155,6 +168,9 @@ class AvfCapabilityChecker(private val context: Context) {
     }
 
     companion object {
+        private const val FEATURE_VIRTUALIZATION_FRAMEWORK = "android.software.virtualization_framework"
+        private const val VMM_CLASS_NAME = "android.system.virtualmachine.VirtualMachineManager"
+
         val AvfUnavailableReason.displayText: String
             get() = when (this) {
                 AvfUnavailableReason.SDK_TOO_LOW -> "系统版本过低，需要 Android 14+"
