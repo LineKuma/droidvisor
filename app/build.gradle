@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'io.gitlab.arturbosch.detekt'
 }
 
 android {
@@ -52,6 +53,10 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+    lint {
+        sarifOutput = file("$buildDir/reports/lint-results-debug.sarif")
+        abortOnError = false
+    }
 }
 
 dependencies {
@@ -84,4 +89,21 @@ dependencies {
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config = files("$rootDir/detekt-config.yml")
+    baseline = file("$rootDir/detekt-baseline.xml")
+    ignoreFailures = true
+}
+
+tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach {
+    reports {
+        html.required = true
+        xml.required = true
+        sarif.required = true
+        md.required = true
+    }
 }
