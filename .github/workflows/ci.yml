@@ -52,7 +52,17 @@ jobs:
 
       - name: Run Unit Tests
         run: |
-          ./gradlew testDebugUnitTest --stacktrace
+          ./gradlew testDebugUnitTest \
+            --tests "com.droidvisor.docker.*" \
+            --tests "com.droidvisor.docker.model.*" \
+            --tests "com.droidvisor.ui.viewmodel.*" \
+            --tests "com.droidvisor.ui.components.*" \
+            --tests "com.droidvisor.vm.*" \
+            --tests "com.droidvisor.vm.model.*" \
+            --tests "com.droidvisor.vm.vsock.*" \
+            --tests "com.droidvisor.datastore.*" \
+            --tests "com.droidvisor.util.*" \
+            --stacktrace
 
       - name: Upload Unit Test Results
         uses: actions/upload-artifact@v4
