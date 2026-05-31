@@ -13,11 +13,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
-import org.mockito.Mockito.`when`
 import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.Mockito.`when`
 
-@RunWith(MockitoJUnitRunner::class)
+@RunWith(MockitoJUnitRunner.Silent::class)
 class VsockIntegrationTest {
 
     @Mock
@@ -46,8 +45,6 @@ class VsockIntegrationTest {
     fun testVsockConnectionToDocker() {
         `when`(mockVsockService.isConnected()).thenReturn(true)
         connectionStateFlow.value = VsockConnectionState.CONNECTED
-
-        `when`(mockVsockService.isConnected()).thenReturn(true)
 
         assertTrue(mockVsockService.isConnected())
         assertEquals(VsockConnectionState.CONNECTED, connectionStateFlow.value)

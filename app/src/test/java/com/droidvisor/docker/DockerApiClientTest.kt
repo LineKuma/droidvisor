@@ -142,7 +142,7 @@ class DockerApiClientTest {
     @Test
     fun ping_returnsFalseOnError() = runBlocking {
         val result = try {
-            apiClient.ping()
+            errorApiClient.ping()
         } catch (e: DockerError) {
             false
         }
