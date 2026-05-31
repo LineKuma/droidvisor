@@ -108,22 +108,3 @@ jobs:
           deny-licenses: ''
           vulnerability-check: true
           license-check: false
-
-  dependency-submission:
-    name: Dependency Submission
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Android Project
-        uses: ./.github/actions/setup-android
-
-      - name: Run Dependency Submission
-        uses: advanced-security/dependency-submission-action@v4
-        with:
-          gradle-command: dependencies
