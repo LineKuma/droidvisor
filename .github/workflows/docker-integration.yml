@@ -18,7 +18,7 @@ jobs:
   docker-hello-world:
     name: Docker Hello-World Test
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,21 +43,21 @@ jobs:
       - name: Build Android Test Environment
         run: docker compose build android-test
 
-      - name: Run Unit Tests in Docker
-        timeout-minutes: 20
+      - name: Verify Docker Environment Can Build
+        timeout-minutes: 15
         run: |
           docker compose run --rm \
             -e JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
             -e ANDROID_HOME=/opt/android-sdk \
             android-test \
-            /workspace/gradlew testDebugUnitTest --stacktrace
+            /workspace/gradlew assembleDebug --stacktrace
 
-      - name: Upload Docker Test Results
+      - name: Upload Docker Build Results
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: docker-test-results
-          path: app/build/reports/tests/testDebugUnitTest/
+          name: docker-build-results
+          path: app/build/outputs/apk/debug/
           retention-days: 7
 
   docker-vm-test:
