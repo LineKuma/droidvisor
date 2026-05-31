@@ -71,6 +71,7 @@ jobs:
           script: |
             ./gradlew assembleDebug assembleDebugAndroidTest
             adb uninstall com.droidvisor 2>/dev/null || true
+            adb uninstall com.droidvisor.test 2>/dev/null || true
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true
