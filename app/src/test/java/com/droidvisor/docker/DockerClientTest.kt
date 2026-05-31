@@ -37,7 +37,7 @@ class DockerClientTest {
         }
     }
 
-@Test
+    @Test
     fun ping_whenDockerUnavailable_shouldReturnFalse() = runBlocking {
         doAnswer { throw DockerError.ConnectionError("Connection refused") }.`when`(mockHttpClient).get("/_ping")
 
@@ -45,16 +45,14 @@ class DockerClientTest {
 
         assertFalse(result)
     }
-    }
 
-@Test
+    @Test
     fun ping_whenTimeout_shouldReturnFalse() = runBlocking {
         doAnswer { throw DockerError.TimeoutError("Request timeout") }.`when`(mockHttpClient).get("/_ping")
 
         val result = dockerClient.ping()
 
         assertFalse(result)
-    }
     }
 
     @Test
