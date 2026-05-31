@@ -19,11 +19,11 @@ jobs:
   e2e-test:
     name: Instrumented E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        api-level: [34]
+        api-level: [30]
 
     steps:
       - name: Checkout
@@ -39,7 +39,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-api-${{ matrix.api-level }}-${{ runner.os }}-v2
+          key: avd-api-${{ matrix.api-level }}-${{ runner.os }}-v3
 
       - name: Create AVD and Generate Snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -47,9 +47,9 @@ jobs:
         with:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
-          target: google_apis
+          target: default
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
           disable-animations: true
           script: echo "AVD snapshot generated"
 
@@ -58,9 +58,9 @@ jobs:
         with:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
-          target: google_apis
+          target: default
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
           disable-animations: true
           script: |
             adb wait-for-device

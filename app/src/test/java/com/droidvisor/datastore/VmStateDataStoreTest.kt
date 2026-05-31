@@ -184,6 +184,7 @@ class VmStateDataStoreTest {
     @Test
     fun saveVmInstances_withEmptyList_shouldPersistEmptyList() {
         runBlocking {
+            vmStateDataStore.clearState()
             val initial = vmStateDataStore.vmInstancesFlow.first()
             assertTrue(initial.isEmpty())
 

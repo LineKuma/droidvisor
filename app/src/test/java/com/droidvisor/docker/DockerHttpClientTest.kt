@@ -10,22 +10,22 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.Mockito.`when`
-import org.mockito.junit.MockitoJUnitRunner
+import org.mockito.Mockito.mock
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
-@RunWith(MockitoJUnitRunner::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
 class DockerHttpClientTest {
 
-    @Mock
     private lateinit var mockVsockService: VsockService
-
     private lateinit var httpClient: DockerHttpClient
 
     @Before
     fun setup() {
+        mockVsockService = mock(VsockService::class.java)
         httpClient = DockerHttpClient(mockVsockService)
     }
 

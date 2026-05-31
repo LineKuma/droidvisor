@@ -12,7 +12,7 @@ import org.mockito.junit.MockitoJUnitRunner
 @RunWith(MockitoJUnitRunner::class)
 class ImageTest {
 
-    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+    private val json = Json { ignoreUnknownKeys = true }
 
     @Test
     fun image_creation_withAllFields() {
