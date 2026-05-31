@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [30]
+        api-level: [29]
 
     steps:
       - name: Checkout
@@ -39,7 +39,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-api-${{ matrix.api-level }}-${{ runner.os }}-v3
+          key: avd-api-${{ matrix.api-level }}-${{ runner.os }}-v4
 
       - name: Create AVD and Generate Snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -49,7 +49,7 @@ jobs:
           arch: x86_64
           target: default
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics
           disable-animations: true
           script: echo "AVD snapshot generated"
 
@@ -60,7 +60,7 @@ jobs:
           arch: x86_64
           target: default
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics
           disable-animations: true
           script: |
             adb wait-for-device
