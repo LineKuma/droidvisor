@@ -1,13 +1,8 @@
 package com.droidvisor.docker
 
-import com.droidvisor.docker.model.Container
-import com.droidvisor.docker.model.Image
-import com.droidvisor.docker.model.PortBinding
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -180,7 +175,7 @@ class DockerClientTest {
             dockerClient.startContainer("abc123!@#def456")
 
             verify(mockHttpClient).post(
-                org.mockito.ArgumentMatchers.contains("/containers/abcdef456"),
+                org.mockito.ArgumentMatchers.contains("/containers/abc123def456"),
                 anyString()
             )
         }
@@ -275,9 +270,9 @@ class DockerClientTest {
                 [
                     {
                         "Id": "sha256:abc123",
-                        "ParentId": "",
                         "RepoTags": ["nginx:latest"],
-                        "Size": "100MB"
+                        "Created": 1715000000,
+                        "Size": 100000000
                     }
                 ]
             """.trimIndent()
@@ -300,7 +295,9 @@ class DockerClientTest {
                     "GitCommit": "abc123",
                     "GoVersion": "go1.20",
                     "Os": "linux",
-                    "Arch": "amd64"
+                    "Arch": "amd64",
+                    "KernelVersion": "6.1.0",
+                    "BuildTime": "2024-01-01"
                 }
             """.trimIndent()
             `when`(mockHttpClient.get(anyString())).thenReturn(jsonResponse)
@@ -317,9 +314,9 @@ class DockerClientTest {
     fun pullImage_whenSuccessful_shouldReturnImageCreateResponses() {
         runBlocking {
             val responseJson = """
-                {"Status": "Pulling from library/nginx:latest"}
-                {"Status": "Digest: sha256:abc123"}
-                {"Status": "Status: Image is up to date for nginx:latest"}
+                {"status":"Pulling from library/nginx:latest","progress":null,"progressDetail":null}
+                {"status":"Digest: sha256:abc123","progress":null,"progressDetail":null}
+                {"status":"Status: Image is up to date for nginx:latest","progress":null,"progressDetail":null}
             """.trimIndent()
             `when`(mockHttpClient.post(anyString(), anyString())).thenReturn(responseJson)
 

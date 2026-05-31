@@ -13,7 +13,7 @@ class DockerApiClient(private val httpClient: DockerHttpClient) {
 
     internal fun sanitizePath(path: String): String {
         return path
-            .replace(Regex("[^a-zA-Z0-9/_?=&-]"), "")
+            .replace(Regex("[^a-zA-Z0-9/_?=&.:-]"), "")
             .take(256)
     }
 
