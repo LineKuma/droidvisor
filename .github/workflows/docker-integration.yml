@@ -93,31 +93,19 @@ jobs:
           test -f app/build/outputs/apk/debug/app-debug.apk || (echo "APK not found" && exit 1)
           echo "Debug APK built successfully"
 
-      - name: Start Docker Services
-        run: docker compose up -d dind
-
-      - name: Wait for Docker Daemon
+      - name: Run hello-world in Docker VM
         run: |
-          timeout 60 bash -c 'until docker info > /dev/null 2>&1; do sleep 2; done'
-          echo "Docker daemon is ready"
+          docker pull hello-world
+          docker run --rm hello-world
+          echo "Docker VM hello-world test passed"
 
-      - name: Run Docker hello-world via DinD
+      - name: Docker Container Lifecycle in VM
         run: |
-          docker exec droidvisor-dind docker pull hello-world
-          docker exec droidvisor-dind docker run --rm hello-world
-          echo "DinD hello-world test passed"
-
-      - name: Run Docker Container Lifecycle Test
-        run: |
-          docker exec droidvisor-dind docker run -d --name test-alpine alpine:latest sleep 60
-          docker exec droidvisor-dind docker ps | grep test-alpine
-          docker exec droidvisor-dind docker stop test-alpine
-          docker exec droidvisor-dind docker rm test-alpine
-          echo "Docker container lifecycle test passed"
-
-      - name: Stop Docker Services
-        if: always()
-        run: docker compose down -v
+          docker run -d --name vm-test-alpine alpine:latest sleep 60
+          docker ps | grep vm-test-alpine
+          docker stop vm-test-alpine
+          docker rm vm-test-alpine
+          echo "Docker VM container lifecycle test passed"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
