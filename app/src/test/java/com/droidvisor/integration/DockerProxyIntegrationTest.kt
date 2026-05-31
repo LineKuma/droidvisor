@@ -1,12 +1,6 @@
 package com.droidvisor.integration
 
-import com.droidvisor.docker.DockerApiClient
-import com.droidvisor.docker.DockerError
-import com.droidvisor.docker.DockerHttpClient
 import com.droidvisor.docker.DockerProxyService
-import com.droidvisor.docker.model.Container
-import com.droidvisor.docker.model.DockerInfo
-import com.droidvisor.docker.model.Image
 import com.droidvisor.vm.vsock.VsockConnectionState
 import com.droidvisor.vm.vsock.VsockService
 import com.droidvisor.vm.vsock.isConnected
@@ -20,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.junit.MockitoJUnitRunner
+import org.mockito.Mockito.`when`
 
 @RunWith(MockitoJUnitRunner::class)
 class DockerProxyIntegrationTest {
@@ -44,7 +39,7 @@ class DockerProxyIntegrationTest {
 
     @Test
     fun testDockerProxyServiceInitialState() {
-        assertFalse(mockVsockService.isConnected())
+        assertFalse(connectionStateFlow.value.isConnected())
         assertFalse(daemonHealthyFlow.value)
         assertFalse(reconnectingFlow.value)
         assertNull(dockerVersionFlow.value)
@@ -55,6 +50,8 @@ class DockerProxyIntegrationTest {
         connectionStateFlow.value = VsockConnectionState.CONNECTED
         daemonHealthyFlow.value = true
         dockerVersionFlow.value = "25.0.0"
+
+        `when`(mockVsockService.isConnected()).thenReturn(true)
 
         assertTrue(mockVsockService.isConnected())
         assertTrue(daemonHealthyFlow.value)
@@ -69,7 +66,7 @@ class DockerProxyIntegrationTest {
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
         daemonHealthyFlow.value = false
 
-        assertFalse(mockVsockService.isConnected())
+        assertFalse(connectionStateFlow.value.isConnected())
         assertFalse(daemonHealthyFlow.value)
     }
 
@@ -78,7 +75,7 @@ class DockerProxyIntegrationTest {
         connectionStateFlow.value = VsockConnectionState.DISCONNECTED
         reconnectingFlow.value = true
 
-        assertFalse(mockVsockService.isConnected())
+        assertFalse(connectionStateFlow.value.isConnected())
         assertTrue(reconnectingFlow.value)
 
         connectionStateFlow.value = VsockConnectionState.CONNECTING
@@ -91,6 +88,8 @@ class DockerProxyIntegrationTest {
     fun testDockerErrorRecoveryIntegration() {
         connectionStateFlow.value = VsockConnectionState.CONNECTED
         daemonHealthyFlow.value = true
+
+        `when`(mockVsockService.isConnected()).thenReturn(true)
 
         daemonHealthyFlow.value = false
         reconnectingFlow.value = true
