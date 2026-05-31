@@ -42,7 +42,7 @@ class VmStateDataStoreTest {
         tempFile = File.createTempFile("test_vm_state", ".preferences_pb")
         dataStore = DataStoreFactory.create(
             produceFile = { tempFile },
-            serializer = PreferencesSerializer()
+            serializer = PreferencesSerializer
         )
         vmStateDataStore = VmStateDataStore(context, dataStore)
     }

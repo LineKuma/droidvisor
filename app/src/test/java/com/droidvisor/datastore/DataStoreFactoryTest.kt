@@ -21,7 +21,7 @@ class DataStoreFactoryTest {
         tempFile = File.createTempFile("test_datastore_factory", ".preferences_pb")
         testDataStore = DataStoreFactory.create(
             produceFile = { tempFile },
-            serializer = PreferencesSerializer()
+            serializer = PreferencesSerializer
         )
     }
 

@@ -2,15 +2,15 @@ package com.droidvisor.integration
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.PreferencesSerializer
 import com.droidvisor.datastore.VmStateDataStore
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import okio.Path.Companion.toPath
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -42,8 +42,9 @@ class VmManagerDataStoreIntegrationTest {
     fun setup() {
         context = mock(Context::class.java)
         tempFile = File.createTempFile("test_integration_ds", ".preferences_pb")
-        dataStore = PreferenceDataStoreFactory.createWithPath(
-            producePath = { tempFile.absolutePath.toPath() }
+        dataStore = DataStoreFactory.create(
+            produceFile = { tempFile },
+            serializer = PreferencesSerializer
         )
         vmStateDataStore = VmStateDataStore(context, dataStore)
     }
