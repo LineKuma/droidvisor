@@ -1,0 +1,42 @@
+name: 'Setup Android Project'
+description: 'Setup JDK 17, Android SDK, Gradle cache and grant execute permission'
+
+inputs:
+  java-version:
+    description: 'JDK version'
+    required: false
+    default: '17'
+  java-distribution:
+    description: 'JDK distribution'
+    required: false
+    default: 'temurin'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java-version }}
+        distribution: ${{ inputs.java-distribution }}
+        cache: gradle
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Accept Android licenses
+      shell: bash
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+
+    - name: Grant execute permission for gradlew
+      shell: bash
+      run: chmod +x gradlew
+
+    - name: Cache Gradle wrapper
+      uses: actions/cache@v4
+      with:
+        path: ~/.gradle/wrapper
+        key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('**/gradle-wrapper.properties') }}
+        restore-keys: |
+          gradle-wrapper-${{ runner.os }}-
