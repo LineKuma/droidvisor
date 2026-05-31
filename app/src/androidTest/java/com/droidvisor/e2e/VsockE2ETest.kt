@@ -5,6 +5,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.droidvisor.MainActivity
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -12,6 +13,11 @@ class VsockE2ETest {
 
     @get:Rule
     val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+    @Before
+    fun dismissPermission() {
+        E2ETestHelper.dismissPermissionScreen(composeTestRule)
+    }
 
     @Test
     fun vsockE2E_connectionEstablishes() {

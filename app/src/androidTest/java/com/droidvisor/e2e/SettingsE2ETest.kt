@@ -6,6 +6,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.droidvisor.MainActivity
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -13,6 +14,11 @@ class SettingsE2ETest {
 
     @get:Rule
     val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+    @Before
+    fun dismissPermission() {
+        E2ETestHelper.dismissPermissionScreen(composeTestRule)
+    }
 
     @Test
     fun settingsE2E_navigateToSettings() {
