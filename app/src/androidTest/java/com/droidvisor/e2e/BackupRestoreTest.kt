@@ -7,7 +7,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.waitForIdle
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.droidvisor.MainActivity
 import org.junit.Rule
