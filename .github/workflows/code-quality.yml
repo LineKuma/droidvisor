@@ -1,0 +1,129 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, master, develop, agent-develop]
+  pull_request:
+    branches: [main, master, develop, agent-develop]
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+  security-events: write
+  pull-requests: write
+
+jobs:
+  detekt:
+    name: Detekt Static Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Android Project
+        uses: ./.github/actions/setup-android
+
+      - name: Run Detekt
+        run: ./gradlew detekt --stacktrace
+
+      - name: Upload Detekt Report (HTML)
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: detekt-report-html
+          path: app/build/reports/detekt/detekt.html
+          retention-days: 14
+
+      - name: Upload Detekt Report (SARIF)
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: detekt-report-sarif
+          path: app/build/reports/detekt/detekt.sarif
+          retention-days: 14
+
+      - name: Upload Detekt Results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: success() || failure()
+        with:
+          sarif_file: app/build/reports/detekt/detekt.sarif
+          category: detekt
+          wait-for-processing: true
+
+  android-lint:
+    name: Android Lint Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Android Project
+        uses: ./.github/actions/setup-android
+
+      - name: Run Android Lint
+        run: ./gradlew lintDebug --stacktrace
+
+      - name: Upload Lint Report
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: quality-lint-report
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
+          retention-days: 14
+
+      - name: Upload Lint SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: success() || failure()
+        continue-on-error: true
+        with:
+          sarif_file: app/build/reports/lint-results-debug.sarif
+          category: android-lint
+          wait-for-processing: true
+
+  dependency-review:
+    name: Dependency Vulnerability Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: 'high'
+          fail-on-scopes: 'runtime'
+          deny-licenses: ''
+          vulnerability-check: true
+          license-check: false
+
+  dependency-submission:
+    name: Dependency Submission
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Android Project
+        uses: ./.github/actions/setup-android
+
+      - name: Run Dependency Submission
+        uses: advanced-security/dependency-submission-action@v4
+        with:
+          gradle-command: dependencies
