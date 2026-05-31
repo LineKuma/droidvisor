@@ -48,6 +48,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -153,8 +154,8 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
     if (showCreateDialog) {
         CreateVmDialog(
             onDismiss = { showCreateDialog = false },
-            onCreate = { name, template ->
-                vmManagerService?.createVm(name, template)
+            onCreate = { name, template, protectedVm ->
+                vmManagerService?.createVm(name, template.copy(protectedVm = protectedVm))
                 showCreateDialog = false
             }
         )
@@ -380,9 +381,10 @@ fun VmInfoChip(icon: ImageVector, text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate) -> Unit) {
+fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate, Boolean) -> Unit) {
     var vmName by remember { mutableStateOf("") }
     var selectedTemplate by remember { mutableStateOf(VmTemplate.getDefaultTemplates().first()) }
+    var isProtectedVm by remember { mutableStateOf(true) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.padding(16.dp)) {
@@ -398,6 +400,55 @@ fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate) -> Unit
                     placeholder = { Text("e.g., 我的开发机") },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("安全模式", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isProtectedVm = true },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isProtectedVm,
+                            onClick = { isProtectedVm = true }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("受保护虚拟机 (pKVM)", fontWeight = FontWeight.Medium)
+                            Text(
+                                "硬件级安全隔离，推荐用于生产环境",
+                                fontSize = 12.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isProtectedVm = false },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = !isProtectedVm,
+                            onClick = { isProtectedVm = false }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text("普通虚拟机 (KVM)", fontWeight = FontWeight.Medium)
+                            Text(
+                                "无硬件级隔离，适合开发和测试",
+                                fontSize = 12.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -432,7 +483,7 @@ fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate) -> Unit
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { onCreate(vmName.ifBlank { "新建虚拟机" }, selectedTemplate) },
+                        onClick = { onCreate(vmName.ifBlank { "新建虚拟机" }, selectedTemplate, isProtectedVm) },
                         enabled = true
                     ) {
                         Text("创建")

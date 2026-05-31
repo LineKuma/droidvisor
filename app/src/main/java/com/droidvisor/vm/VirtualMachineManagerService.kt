@@ -1,5 +1,8 @@
+@file:Suppress("NewApi")
+
 package com.droidvisor.vm
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,7 +11,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
+import android.os.ParcelFileDescriptor
+import android.system.virtualmachine.VirtualMachine
+import android.system.virtualmachine.VirtualMachineCallback
+import android.system.virtualmachine.VirtualMachineConfig
+import android.system.virtualmachine.VirtualMachineManager
 import android.util.Log
+import androidx.annotation.RequiresApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,24 +26,29 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.lang.reflect.Method
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
+@RequiresApi(34)
+@SuppressLint("NewApi")
 class VirtualMachineManagerService : Service() {
 
     private val TAG = "VirtualMachineManagerService"
 
     private val binder = LocalBinder()
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val callbackExecutor: Executor = Executors.newSingleThreadExecutor()
 
     private var config: VmConfig = VmConfig()
+    private var protectedVm: Boolean = true
 
     private val _status = MutableStateFlow(VmStatus.STOPPED)
     val status: StateFlow<VmStatus> = _status.asStateFlow()
 
-    private var vmInstance: Any? = null
+    private var vmInstance: VirtualMachine? = null
     private var consoleOutputService: ConsoleOutputService? = null
 
-    private var avfVmManager: Any? = null
+    private var avfVmManager: VirtualMachineManager? = null
     private var isAvfAvailable = false
 
     private var vmStartRetryCount = 0
@@ -43,6 +57,35 @@ class VirtualMachineManagerService : Service() {
 
     inner class LocalBinder : Binder() {
         fun getService(): VirtualMachineManagerService = this@VirtualMachineManagerService
+    }
+
+    private val vmCallback = object : VirtualMachineCallback {
+        override fun onPayloadStarted(vm: VirtualMachine) {
+            _status.value = VmStatus.RUNNING
+            consoleOutputService?.appendOutput("Payload started")
+            Log.d(TAG, "AVF VM payload started")
+        }
+
+        override fun onPayloadReady(vm: VirtualMachine) {
+            Log.d(TAG, "AVF VM payload ready")
+        }
+
+        override fun onPayloadFinished(vm: VirtualMachine, exitCode: Int) {
+            consoleOutputService?.appendOutput("Payload finished with exit code: $exitCode")
+            Log.d(TAG, "AVF VM payload finished with exit code: $exitCode")
+        }
+
+        override fun onStopped(vm: VirtualMachine, reason: Int) {
+            _status.value = VmStatus.STOPPED
+            consoleOutputService?.appendOutput("VM stopped")
+            Log.d(TAG, "AVF VM stopped, reason: $reason")
+        }
+
+        override fun onError(vm: VirtualMachine, errorCode: Int, message: String) {
+            _status.value = VmStatus.ERROR
+            consoleOutputService?.appendOutput("VM error: $message")
+            Log.e(TAG, "AVF VM error, code: $errorCode, message: $message")
+        }
     }
 
     override fun onCreate() {
@@ -57,22 +100,26 @@ class VirtualMachineManagerService : Service() {
 
     private fun initAvf() {
         isAvfAvailable = try {
-            val vmManagerClass = Class.forName("android.os.VirtualMachineManager")
-            val getInstanceMethod = vmManagerClass.getMethod("getInstance", Context::class.java)
-            avfVmManager = getInstanceMethod.invoke(null, this)
-            Log.d(TAG, "AVF VirtualMachineManager initialized successfully")
-            true
+            avfVmManager = getSystemService(VirtualMachineManager::class.java)
+            if (avfVmManager != null) {
+                Log.d(TAG, "AVF VirtualMachineManager initialized successfully")
+                true
+            } else {
+                Log.w(TAG, "AVF VirtualMachineManager is null, falling back to simulation mode")
+                false
+            }
         } catch (e: Exception) {
             Log.w(TAG, "AVF not available, falling back to simulation mode", e)
             false
         }
     }
 
-    fun configure(newConfig: VmConfig) {
+    fun configure(newConfig: VmConfig, protectedVm: Boolean = true) {
         if (_status.value.isRunning()) {
             throw VmError.ConfigurationError("Cannot modify config while VM is running")
         }
         this.config = newConfig
+        this.protectedVm = protectedVm
     }
 
     fun startVm() {
@@ -181,130 +228,42 @@ class VirtualMachineManagerService : Service() {
     }
 
     private fun startAvfVm() {
-        val vmManager = avfVmManager ?: throw VmError.AvfNotSupportedError("VirtualMachineManager not initialized")
+        val vmm = avfVmManager ?: throw VmError.AvfNotSupportedError("VirtualMachineManager not initialized")
 
         val vmConfig = buildAvfVmConfig()
         val vmName = "droidvisor_vm"
 
-        val vmManagerClass = vmManager.javaClass
-
-        val existingVm = try {
-            val getMethod = vmManagerClass.getMethod("get", String::class.java)
-            getMethod.invoke(vmManager, vmName)
-        } catch (e: Exception) {
-            null
-        }
-
-        val vm = if (existingVm != null) {
-            Log.d(TAG, "Using existing VM: $vmName")
-            existingVm
-        } else {
-            Log.d(TAG, "Creating new VM: $vmName")
-            val createMethod = vmManagerClass.getMethod("create", String::class.java, vmConfig.javaClass.superclass)
-            createMethod.invoke(vmManager, vmName, vmConfig)
-        }
-
+        val vm = vmm.getOrCreate(vmName, vmConfig)
         vmInstance = vm
 
-        val vmClass = vm.javaClass
-        val runMethod = vmClass.getMethod("run")
-        runMethod.invoke(vm)
+        vm.setCallback(callbackExecutor, vmCallback)
+        vm.run()
 
-        _status.value = VmStatus.RUNNING
-        consoleOutputService?.appendOutput("AVF VM started successfully")
-
-        setupAvfConsoleOutput(vm)
-
-        Log.d(TAG, "AVF VM started successfully")
+        consoleOutputService?.appendOutput("AVF VM starting...")
+        Log.d(TAG, "AVF VM run() called, waiting for callback")
     }
 
-    private fun buildAvfVmConfig(): Any {
-        val configBuilderClass = Class.forName("android.os.VirtualMachineConfig\$Builder")
-        val builderConstructor = configBuilderClass.getConstructor(Context::class.java)
-        val builder = builderConstructor.newInstance(this)
+    private fun buildAvfVmConfig(): VirtualMachineConfig {
+        val builder = VirtualMachineConfig.Builder(this)
 
-        val setApkPathMethod = configBuilderClass.getMethod("setApkPath", String::class.java)
-        val apkPath = packageResourcePath
-        setApkPathMethod.invoke(builder, apkPath)
+        builder.setApkPath(packageResourcePath)
 
-        try {
-            val setPayloadBinaryNameMethod = configBuilderClass.getMethod("setPayloadBinaryName", String::class.java)
-            setPayloadBinaryNameMethod.invoke(builder, config.payloadBinaryName)
-        } catch (e: Exception) {
-            Log.w(TAG, "setPayloadBinaryName not available", e)
-        }
+        builder.setPayloadBinaryName("libmicrodroid_payload.so")
 
-        try {
-            val setMemoryMibMethod = configBuilderClass.getMethod("setMemoryMib", Int::class.javaPrimitiveType)
-            setMemoryMibMethod.invoke(builder, (config.memoryBytes / (1024 * 1024)).toInt())
-        } catch (e: Exception) {
-            Log.w(TAG, "setMemoryMib not available", e)
-        }
+        builder.setMemoryMib((config.memoryBytes / (1024 * 1024)).toInt())
 
-        try {
-            val setCpuTopologyMethod = configBuilderClass.getMethod("setNumCpus", Int::class.javaPrimitiveType)
-            setCpuTopologyMethod.invoke(builder, config.cpuCores)
-        } catch (e: Exception) {
-            Log.w(TAG, "setNumCpus not available", e)
-        }
+        builder.setNumCpus(config.cpuCores)
 
-        try {
-            val setProtectedVmMethod = configBuilderClass.getMethod("setProtectedVm", Boolean::class.javaPrimitiveType)
-            setProtectedVmMethod.invoke(builder, true)
-        } catch (e: Exception) {
-            Log.w(TAG, "setProtectedVm not available, using default")
-        }
+        builder.setProtectedVm(protectedVm)
 
-        val buildMethod = configBuilderClass.getMethod("build")
-        return buildMethod.invoke(builder)
-    }
-
-    private fun setupAvfConsoleOutput(vm: Any) {
-        try {
-            val vmClass = vm.javaClass
-
-            val getVmOutputMethod = vmClass.getMethod("getVmOutput")
-            val vmOutput = getVmOutputMethod.invoke(vm)
-
-            if (vmOutput != null) {
-                val inputStream = vmOutput.javaClass.getMethod("getInputStream").invoke(vmOutput) as? java.io.InputStream
-                if (inputStream != null) {
-                    coroutineScope.launch {
-                        try {
-                            val reader = java.io.BufferedReader(java.io.InputStreamReader(inputStream))
-                            var line: String?
-                            while (reader.readLine().also { line = it } != null) {
-                                consoleOutputService?.appendOutput(line ?: "")
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error reading VM output", e)
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not setup AVF console output", e)
-        }
+        return builder.build()
     }
 
     private fun stopAvfVm() {
         try {
             val vm = vmInstance ?: throw VmError.StopError("No VM instance to stop")
-            val vmClass = vm.javaClass
-
-            try {
-                val stopMethod = vmClass.getMethod("stop")
-                stopMethod.invoke(vm)
-            } catch (e: NoSuchMethodException) {
-                try {
-                    val tryStopMethod = vmClass.getMethod("tryStop")
-                    tryStopMethod.invoke(vm)
-                } catch (e2: Exception) {
-                    Log.w(TAG, "Neither stop() nor tryStop() available", e2)
-                }
-            }
-
-            Log.d(TAG, "AVF VM stopped successfully, releasing resources...")
+            vm.stop()
+            Log.d(TAG, "AVF VM stop() called, releasing resources...")
             Log.d(TAG, "Memory release: VM instance cleared, preparing for garbage collection")
             vmInstance = null
             System.gc()
@@ -319,15 +278,7 @@ class VirtualMachineManagerService : Service() {
     private fun closeAvfVm() {
         try {
             val vm = vmInstance ?: return
-            val vmClass = vm.javaClass
-
-            try {
-                val closeMethod = vmClass.getMethod("close")
-                closeMethod.invoke(vm)
-            } catch (e: Exception) {
-                Log.w(TAG, "close() not available on VM", e)
-            }
-
+            vm.close()
             Log.d(TAG, "AVF VM closed, cleaning up resources")
             Log.d(TAG, "Memory cleanup: vmInstance=null, consoleOutputService cleanup triggered")
             vmInstance = null
@@ -338,16 +289,29 @@ class VirtualMachineManagerService : Service() {
         }
     }
 
-    fun connectVsock(port: Int): Any? {
+    fun connectVsock(port: Int): ParcelFileDescriptor? {
         return try {
             val vm = vmInstance ?: throw VmError.StartError("VM not running")
-            val vmClass = vm.javaClass
-            val connectVsockMethod = vmClass.getMethod("connectVsock", Int::class.javaPrimitiveType)
-            connectVsockMethod.invoke(vm, port)
+            vm.connectVsock(port)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to connect vsock on port $port", e)
             null
         }
+    }
+
+    fun getCapabilities(): Int {
+        val vmm = avfVmManager ?: return 0
+        return vmm.capabilities
+    }
+
+    fun isProtectedVmCapabilityAvailable(): Boolean {
+        val caps = getCapabilities()
+        return (caps and VirtualMachineManager.CAPABILITY_PROTECTED_VM) != 0
+    }
+
+    fun isNonProtectedVmCapabilityAvailable(): Boolean {
+        val caps = getCapabilities()
+        return (caps and VirtualMachineManager.CAPABILITY_NON_PROTECTED_VM) != 0
     }
 
     private fun createNotificationChannel() {

@@ -185,9 +185,10 @@ class VmManagerService : Service() {
             memoryBytes = vm.effectiveMemoryBytes,
             cpuCores = vm.effectiveCpuCores,
             diskSizeBytes = vm.effectiveDiskSizeBytes,
-            payloadBinaryName = vm.template.payloadBinaryName
+            payloadBinaryName = vm.template.payloadBinaryName,
+            protectedVm = vm.template.protectedVm
         )
-        avf.configure(vmConfig)
+        avf.configure(vmConfig, vm.template.protectedVm)
         avf.startVm()
     }
 

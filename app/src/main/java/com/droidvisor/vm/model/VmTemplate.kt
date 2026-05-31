@@ -21,7 +21,8 @@ data class VmTemplate(
     val includesDocker: Boolean = false,
     val includesDesktop: Boolean = false,
     val recommended: Boolean = false,
-    val payloadBinaryName: String = "microdroid_payload"
+    val payloadBinaryName: String = "libmicrodroid_payload.so",
+    val protectedVm: Boolean = true
 ) {
     companion object {
         val STANDARD_DEBIAN = VmTemplate(
@@ -31,7 +32,8 @@ data class VmTemplate(
             memoryBytes = 512 * 1024 * 1024L,
             cpuCores = 2,
             diskSizeBytes = 4L * 1024 * 1024 * 1024,
-            includesDocker = false
+            includesDocker = false,
+            protectedVm = true
         )
 
         val DOCKER_HOST = VmTemplate(
@@ -42,7 +44,8 @@ data class VmTemplate(
             cpuCores = 4,
             diskSizeBytes = 16L * 1024 * 1024 * 1024,
             includesDocker = true,
-            recommended = true
+            recommended = true,
+            protectedVm = true
         )
 
         val MINIMAL_ALPINE = VmTemplate(
@@ -52,7 +55,8 @@ data class VmTemplate(
             memoryBytes = 256 * 1024 * 1024L,
             cpuCores = 1,
             diskSizeBytes = 2L * 1024 * 1024 * 1024,
-            includesDocker = false
+            includesDocker = false,
+            protectedVm = false
         )
 
         fun getDefaultTemplates(): List<VmTemplate> {

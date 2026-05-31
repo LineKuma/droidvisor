@@ -128,7 +128,7 @@ class VirtualMachineManagerServiceTest {
         val config = VmConfig()
         assertEquals(512L * 1024 * 1024, config.memoryBytes)
         assertEquals(2, config.cpuCores)
-        assertEquals("microdroid_payload", config.payloadBinaryName)
+        assertEquals("libmicrodroid_payload.so", config.payloadBinaryName)
     }
 
     @Test

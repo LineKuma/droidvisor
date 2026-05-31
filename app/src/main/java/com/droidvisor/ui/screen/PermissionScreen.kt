@@ -102,8 +102,8 @@ fun PermissionScreen(
 
             PermissionCard(
                 icon = Icons.Default.Android,
-                title = "Android 13+",
-                description = "需要 Android 13 或更高版本",
+                title = "Android 14+",
+                description = "需要 Android 14 或更高版本",
                 isGranted = permissionState.meetsMinSdk
             )
 
@@ -122,8 +122,18 @@ fun PermissionScreen(
             PermissionCard(
                 icon = Icons.Default.Shield,
                 title = "受保护虚拟机 (pKVM)",
-                description = "pKVM 支持，提供更强的安全隔离",
+                description = "pKVM 支持，提供硬件级安全隔离",
                 isGranted = permissionState.protectedVmSupported,
+                isCritical = false
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            PermissionCard(
+                icon = Icons.Default.Computer,
+                title = "普通虚拟机 (KVM)",
+                description = "KVM 支持，适合开发和测试环境",
+                isGranted = permissionState.nonProtectedVmSupported,
                 isCritical = false
             )
 
@@ -309,10 +319,11 @@ private fun AvfUnavailableWarning(
                     Column {
                         Text(
                             text = when (reason) {
-                                AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "系统版本过低，需要 Android 13+"
+                                AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "系统版本过低，需要 Android 14+"
                                 AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "设备不支持 Android 虚拟化框架 (AVF)"
                                 AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "AVF 框架初始化失败，可能缺少系统权限"
                                 AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "设备不支持受保护虚拟机 (pKVM)"
+                                AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "设备不支持普通虚拟机 (KVM)"
                                 AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "设备不支持 Vsock 通信"
                                 AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "未知原因"
                             },
@@ -322,10 +333,11 @@ private fun AvfUnavailableWarning(
                         )
                         Text(
                             text = when (reason) {
-                                AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "请升级到 Android 13 或更高版本"
+                                AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "请升级到 Android 14 或更高版本"
                                 AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，应用将以模拟模式运行"
                                 AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "请确认应用已获得虚拟化管理权限，或尝试重启设备"
-                                AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 pKVM，虚拟机安全性无法保障，部分功能可能受限"
+                                AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 pKVM，可使用普通虚拟机模式"
+                                AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持普通虚拟机，将使用 pKVM 模式"
                                 AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "Vsock 不可用，Docker 和终端功能将无法正常工作"
                                 AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "请尝试重启设备或更新系统"
                             },

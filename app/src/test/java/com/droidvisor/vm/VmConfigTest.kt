@@ -15,7 +15,7 @@ class VmConfigTest {
         assertEquals(0L, config.diskSizeBytes)
         assertNull(config.diskPath)
         assertNull(config.payloadApkPath)
-        assertEquals("microdroid_payload", config.payloadBinaryName)
+        assertEquals("libmicrodroid_payload.so", config.payloadBinaryName)
     }
 
     @Test

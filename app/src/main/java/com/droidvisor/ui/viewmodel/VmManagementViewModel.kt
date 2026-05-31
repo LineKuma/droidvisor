@@ -81,11 +81,11 @@ class VmManagementViewModel(
         savedStateHandle[KEY_SELECTED_VM_ID] = vmId
     }
 
-    fun createVm(name: String, template: VmTemplate) {
+    fun createVm(name: String, template: VmTemplate, protectedVm: Boolean = true) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
             try {
-                vmManagerService?.createVm(name, template)
+                vmManagerService?.createVm(name, template.copy(protectedVm = protectedVm))
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isLoading = false,

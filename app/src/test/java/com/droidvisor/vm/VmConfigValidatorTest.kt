@@ -17,7 +17,7 @@ class VmConfigValidatorTest {
             memoryBytes = 512L * 1024 * 1024,
             cpuCores = 1,
             diskPath = "/data/vm/disk.qcow2",
-            payloadBinaryName = "microdroid_payload"
+            payloadBinaryName = "libmicrodroid_payload.so"
         )
 
         val result = validator.validate(config)
@@ -259,7 +259,7 @@ class VmConfigValidatorTest {
             memoryBytes = 4L * 1024 * 1024 * 1024,
             cpuCores = 4,
             diskPath = "/data/vm/optimal.img",
-            payloadBinaryName = "microdroid_payload"
+            payloadBinaryName = "libmicrodroid_payload.so"
         )
 
         val result = validator.validate(config)

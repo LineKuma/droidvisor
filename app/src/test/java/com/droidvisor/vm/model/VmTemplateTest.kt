@@ -24,7 +24,7 @@ class VmTemplateTest {
         assertFalse(template.includesDocker)
         assertFalse(template.includesDesktop)
         assertFalse(template.recommended)
-        assertEquals("microdroid_payload", template.payloadBinaryName)
+        assertEquals("libmicrodroid_payload.so", template.payloadBinaryName)
     }
 
     @Test

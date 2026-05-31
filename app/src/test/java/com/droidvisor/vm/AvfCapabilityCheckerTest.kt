@@ -38,45 +38,72 @@ class AvfCapabilityCheckerTest {
         val capabilities = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = false,
             isProtectedVmSupported = false,
+            isNonProtectedVmSupported = false,
             isVsockSupported = false,
             minimumSdkMet = false
         )
 
         assertFalse(capabilities.isAvfSupported)
         assertFalse(capabilities.isProtectedVmSupported)
+        assertFalse(capabilities.isNonProtectedVmSupported)
         assertFalse(capabilities.isVsockSupported)
         assertFalse(capabilities.minimumSdkMet)
     }
 
     @Test
-    fun avfCapabilities_canRunRealVm_requiresAllSupport() {
+    fun avfCapabilities_canRunRealVm_withProtectedVm() {
         val fullSupport = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = true,
             isProtectedVmSupported = true,
+            isNonProtectedVmSupported = false,
             isVsockSupported = true,
             minimumSdkMet = true
         )
         assertTrue(fullSupport.canRunRealVm)
+    }
 
+    @Test
+    fun avfCapabilities_canRunRealVm_withNonProtectedVm() {
+        val nonProtectedSupport = AvfCapabilityChecker.AvfCapabilities(
+            isAvfSupported = true,
+            isProtectedVmSupported = false,
+            isNonProtectedVmSupported = true,
+            isVsockSupported = true,
+            minimumSdkMet = true
+        )
+        assertTrue(nonProtectedSupport.canRunRealVm)
+    }
+
+    @Test
+    fun avfCapabilities_canRunRealVm_requiresAvfOrNonProtected() {
         val missingAvf = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = false,
             isProtectedVmSupported = true,
+            isNonProtectedVmSupported = true,
             isVsockSupported = true,
             minimumSdkMet = true
         )
         assertFalse(missingAvf.canRunRealVm)
+    }
 
-        val missingProtected = AvfCapabilityChecker.AvfCapabilities(
+    @Test
+    fun avfCapabilities_canRunRealVm_requiresVmSupport() {
+        val noVmSupport = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = true,
             isProtectedVmSupported = false,
+            isNonProtectedVmSupported = false,
             isVsockSupported = true,
             minimumSdkMet = true
         )
-        assertFalse(missingProtected.canRunRealVm)
+        assertFalse(noVmSupport.canRunRealVm)
+    }
 
+    @Test
+    fun avfCapabilities_canRunRealVm_requiresSdk() {
         val missingSdk = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = true,
             isProtectedVmSupported = true,
+            isNonProtectedVmSupported = true,
             isVsockSupported = true,
             minimumSdkMet = false
         )
@@ -88,6 +115,7 @@ class AvfCapabilityCheckerTest {
         val noSupport = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = false,
             isProtectedVmSupported = false,
+            isNonProtectedVmSupported = false,
             isVsockSupported = false,
             minimumSdkMet = false
         )
@@ -96,6 +124,7 @@ class AvfCapabilityCheckerTest {
         val fullSupport = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = true,
             isProtectedVmSupported = true,
+            isNonProtectedVmSupported = true,
             isVsockSupported = true,
             minimumSdkMet = true
         )
@@ -112,6 +141,7 @@ class AvfCapabilityCheckerTest {
         val capabilities = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = false,
             isProtectedVmSupported = false,
+            isNonProtectedVmSupported = false,
             isVsockSupported = false,
             minimumSdkMet = false,
             avfUnavailableReasons = reasons
@@ -126,6 +156,7 @@ class AvfCapabilityCheckerTest {
         val noSupport = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = false,
             isProtectedVmSupported = false,
+            isNonProtectedVmSupported = false,
             isVsockSupported = false,
             minimumSdkMet = false
         )
@@ -134,6 +165,7 @@ class AvfCapabilityCheckerTest {
         val fullSupport = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = true,
             isProtectedVmSupported = true,
+            isNonProtectedVmSupported = true,
             isVsockSupported = true,
             minimumSdkMet = true
         )
@@ -148,6 +180,7 @@ class AvfCapabilityCheckerTest {
         assertNotNull(capabilities)
         assertNotNull(capabilities.isAvfSupported)
         assertNotNull(capabilities.isProtectedVmSupported)
+        assertNotNull(capabilities.isNonProtectedVmSupported)
         assertNotNull(capabilities.isVsockSupported)
         assertNotNull(capabilities.minimumSdkMet)
     }
@@ -162,6 +195,12 @@ class AvfCapabilityCheckerTest {
     fun displayText_forAvfClassNotFound() {
         val reason = AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND
         assertTrue(reason.name.contains("AVF_CLASS_NOT_FOUND"))
+    }
+
+    @Test
+    fun displayText_forNonProtectedVmNotSupported() {
+        val reason = AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED
+        assertTrue(reason.name.contains("NON_PROTECTED_VM_NOT_SUPPORTED"))
     }
 
     @Test
