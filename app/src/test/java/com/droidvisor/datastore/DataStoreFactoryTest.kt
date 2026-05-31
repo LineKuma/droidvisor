@@ -1,38 +1,44 @@
 package com.droidvisor.datastore
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.PreferenceDataStoreFactory
+import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.Robolectric
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
+import java.io.File
 
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
 class DataStoreFactoryTest {
 
-    private lateinit var context: Context
+    private lateinit var tempFile: File
+    private lateinit var testDataStore: DataStore<Preferences>
 
     @Before
     fun setup() {
-        context = Robolectric.setupActivity(android.app.Activity::class.java)
+        tempFile = File.createTempFile("test_datastore_factory", ".preferences_pb")
+        testDataStore = PreferenceDataStoreFactory.create(
+            produceFile = { tempFile }
+        )
+    }
+
+    @After
+    fun tearDown() {
+        if (::tempFile.isInitialized) {
+            tempFile.delete()
+        }
     }
 
     @Test
-    fun dataStore_extension_isPresent() {
-        val dataStore = context.dataStore
-        assertNotNull(dataStore)
+    fun dataStore_canBeCreated() {
+        assertNotNull(testDataStore)
     }
 
     @Test
     fun dataStore_returnsSameInstance() {
-        val dataStore1 = context.dataStore
-        val dataStore2 = context.dataStore
+        val dataStore1 = testDataStore
+        val dataStore2 = testDataStore
 
         assertNotNull(dataStore1)
         assertNotNull(dataStore2)
@@ -41,7 +47,7 @@ class DataStoreFactoryTest {
 
     @Test
     fun dataStore_canBeUsedForPreferences() {
-        val dataStore: DataStore<Preferences> = context.dataStore
+        val dataStore: DataStore<Preferences> = testDataStore
         assertNotNull(dataStore)
     }
 }

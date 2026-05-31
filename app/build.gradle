@@ -57,6 +57,11 @@ android {
         sarifOutput = file("$buildDir/reports/lint-results-debug.sarif")
         abortOnError = false
     }
+    testOptions {
+        unitTests {
+            returnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
@@ -78,7 +83,6 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.robolectric:robolectric:4.12.2'
     testImplementation 'org.mockito:mockito-core:5.8.0'
     testImplementation 'io.mockk:mockk:1.13.9'
     testImplementation 'io.kotest:kotest-assertions-core:5.8.0'

@@ -1,8 +1,5 @@
 package com.droidvisor.vm
 
-import android.app.NotificationManager
-import android.content.Context
-import android.content.Intent
 import com.droidvisor.vm.model.VmTemplate
 import com.droidvisor.vm.model.VmTemplateType
 import kotlinx.coroutines.CoroutineScope
@@ -14,13 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowNotificationManager
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,15 +19,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], shadows = [ShadowNotificationManager::class])
 class VirtualMachineManagerServiceTest {
 
-    @Mock
-    private lateinit var mockContext: Context
-
-    @Mock
-    private lateinit var mockConsoleOutputService: ConsoleOutputService
+    private val mockConsoleOutputService = mock(ConsoleOutputService::class.java)
 
     private lateinit var service: TestableVirtualMachineManagerService
 

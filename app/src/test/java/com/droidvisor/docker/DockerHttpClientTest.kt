@@ -1,7 +1,6 @@
 package com.droidvisor.docker
 
 import com.droidvisor.vm.vsock.VsockService
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -9,15 +8,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.Mockito.mock
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
 class DockerHttpClientTest {
 
     private lateinit var mockVsockService: VsockService

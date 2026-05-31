@@ -1,28 +1,31 @@
 package com.droidvisor.integration
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.PreferenceDataStoreFactory
 import com.droidvisor.datastore.VmStateDataStore
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
+import org.mockito.Mockito.mock
+import java.io.File
 
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
 class VmManagerDataStoreIntegrationTest {
 
     private lateinit var context: Context
+    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var vmStateDataStore: VmStateDataStore
+    private lateinit var tempFile: File
 
     private val testTemplate = VmTemplate(
         type = com.droidvisor.vm.model.VmTemplateType.CUSTOM,
@@ -36,8 +39,19 @@ class VmManagerDataStoreIntegrationTest {
 
     @Before
     fun setup() {
-        context = org.robolectric.Robolectric.setupActivity(android.app.Activity::class.java)
-        vmStateDataStore = VmStateDataStore(context)
+        context = mock(Context::class.java)
+        tempFile = File.createTempFile("test_integration_ds", ".preferences_pb")
+        dataStore = PreferenceDataStoreFactory.create(
+            produceFile = { tempFile }
+        )
+        vmStateDataStore = VmStateDataStore(context, dataStore)
+    }
+
+    @After
+    fun tearDown() {
+        if (::tempFile.isInitialized) {
+            tempFile.delete()
+        }
     }
 
     @Test

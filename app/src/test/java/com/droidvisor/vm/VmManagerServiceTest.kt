@@ -1,12 +1,5 @@
 package com.droidvisor.vm
 
-import android.app.NotificationManager
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.os.Binder
-import android.os.IBinder
 import com.droidvisor.datastore.VmStateDataStore
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
@@ -20,22 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.ArgumentCaptor
-import org.mockito.Mock
-import org.mockito.Mockito.`when`
-import org.mockito.Mockito.any
-import org.mockito.Mockito.anyString
-import org.mockito.Mockito.doAnswer
-import org.mockito.Mockito.eq
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.never
-import org.mockito.Mockito.spy
-import org.mockito.Mockito.verify
-import org.robolectric.Robolectric
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowNotificationManager
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,15 +21,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34], shadows = [ShadowNotificationManager::class])
 class VmManagerServiceTest {
 
-    @Mock
-    private lateinit var mockVmStateDataStore: VmStateDataStore
-
-    @Mock
-    private lateinit var mockVirtualMachineManagerService: VirtualMachineManagerService
+    private val mockVmStateDataStore = mock(VmStateDataStore::class.java)
+    private val mockVirtualMachineManagerService = mock(VirtualMachineManagerService::class.java)
 
     private lateinit var service: TestableVmManagerService
 

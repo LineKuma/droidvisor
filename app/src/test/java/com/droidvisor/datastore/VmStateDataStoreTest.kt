@@ -3,36 +3,27 @@ package com.droidvisor.datastore
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.PreferenceDataStoreFactory
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runBlockingTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.Robolectric
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
+import org.mockito.Mockito.mock
+import java.io.File
 
-private val Context.testVmStateDataStore: DataStore<Preferences> by preferencesDataStore(name = "test_vm_state")
-
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
 class VmStateDataStoreTest {
 
     private lateinit var context: Context
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var vmStateDataStore: VmStateDataStore
+    private lateinit var tempFile: File
 
     private val testTemplate = VmTemplate(
         type = com.droidvisor.vm.model.VmTemplateType.CUSTOM,
@@ -46,9 +37,19 @@ class VmStateDataStoreTest {
 
     @Before
     fun setup() {
-        context = Robolectric.setupActivity(android.app.Activity::class.java)
-        dataStore = context.testVmStateDataStore
+        context = mock(Context::class.java)
+        tempFile = File.createTempFile("test_vm_state", ".preferences_pb")
+        dataStore = PreferenceDataStoreFactory.create(
+            produceFile = { tempFile }
+        )
         vmStateDataStore = VmStateDataStore(context, dataStore)
+    }
+
+    @After
+    fun tearDown() {
+        if (::tempFile.isInitialized) {
+            tempFile.delete()
+        }
     }
 
     @Test
