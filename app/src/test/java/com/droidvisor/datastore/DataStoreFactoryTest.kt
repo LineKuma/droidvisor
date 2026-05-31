@@ -1,10 +1,9 @@
 package com.droidvisor.datastore
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.core.DataStoreFactory
-import androidx.datastore.core.Serializer
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.PreferencesSerializer
+import okio.Path.Companion.toPath
 import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
@@ -20,10 +19,8 @@ class DataStoreFactoryTest {
     @Before
     fun setup() {
         tempFile = File.createTempFile("test_datastore_factory", ".preferences_pb")
-        val serializer: Serializer<Preferences> = PreferencesSerializer
-        testDataStore = DataStoreFactory.create(
-            produceFile = { tempFile },
-            serializer = serializer
+        testDataStore = PreferenceDataStoreFactory.createWithPath(
+            produceFile = { tempFile.absolutePath.toPath() }
         )
     }
 
