@@ -2,6 +2,7 @@ package com.droidvisor.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.Serializer
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferencesSerializer
 import org.junit.After
@@ -19,9 +20,10 @@ class DataStoreFactoryTest {
     @Before
     fun setup() {
         tempFile = File.createTempFile("test_datastore_factory", ".preferences_pb")
+        val serializer: Serializer<Preferences> = PreferencesSerializer
         testDataStore = DataStoreFactory.create(
             produceFile = { tempFile },
-            serializer = PreferencesSerializer
+            serializer = serializer
         )
     }
 

@@ -3,6 +3,7 @@ package com.droidvisor.integration
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.Serializer
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferencesSerializer
 import com.droidvisor.datastore.VmStateDataStore
@@ -42,9 +43,10 @@ class VmManagerDataStoreIntegrationTest {
     fun setup() {
         context = mock(Context::class.java)
         tempFile = File.createTempFile("test_integration_ds", ".preferences_pb")
+        val prefsSerializer: Serializer<Preferences> = PreferencesSerializer
         dataStore = DataStoreFactory.create(
             produceFile = { tempFile },
-            serializer = PreferencesSerializer
+            serializer = prefsSerializer
         )
         vmStateDataStore = VmStateDataStore(context, dataStore)
     }
