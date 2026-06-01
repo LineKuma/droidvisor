@@ -87,7 +87,7 @@ class PermissionViewModelTest {
     @Test
     fun permissionState_meetsMinSdk_returnsCorrectValue() {
         val state = viewModel.permissionState.value
-        val expectedMinSdk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        val expectedMinSdk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
         assertEquals(expectedMinSdk, state.meetsMinSdk)
     }
 
@@ -180,7 +180,7 @@ class PermissionViewModelTest {
     fun permissionState_missingPermissions_includesMinSdkWhenNotMet() {
         val state = viewModel.permissionState.value
         assertFalse(state.meetsMinSdk)
-        assertTrue(state.missingPermissions.contains("Android 13+"))
+        assertTrue(state.missingPermissions.contains("Android 14+"))
     }
 
     @Test
