@@ -1,9 +1,19 @@
-#include <android-base/logging.h>
+#include <android/log.h>
 #include <sys/socket.h>
 #include <linux/vm_sockets.h>
 #include <unistd.h>
+
+#ifndef AF_VSOCK
+#define AF_VSOCK 40
+#endif
+
+#ifndef VMADDR_CID_ANY
+#define VMADDR_CID_ANY 0xFFFFFFFF
+#endif
+
 #include <cstdlib>
 #include <cstring>
+#include <dlfcn.h>
 #include <thread>
 #include <vector>
 #include <string>
@@ -11,15 +21,32 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-extern "C" void AVmPayload_notifyPayloadReady();
-extern "C" int AVmPayload_main();
+#define LOG_TAG "DroidVisorPayload"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+typedef void (*NotifyPayloadReadyFunc)();
+
+static NotifyPayloadReadyFunc getNotifyPayloadReady() {
+    void* handle = dlopen("libmicrodroid_payload.so", RTLD_NOW);
+    if (!handle) {
+        LOGI("libmicrodroid_payload.so not available, running in non-Microdroid mode");
+        return nullptr;
+    }
+    auto func = reinterpret_cast<NotifyPayloadReadyFunc>(dlsym(handle, "AVmPayload_notifyPayloadReady"));
+    if (!func) {
+        LOGI("AVmPayload_notifyPayloadReady symbol not found");
+        dlclose(handle);
+    }
+    return func;
+}
 
 static int startVsockServer(int port);
 static void handleClient(int clientFd);
 static std::string executeCommand(const std::string& cmd);
 
 extern "C" int AVmPayload_main() {
-    LOG(INFO) << "DroidVisor payload started";
+    LOGI("DroidVisor payload started");
 
     std::thread dockerThread([]() {
         startVsockServer(2375);
@@ -31,8 +58,13 @@ extern "C" int AVmPayload_main() {
     });
     ttyThread.detach();
 
-    AVmPayload_notifyPayloadReady();
-    LOG(INFO) << "DroidVisor payload ready";
+    auto notifyPayloadReady = getNotifyPayloadReady();
+    if (notifyPayloadReady) {
+        notifyPayloadReady();
+        LOGI("DroidVisor payload ready (Microdroid)");
+    } else {
+        LOGI("DroidVisor payload ready (standalone)");
+    }
 
     while (true) {
         sleep(60);
@@ -44,7 +76,7 @@ extern "C" int AVmPayload_main() {
 static int startVsockServer(int port) {
     int serverFd = socket(AF_VSOCK, SOCK_STREAM, 0);
     if (serverFd < 0) {
-        LOG(ERROR) << "Failed to create vsock socket on port " << port;
+        LOGE("Failed to create vsock socket on port %d", port);
         return -1;
     }
 
@@ -54,18 +86,18 @@ static int startVsockServer(int port) {
     addr.svm_cid = VMADDR_CID_ANY;
 
     if (bind(serverFd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        LOG(ERROR) << "Failed to bind vsock on port " << port;
+        LOGE("Failed to bind vsock on port %d", port);
         close(serverFd);
         return -1;
     }
 
     if (listen(serverFd, 4) < 0) {
-        LOG(ERROR) << "Failed to listen on vsock port " << port;
+        LOGE("Failed to listen on vsock port %d", port);
         close(serverFd);
         return -1;
     }
 
-    LOG(INFO) << "Vsock server listening on port " << port;
+    LOGI("Vsock server listening on port %d", port);
 
     while (true) {
         int clientFd = accept(serverFd, nullptr, nullptr);

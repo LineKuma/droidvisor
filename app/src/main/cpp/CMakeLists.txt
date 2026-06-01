@@ -6,4 +6,5 @@ add_library(microdroid_payload SHARED microdroid_payload.cpp)
 target_link_libraries(microdroid_payload
     android
     log
+    dl
 )
