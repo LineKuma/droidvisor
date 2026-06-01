@@ -32,7 +32,7 @@ ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-too
 
 # 接受Android SDK许可并安装平台工具
 RUN yes | sdkmanager --licenses || true && \
-    sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+    sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
 # 配置Gradle Wrapper
 COPY gradle gradle/
