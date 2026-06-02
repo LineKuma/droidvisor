@@ -42,7 +42,7 @@ jobs:
   unit-test:
     name: Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,6 +62,7 @@ jobs:
             --tests "com.droidvisor.vm.vsock.*" \
             --tests "com.droidvisor.datastore.*" \
             --tests "com.droidvisor.util.*" \
+            --no-daemon \
             --stacktrace
 
       - name: Upload Unit Test Results

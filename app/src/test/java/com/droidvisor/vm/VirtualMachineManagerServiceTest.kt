@@ -208,14 +208,10 @@ class TestableVirtualMachineManagerService {
     }
 
     fun connectVsock(port: Int): Any? {
-        return try {
-            if (status.value != VmStatus.RUNNING) {
-                throw VmError.StartError("VM not running")
-            }
-            null
-        } catch (e: Exception) {
-            null
+        if (status.value != VmStatus.RUNNING) {
+            throw VmError.StartError("VM not running")
         }
+        return null
     }
 
     fun testGetConfig(): VmConfig = config

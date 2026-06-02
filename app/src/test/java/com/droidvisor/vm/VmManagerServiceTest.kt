@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
@@ -168,11 +169,19 @@ class VmManagerServiceTest {
     }
 
     @Test
-    fun startVm_shouldUpdateStatusToStarting() {
+    fun startVm_shouldUpdateStatusToStarting() = kotlinx.coroutines.runBlocking {
         val vm = service.createVm("Test VM", testVmTemplate)
         assertEquals(VmStatus.STOPPED, vm.status)
 
         service.startVm(vm.id)
+
+        withTimeout(5000L) {
+            while (true) {
+                val updatedVm = service.getVm(vm.id)
+                if (updatedVm?.status != VmStatus.STOPPED) break
+                kotlinx.coroutines.delay(100)
+            }
+        }
 
         val updatedVm = service.getVm(vm.id)
         assertNotNull(updatedVm)
@@ -331,18 +340,15 @@ class TestableVmManagerService(
     }
 
     fun deleteVm(vmId: String) {
-        coroutineScope.launch {
-            val vm = _vmInstances.value.find { it.id == vmId }
-            if (vm != null) {
-                if (vm.isRunning) {
-                    stopVm(vmId)
-                    kotlinx.coroutines.delay(50)
-                }
-                activeVms.remove(vmId)
-                _vmInstances.value = _vmInstances.value.filter { it.id != vmId }
-                if (_selectedVmId.value == vmId) {
-                    _selectedVmId.value = _vmInstances.value.firstOrNull()?.id
-                }
+        val vm = _vmInstances.value.find { it.id == vmId }
+        if (vm != null) {
+            if (vm.isRunning) {
+                stopVm(vmId)
+            }
+            activeVms.remove(vmId)
+            _vmInstances.value = _vmInstances.value.filter { it.id != vmId }
+            if (_selectedVmId.value == vmId) {
+                _selectedVmId.value = _vmInstances.value.firstOrNull()?.id
             }
         }
     }

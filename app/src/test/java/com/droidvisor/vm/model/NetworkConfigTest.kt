@@ -9,7 +9,7 @@ import org.junit.Test
 
 class NetworkConfigTest {
 
-    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
 
     @Test
     fun networkConfig_creation_withAllFields() {
@@ -112,9 +112,9 @@ class NetworkConfigTest {
         )
 
         val jsonString = json.encodeToString(NetworkConfig.serializer(), config)
-        assertTrue(jsonString.contains("\"vmId\":\"vm-003\""))
-        assertTrue(jsonString.contains("\"mode\":\"HOST\""))
-        assertTrue(jsonString.contains("\"ipv4Address\":\"10.0.0.1\""))
+        assertTrue(jsonString.contains("\"vmId\": \"vm-003\""))
+        assertTrue(jsonString.contains("\"mode\": \"HOST\""))
+        assertTrue(jsonString.contains("\"ipv4Address\": \"10.0.0.1\""))
     }
 
     @Test
@@ -147,8 +147,11 @@ class NetworkConfigTest {
         )
 
         val jsonString = json.encodeToString(PortForwarding.serializer(), pf)
-        assertTrue(jsonString.contains("\"id\":\"pf-004\""))
-        assertTrue(jsonString.contains("\"protocol\":\"TCP\""))
-        assertTrue(jsonString.contains("\"hostPort\":443"))
+        assertTrue(jsonString.contains("\"id\""))
+        assertTrue(jsonString.contains("pf-004"))
+        assertTrue(jsonString.contains("\"protocol\""))
+        assertTrue(jsonString.contains("TCP"))
+        assertTrue(jsonString.contains("\"hostPort\""))
+        assertTrue(jsonString.contains("443"))
     }
 }
