@@ -1,8 +1,10 @@
 package com.droidvisor.vm
 
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -32,9 +34,11 @@ class ConsoleOutputServiceTest {
         service.appendOutputLines(lines)
 
         val outputs = mutableListOf<String>()
-        service.outputFlow.collect { output ->
-            outputs.add(output)
-            if (outputs.size >= 3) return@collect
+        withTimeout(3000L) {
+            service.outputFlow.collect { output ->
+                outputs.add(output)
+                if (outputs.size >= 3) return@collect
+            }
         }
 
         assertTrue(outputs.size >= 3)
@@ -59,8 +63,15 @@ class ConsoleOutputServiceTest {
     @Test
     fun appendOutputLines_withEmptyList_doesNotEmit() = runBlocking {
         service.appendOutputLines(emptyList())
-        val first = service.outputFlow.first()
-        assertEquals("First line", first)
+        var received = false
+        try {
+            withTimeout(500L) {
+                service.outputFlow.first()
+                received = true
+            }
+        } catch (_: TimeoutCancellationException) {
+        }
+        assertTrue(!received)
     }
 
     @Test
@@ -69,9 +80,11 @@ class ConsoleOutputServiceTest {
         service.appendOutputLines(lines)
 
         val outputs = mutableListOf<String>()
-        service.outputFlow.collect { output ->
-            outputs.add(output)
-            if (outputs.size >= 4) return@collect
+        withTimeout(3000L) {
+            service.outputFlow.collect { output ->
+                outputs.add(output)
+                if (outputs.size >= 4) return@collect
+            }
         }
 
         assertTrue(outputs.size >= 4)
