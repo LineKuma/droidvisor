@@ -3,6 +3,8 @@ package com.droidvisor.vm
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -33,15 +35,12 @@ class ConsoleOutputServiceTest {
         val lines = listOf("Line 1", "Line 2", "Line 3")
         service.appendOutputLines(lines)
 
-        val outputs = mutableListOf<String>()
-        withTimeout(3000L) {
-            service.outputFlow.collect { output ->
-                outputs.add(output)
-                if (outputs.size >= 3) return@collect
-            }
-        }
+        val outputs = service.outputFlow.take(3).toList()
 
-        assertTrue(outputs.size >= 3)
+        assertEquals(3, outputs.size)
+        assertEquals("Line 1", outputs[0])
+        assertEquals("Line 2", outputs[1])
+        assertEquals("Line 3", outputs[2])
     }
 
     @Test
@@ -79,15 +78,13 @@ class ConsoleOutputServiceTest {
         val lines = listOf("Normal", "", "Empty line", "More")
         service.appendOutputLines(lines)
 
-        val outputs = mutableListOf<String>()
-        withTimeout(3000L) {
-            service.outputFlow.collect { output ->
-                outputs.add(output)
-                if (outputs.size >= 4) return@collect
-            }
-        }
+        val outputs = service.outputFlow.take(4).toList()
 
-        assertTrue(outputs.size >= 4)
+        assertEquals(4, outputs.size)
+        assertEquals("Normal", outputs[0])
+        assertEquals("", outputs[1])
+        assertEquals("Empty line", outputs[2])
+        assertEquals("More", outputs[3])
     }
 }
 

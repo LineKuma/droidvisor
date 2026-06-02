@@ -99,9 +99,9 @@ class BackupTest {
         )
 
         val jsonString = json.encodeToString(Backup.serializer(), backup)
-        assertTrue(jsonString.contains("\"id\":\"backup-003\""))
-        assertTrue(jsonString.contains("\"vmId\":\"vm-001\""))
-        assertTrue(jsonString.contains("\"status\":\"AVAILABLE\""))
+        assertTrue(jsonString.contains("\"id\": \"backup-003\""))
+        assertTrue(jsonString.contains("\"vmId\": \"vm-001\""))
+        assertTrue(jsonString.contains("\"status\": \"AVAILABLE\""))
     }
 
     @Test

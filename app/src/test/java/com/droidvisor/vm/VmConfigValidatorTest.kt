@@ -210,7 +210,7 @@ class VmConfigValidatorTest {
 
         assertFalse(result.isValid)
         assertNotNull(result.errorMessage)
-        assertTrue(result.errorMessage!!.contains("payload"))
+        assertTrue(result.errorMessage!!.contains("Payload"))
     }
 
     @Test

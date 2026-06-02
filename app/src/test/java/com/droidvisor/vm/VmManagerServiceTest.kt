@@ -331,18 +331,15 @@ class TestableVmManagerService(
     }
 
     fun deleteVm(vmId: String) {
-        coroutineScope.launch {
-            val vm = _vmInstances.value.find { it.id == vmId }
-            if (vm != null) {
-                if (vm.isRunning) {
-                    stopVm(vmId)
-                    kotlinx.coroutines.delay(50)
-                }
-                activeVms.remove(vmId)
-                _vmInstances.value = _vmInstances.value.filter { it.id != vmId }
-                if (_selectedVmId.value == vmId) {
-                    _selectedVmId.value = _vmInstances.value.firstOrNull()?.id
-                }
+        val vm = _vmInstances.value.find { it.id == vmId }
+        if (vm != null) {
+            if (vm.isRunning) {
+                stopVm(vmId)
+            }
+            activeVms.remove(vmId)
+            _vmInstances.value = _vmInstances.value.filter { it.id != vmId }
+            if (_selectedVmId.value == vmId) {
+                _selectedVmId.value = _vmInstances.value.firstOrNull()?.id
             }
         }
     }
