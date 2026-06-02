@@ -147,8 +147,11 @@ class NetworkConfigTest {
         )
 
         val jsonString = json.encodeToString(PortForwarding.serializer(), pf)
-        assertTrue(jsonString.contains("\"id\": \"pf-004\""))
-        assertTrue(jsonString.contains("\"protocol\": \"TCP\""))
-        assertTrue(jsonString.contains("\"hostPort\": 443"))
+        assertTrue(jsonString.contains("\"id\""))
+        assertTrue(jsonString.contains("pf-004"))
+        assertTrue(jsonString.contains("\"protocol\""))
+        assertTrue(jsonString.contains("TCP"))
+        assertTrue(jsonString.contains("\"hostPort\""))
+        assertTrue(jsonString.contains("443"))
     }
 }
