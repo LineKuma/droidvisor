@@ -9,7 +9,7 @@ import org.junit.Test
 
 class NetworkConfigTest {
 
-    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+    private val json = Json { ignoreUnknownKeys = true; prettyPrint = true; encodeDefaults = true }
 
     @Test
     fun networkConfig_creation_withAllFields() {
