@@ -141,7 +141,7 @@ class NetworkConfigTest {
     fun portForwarding_serialization() {
         val pf = PortForwarding(
             id = "pf-004",
-            protocol = Protocol.TCP,
+            protocol = Protocol.UDP,
             hostPort = 443,
             guestPort = 443
         )
@@ -150,7 +150,7 @@ class NetworkConfigTest {
         assertTrue(jsonString.contains("\"id\""))
         assertTrue(jsonString.contains("pf-004"))
         assertTrue(jsonString.contains("\"protocol\""))
-        assertTrue(jsonString.contains("TCP"))
+        assertTrue(jsonString.contains("UDP"))
         assertTrue(jsonString.contains("\"hostPort\""))
         assertTrue(jsonString.contains("443"))
     }
