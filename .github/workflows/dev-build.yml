@@ -1,0 +1,88 @@
+name: Dev Build
+
+on:
+  push:
+    branches: [agent-develop]
+  workflow_dispatch:
+
+concurrency:
+  group: devbuild-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # 日期编码版本号格式: YYYYMMDD.BUILD_NUMBER
+  # 例如: 20260604.57
+  DATE_VERSION: ${{ github.run_number }}
+
+jobs:
+  build-dev:
+    name: Build Dev APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Android Project
+        uses: ./.github/actions/setup-android
+
+      - name: Generate date-based version
+        id: version
+        run: |
+          # 格式: YYYYMMDD.BUILD_NUMBER (例如 20260604.57)
+          DATE=$(date -u +%Y%m%d)
+          BUILD=${{ github.run_number }}
+          VERSION="${DATE}.${BUILD}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+          echo "Generated dev version: ${VERSION}"
+
+      - name: Set version in build.gradle
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DATE="${{ steps.version.outputs.date }}"
+          # versionCode 使用 YYYYMMDDNN 格式的整数 (例如 2026060401)
+          VERSION_CODE="${DATE}01"
+          # 去掉前导零避免被当作八进制
+          VERSION_CODE=$((10#$VERSION_CODE))
+
+          sed -i "s/versionCode .*/versionCode ${VERSION_CODE}/" app/build.gradle
+          sed -i "s/versionName \".*\"/versionName \"${VERSION}-dev\"/" app/build.gradle
+
+          echo "Set versionCode=${VERSION_CODE}, versionName=${VERSION}-dev"
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Rename APK with date version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk \
+            dist/droidvisor-${VERSION}-dev-${SHORT_SHA}.apk
+
+      - name: Upload Dev APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-apk-${{ steps.version.outputs.date }}
+          path: dist/*.apk
+          retention-days: 7
+
+      - name: Show APK info
+        run: |
+          echo "## Dev Build Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Property | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | `${{ steps.version.outputs.version }}-dev` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Branch | `${{ github.ref_name }}` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Triggered by | ${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Run ID | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Download" >> "$GITHUB_STEP_SUMMARY"
+          echo "APK artifact: \`dev-apk-${{ steps.version.outputs.date }}\` (retention: 7 days)" >> "$GITHUB_STEP_SUMMARY"
