@@ -142,7 +142,11 @@ class FullUserJourneyE2ETest {
         composeTestRule.onNodeWithText("journey-vm-beta").performClick()
         composeTestRule.waitForIdle()
         // 第二个 VM 应该是停止状态
-        composeTestRule.onNodeWithText("启动").assertExists() || composeTestRule.onNodeWithText("已停止").assertExists()
+        try {
+            composeTestRule.onNodeWithText("启动").assertExists()
+        } catch (_: Exception) {
+            composeTestRule.onNodeWithText("已停止").assertExists()
+        }
 
         // 清理
         composeTestRule.onNodeWithText("停止").let { node ->
@@ -364,8 +368,12 @@ class FullUserJourneyE2ETest {
         composeTestRule.onNodeWithText("虚拟机名称").performTextInput("a".repeat(256))
         composeTestRule.onNodeWithText("创建").assertIsNotEnabled()
 
-        // 取消创建对话框
-        composeTestRule.performKeyPress(android.view.KeyEvent.KEYCODE_BACK)
+        // 取消创建对话框（按返回键）
+        try {
+            composeTestRule.onNodeWithText("取消").performClick()
+        } catch (_: Exception) {
+            // 对话框可能没有取消按钮，忽略
+        }
         composeTestRule.waitForIdle()
     }
 
