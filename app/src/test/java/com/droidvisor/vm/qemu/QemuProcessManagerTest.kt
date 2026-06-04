@@ -388,8 +388,8 @@ class QemuProcessManagerTest {
         val d1 = File(tempDir, "e1.qcow2").also { it.createNewFile() }
         val d2 = File(tempDir, "e2.raw").also { it.createNewFile() }
         val config = createDefaultConfig().copy(extraDisks = listOf(
-            QemuDisk(d1.absolutePath, "qcow2"),
-            QemuDisk(d2.absolutePath, "raw")
+            QemuDisk(d1.absolutePath, format = "qcow2"),
+            QemuDisk(d2.absolutePath, format = "raw")
         ))
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
         assertTrue("至少 2 个 -drive", cmd.count { it == "-drive" } >= 2)
