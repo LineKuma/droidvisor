@@ -11,6 +11,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
@@ -34,7 +35,7 @@ class QemuProcessManagerTest {
         tempDir = Files.createTempDirectory("qemu_test_").toFile()
         // 创建测试用的协程作用域
         executor = Executors.newSingleThreadExecutor()
-        testScope = CoroutineScope(Dispatchers.IO + executor.asCoroutineDispatcher())
+        testScope = CoroutineScope(executor.asCoroutineDispatcher())
     }
 
     @After
