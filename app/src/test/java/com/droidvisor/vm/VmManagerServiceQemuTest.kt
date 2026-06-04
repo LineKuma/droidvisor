@@ -89,7 +89,7 @@ class VmManagerServiceQemuTest {
         service.setAvfBound(false)
         service.setQemuAvailable(true)
 
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
 
         assertTrue(service.hasRealRuntime)
@@ -108,7 +108,7 @@ class VmManagerServiceQemuTest {
     fun hasRealRuntime_AVF和QEMU都可用_应返回true() {
         service.setAvfBound(true)
         service.setQemuAvailable(true)
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
 
         assertTrue(service.hasRealRuntime)
@@ -120,7 +120,7 @@ class VmManagerServiceQemuTest {
     fun startVm_AVF不可用但QEMU可用_应选择QEMU运行时() = kotlinx.coroutines.runBlocking {
         service.setAvfBound(false)
         service.setQemuAvailable(true)
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
 
         val vm = service.createVm("Test VM", testVmTemplate)
@@ -149,7 +149,7 @@ class VmManagerServiceQemuTest {
     fun startVm_AVF已绑定_应优先选择AVF运行时() = kotlinx.coroutines.runBlocking {
         service.setAvfBound(true)
         service.setQemuAvailable(true)
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
 
         val vm = service.createVm("Test VM", testVmTemplate)
@@ -164,9 +164,7 @@ class VmManagerServiceQemuTest {
     fun stopVm_QEMU运行时应调用qemuRuntimeStop() = kotlinx.coroutines.runBlocking {
         service.setAvfBound(false)
         service.setQemuAvailable(true)
-        val mockQemuRuntime = object : QemuVmRuntimeMock {
-            override var stopCalled = false
-        }
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
 
         val vm = service.createVm("Test VM", testVmTemplate)
@@ -204,7 +202,7 @@ class VmManagerServiceQemuTest {
 
     @Test
     fun getQemuRuntime_设置后应返回非null() {
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
 
         assertNotNull(service.getQemuRuntime())
@@ -213,7 +211,7 @@ class VmManagerServiceQemuTest {
 
     @Test
     fun getQemuRuntime_清除后应返回null() {
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
         assertNotNull(service.getQemuRuntime())
 
@@ -299,7 +297,7 @@ class VmManagerServiceQemuTest {
         // AVF 和 QEMU 都可用时，应选择 AVF
         service.setAvfBound(true)
         service.setQemuAvailable(true)
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
 
         val vm = service.createVm("Test VM", testVmTemplate)
@@ -314,7 +312,7 @@ class VmManagerServiceQemuTest {
         // AVF 不可用，QEMU 可用时，应选择 QEMU
         service.setAvfBound(false)
         service.setQemuAvailable(true)
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
 
         val vm = service.createVm("Test VM", testVmTemplate)
@@ -353,7 +351,7 @@ class VmManagerServiceQemuTest {
 
         // 场景2：添加 QEMU 可用
         service.setQemuAvailable(true)
-        val mockQemuRuntime = object : QemuVmRuntimeMock {}
+        val mockQemuRuntime = QemuVmRuntimeMock()
         service.setQemuRuntime(mockQemuRuntime)
         val vm2 = service.createVm("VM 2", testVmTemplate)
         service.startVm(vm2.id)
