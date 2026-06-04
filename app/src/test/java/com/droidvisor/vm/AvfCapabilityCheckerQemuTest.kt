@@ -111,11 +111,11 @@ class AvfCapabilityCheckerQemuTest {
         for (reason in reasons) {
             val text = reason.displayText
             assertNotNull(text)
-            assertTrue(text.isNotEmpty(), "displayText should not be empty for $reason")
+            assertTrue("displayText should not be empty for $reason", text.isNotEmpty())
 
             val suggestion = reason.suggestion
             assertNotNull(suggestion)
-            assertTrue(suggestion.isNotEmpty(), "suggestion should not be empty for $reason")
+            assertTrue("suggestion should not be empty for $reason", suggestion.isNotEmpty())
         }
     }
 
