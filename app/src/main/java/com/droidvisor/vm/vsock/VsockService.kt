@@ -10,6 +10,9 @@ import android.os.IBinder
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.droidvisor.vm.VirtualMachineManagerService
+import com.droidvisor.vm.VmManagerService
+import com.droidvisor.vm.qemu.QemuVsockChannel
+import com.droidvisor.vm.qemu.QemuVmRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -50,6 +53,9 @@ class VsockService : Service() {
 
     private var avfService: VirtualMachineManagerService? = null
     private var avfBound = false
+
+    /** VmManagerService 引用（用于访问 QEMU 运行时） */
+    private var vmManagerService: VmManagerService? = null
 
     private val avfConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -211,11 +217,21 @@ class VsockService : Service() {
 
     fun getOutputStream(): OutputStream? {
         return (vsockChannel as? RealVsockChannel)?.outputStream
+            ?: (vsockChannel as? QemuVsockChannelWrapper)?.outputStream
+    }
+
+    /**
+     * 绑定 VmManagerService（用于 QEMU 运行时访问）
+     */
+    fun attachVmManagerService(service: VmManagerService) {
+        this.vmManagerService = service
+        Log.d(TAG, "VmManagerService attached for QEMU vsock support")
     }
 
     fun isConnected(): Boolean = _connectionState.value.isConnected()
 
     private fun createVsockChannel(port: Int): VsockChannel {
+        // 优先尝试 AVF vsock
         if (avfBound && avfService != null) {
             val pfd = avfService?.connectVsock(port) as? ParcelFileDescriptor
             if (pfd != null) {
@@ -224,7 +240,25 @@ class VsockService : Service() {
             }
         }
 
-        Log.w(TAG, "AVF Vsock not available, creating simulation channel on port $port")
+        // 尝试 QEMU vsock（通过 unix socket）
+        val qemuRuntime = vmManagerService?.getQemuVmRuntime()
+        if (qemuRuntime != null && vmManagerService?.getActiveRuntimeType() == com.droidvisor.vm.qemu.VmRuntime.RuntimeType.QEMU) {
+            try {
+                val workDir = qemuRuntime.getWorkDirectory()
+                val socketPath = "${workDir.absolutePath}/sockets/vsock_$port.sock"
+                val socketFile = java.io.File(socketPath)
+                if (socketFile.exists()) {
+                    val qemuChannel = QemuVsockChannel(socketPath)
+                    qemuChannel.connect()
+                    Log.d(TAG, "Created QEMU Vsock channel on port $port via $socketPath")
+                    return QemuVsockChannelWrapper(qemuChannel)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "QEMU vsock connection failed for port $port", e)
+            }
+        }
+
+        Log.w(TAG, "AVF and QEMU Vsock not available, creating simulation channel on port $port")
         return SimulationVsockChannel(port)
     }
 
@@ -313,4 +347,32 @@ internal class SimulationVsockChannel(
     }
 
     override fun isOpen(): Boolean = open
+}
+
+/**
+ * QEMU Vsock 通道包装器
+ *
+ * 将 QemuVsockChannel 包装为 VsockChannel 接口，
+ * 同时暴露输入/输出流供上层使用。
+ */
+internal class QemuVsockChannelWrapper(
+    private val qemuChannel: QemuVsockChannel
+) : VsockChannel {
+
+    val inputStream: java.io.InputStream? = qemuChannel.getInputStream()
+    val outputStream: java.io.OutputStream? = qemuChannel.getOutputStream()
+
+    override fun send(data: ByteArray) {
+        qemuChannel.send(data)
+    }
+
+    override fun receive(): ByteArray? {
+        return qemuChannel.receive()
+    }
+
+    override fun close() {
+        qemuChannel.close()
+    }
+
+    override fun isOpen(): Boolean = qemuChannel.isOpen()
 }

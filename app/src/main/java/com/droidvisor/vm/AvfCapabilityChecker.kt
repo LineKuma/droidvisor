@@ -30,19 +30,36 @@ class AvfCapabilityChecker(private val context: Context) {
         val isNonProtectedVmSupported: Boolean,
         val isVsockSupported: Boolean,
         val minimumSdkMet: Boolean,
+        val isQemuSupported: Boolean = false,
         val avfUnavailableReasons: List<AvfUnavailableReason> = emptyList()
     ) {
         val canRunRealVm: Boolean
             get() = isAvfSupported && (isProtectedVmSupported || isNonProtectedVmSupported) && minimumSdkMet
 
+        /** 是否有任何可用的运行时（AVF 或 QEMU） */
+        val hasAnyRuntime: Boolean
+            get() = canRunRealVm || isQemuSupported
+
         val isSimulationOnly: Boolean
-            get() = !canRunRealVm
+            get() = !hasAnyRuntime
 
         val unavailableReasonTexts: List<String>
             get() = avfUnavailableReasons.map { it.displayText }
 
         val summaryText: String
-            get() = if (canRunRealVm) "AVF 可用" else "AVF 不可用: ${unavailableReasonTexts.joinToString("、")}"
+            get() = when {
+                canRunRealVm -> "AVF 可用"
+                isQemuSupported -> "QEMU 兼容模式可用"
+                else -> "无可用的虚拟化运行时: ${unavailableReasonTexts.joinToString("、")}"
+            }
+
+        /** 推荐的运行时类型 */
+        val recommendedRuntime: String
+            get() = when {
+                canRunRealVm -> "AVF (Android Virtualization Framework)"
+                isQemuSupported -> "QEMU (兼容模式)"
+                else -> "模拟模式（无真实虚拟化）"
+            }
     }
 
     fun checkCapabilities(): AvfCapabilities {
@@ -57,6 +74,7 @@ class AvfCapabilityChecker(private val context: Context) {
         val isProtectedVmSupported = checkProtectedVmSupport(reasons)
         val isNonProtectedVmSupported = checkNonProtectedVmSupport(reasons)
         val isVsockSupported = checkVsockSupport(reasons)
+        val isQemuSupported = checkQemuSupport()
 
         return AvfCapabilities(
             isAvfSupported = isAvfSupported,
@@ -64,6 +82,7 @@ class AvfCapabilityChecker(private val context: Context) {
             isNonProtectedVmSupported = isNonProtectedVmSupported,
             isVsockSupported = isVsockSupported,
             minimumSdkMet = minimumSdkMet,
+            isQemuSupported = isQemuSupported,
             avfUnavailableReasons = reasons
         )
     }
@@ -163,6 +182,59 @@ class AvfCapabilityChecker(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Vsock is not supported", e)
             reasons.add(AvfUnavailableReason.VSOCK_NOT_SUPPORTED)
+            false
+        }
+    }
+
+    /**
+     * 检测 QEMU 是否可用
+     *
+     * 检查 qemu-system-aarch64 和 qemu-img 是否存在且可执行。
+     * QEMU 可以作为 AVF 不可用时的 fallback 运行时。
+     */
+    private fun checkQemuSupport(): Boolean {
+        return try {
+            val qemuBinary = checkQemuBinary()
+            val qemuImg = checkQemuImg()
+            val supported = qemuBinary && qemuImg
+
+            if (supported) {
+                Log.d(TAG, "QEMU runtime is available as fallback")
+            } else {
+                Log.d(TAG, "QEMU not available (binary=$qemuBinary, img=$qemuImg)")
+            }
+
+            supported
+        } catch (e: Exception) {
+            Log.w(TAG, "Error checking QEMU support", e)
+            false
+        }
+    }
+
+    private fun checkQemuBinary(): Boolean {
+        return try {
+            val candidates = listOf(
+                "qemu-system-aarch64",
+                "qemu-system-x86_64",
+                "/system/bin/qemu-system-aarch64"
+            )
+            candidates.any { candidate ->
+                val file = java.io.File(candidate)
+                file.exists() && file.canExecute()
+            } || run {
+                val process = Runtime.getRuntime().exec(arrayOf("which", "qemu-system-aarch64"))
+                process.waitFor() == 0
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun checkQemuImg(): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("qemu-img", "--version"))
+            process.waitFor() == 0
+        } catch (_: Exception) {
             false
         }
     }
