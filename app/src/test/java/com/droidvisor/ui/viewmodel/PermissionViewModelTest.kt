@@ -10,7 +10,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -36,10 +35,10 @@ class PermissionViewModelTest {
     fun initialState_hasDefaultValues() {
         val state = viewModel.permissionState.value
         assertFalse(state.hasInternetPermission)
-        assertFalse(state.hasStoragePermission)
         assertFalse(state.meetsMinSdk)
         assertFalse(state.avfSupported)
         assertFalse(state.protectedVmSupported)
+        assertFalse(state.nonProtectedVmSupported)
         assertFalse(state.vsockSupported)
         assertTrue(state.avfUnavailableReasons.isEmpty())
     }
@@ -98,12 +97,6 @@ class PermissionViewModelTest {
     }
 
     @Test
-    fun permissionState_hasStoragePermission_defaultIsFalse() {
-        val state = viewModel.permissionState.value
-        assertFalse(state.hasStoragePermission)
-    }
-
-    @Test
     fun permissionState_avfSupported_defaultIsFalse() {
         val state = viewModel.permissionState.value
         assertFalse(state.avfSupported)
@@ -116,6 +109,12 @@ class PermissionViewModelTest {
     }
 
     @Test
+    fun permissionState_nonProtectedVmSupported_defaultIsFalse() {
+        val state = viewModel.permissionState.value
+        assertFalse(state.nonProtectedVmSupported)
+    }
+
+    @Test
     fun permissionState_vsockSupported_defaultIsFalse() {
         val state = viewModel.permissionState.value
         assertFalse(state.vsockSupported)
@@ -125,13 +124,6 @@ class PermissionViewModelTest {
     fun permissionState_allPermissionsGranted_falseWhenMissingInternet() {
         val state = viewModel.permissionState.value
         assertFalse(state.hasInternetPermission)
-        assertFalse(state.allPermissionsGranted)
-    }
-
-    @Test
-    fun permissionState_allPermissionsGranted_falseWhenMissingStorage() {
-        val state = viewModel.permissionState.value
-        assertFalse(state.hasStoragePermission)
         assertFalse(state.allPermissionsGranted)
     }
 
@@ -170,13 +162,6 @@ class PermissionViewModelTest {
     }
 
     @Test
-    fun permissionState_missingPermissions_includesStorageWhenMissing() {
-        val state = viewModel.permissionState.value
-        assertFalse(state.hasStoragePermission)
-        assertTrue(state.missingPermissions.contains("存储访问") || state.missingPermissions.contains("存储读写"))
-    }
-
-    @Test
     fun permissionState_missingPermissions_includesMinSdkWhenNotMet() {
         val state = viewModel.permissionState.value
         assertFalse(state.meetsMinSdk)
@@ -191,10 +176,23 @@ class PermissionViewModelTest {
     }
 
     @Test
+    fun permissionState_missingPermissions_doesNotIncludeStorage() {
+        val state = viewModel.permissionState.value
+        assertFalse(state.missingPermissions.any { it.contains("存储") })
+    }
+
+    @Test
     fun permissionState_avfWarnings_containsProtectedVmWarningWhenNotSupported() {
         val state = viewModel.permissionState.value
         assertFalse(state.protectedVmSupported)
         assertTrue(state.avfWarnings.any { it.contains("受保护虚拟机") || it.contains("pKVM") })
+    }
+
+    @Test
+    fun permissionState_avfWarnings_containsNonProtectedVmWarningWhenNotSupported() {
+        val state = viewModel.permissionState.value
+        assertFalse(state.nonProtectedVmSupported)
+        assertTrue(state.avfWarnings.any { it.contains("普通虚拟机") || it.contains("KVM") })
     }
 
     @Test
@@ -208,14 +206,6 @@ class PermissionViewModelTest {
     fun permissionState_avfUnavailableSuggestions_notEmptyWhenReasonsPresent() {
         val state = viewModel.permissionState.value
         assertNotNull(state.avfUnavailableSuggestions)
-    }
-
-    @Test
-    fun permissionState_storagePermissionText_differentForSdkVersions() {
-        val state = viewModel.permissionState.value
-        val storagePermission = state.missingPermissions.find { it.contains("存储") }
-        assertNotNull(storagePermission)
-        assertTrue(storagePermission!!.contains("存储"))
     }
 
     @Test
