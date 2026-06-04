@@ -42,8 +42,8 @@ jobs:
       - name: Install QEMU for VM runtime testing
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-system-x86_64 qemu-utils \
-            qemu-system-arm qemu-efi-aarch64 \
+          sudo apt-get install -y qemu-system-x86 qemu-utils \
+            qemu-system-arm ovmf \
             openssh-client wget curl
 
           # 验证 QEMU 安装
