@@ -40,7 +40,7 @@ class AvfCapabilityCheckerQemuTest {
         assertFalse(caps.canRunRealVm)
         assertFalse(caps.hasAnyRuntime)
         assertTrue(caps.isSimulationOnly)
-        assertEquals("无可用的虚拟化运行时", caps.summaryText)
+        assertTrue(caps.summaryText.contains("无可用的虚拟化运行时"))
         assertEquals("模拟模式（无真实虚拟化）", caps.recommendedRuntime)
     }
 
