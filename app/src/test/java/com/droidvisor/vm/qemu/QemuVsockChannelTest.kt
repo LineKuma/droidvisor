@@ -362,7 +362,7 @@ class QemuVsockChannelTest {
     @Test
     fun `VsockChannel 接口的 send 方法存在且可调用`() {
         socketFile.createNewFile()
-        val channel: VsockChannel = QemuVsockChannel(socketFile.absolutePath)
+        val channel = QemuVsockChannel(socketFile.absolutePath)
         channel.connect()
 
         // 验证 send 方法可正常调用（不抛异常即通过）
@@ -372,7 +372,7 @@ class QemuVsockChannelTest {
     @Test
     fun `VsockChannel 接口的 receive 方法存在且可调用`() {
         socketFile.createNewFile()
-        val channel: VsockChannel = QemuVsockChannel(socketFile.absolutePath)
+        val channel = QemuVsockChannel(socketFile.absolutePath)
         channel.connect()
 
         // 无数据可读时 receive 返回 null（而非抛异常）
@@ -383,7 +383,7 @@ class QemuVsockChannelTest {
     @Test
     fun `VsockChannel 接口的 close 方法存在且可调用`() {
         socketFile.createNewFile()
-        val channel: VsockChannel = QemuVsockChannel(socketFile.absolutePath)
+        val channel = QemuVsockChannel(socketFile.absolutePath)
         channel.connect()
 
         // close 不应抛异常
@@ -393,7 +393,7 @@ class QemuVsockChannelTest {
 
     @Test
     fun `VsockChannel 接口的 isOpen 方法存在且可调用`() {
-        val channel: VsockChannel = QemuVsockChannel(socketFile.absolutePath)
+        val channel = QemuVsockChannel(socketFile.absolutePath)
 
         // 未连接时 isOpen 为 false
         assertFalse(channel.isOpen())
@@ -407,7 +407,7 @@ class QemuVsockChannelTest {
     @Test
     fun `VsockChannel 接口的 sendRaw 方法可通过默认实现调用`() {
         socketFile.createNewFile()
-        val channel: VsockChannel = QemuVsockChannel(socketFile.absolutePath)
+        val channel = QemuVsockChannel(socketFile.absolutePath)
         channel.connect()
 
         // sendRaw 是 VsockChannel 的默认实现方法
