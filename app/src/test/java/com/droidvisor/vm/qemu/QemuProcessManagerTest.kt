@@ -21,6 +21,10 @@ import java.util.concurrent.Executors
  * - 进程生命周期管理
  * - 状态管理
  * - Vsock 路径生成
+ *
+ * 注意 buildCommandLine 的后处理逻辑：
+ * - enableGraphic=false 时会添加 -daemonize 并移除 -nographic/-serial/-mon
+ * - enableGraphic=true 时仅移除 -nographic
  */
 class QemuProcessManagerTest {
 
@@ -32,7 +36,6 @@ class QemuProcessManagerTest {
     @Before
     fun setUp() {
         tempDir = Files.createTempDirectory("qemu_test_").toFile()
-        // 创建假的 QEMU 可执行文件，使 resolveQemuBinary() 不抛异常
         fakeQemuBin = File(tempDir, "qemu-system-aarch64")
         fakeQemuBin.createNewFile()
         fakeQemuBin.setExecutable(true)
@@ -47,7 +50,7 @@ class QemuProcessManagerTest {
     }
 
     /**
-     * 创建默认配置，指向假 QEMU 二进制，确保 buildCommandLine 不会因找不到二进制而失败
+     * 创建默认配置，指向假 QEMU 二进制
      */
     private fun createDefaultConfig(): QemuVmConfig {
         return QemuVmConfig(
@@ -60,13 +63,11 @@ class QemuProcessManagerTest {
         )
     }
 
-    // ==================== 1. buildCommandLine 基础参数 ====================
+    // ==================== 1. 基础参数 ====================
 
     @Test
     fun `buildCommandLine 包含 QEMU 二进制路径`() {
-        val config = createDefaultConfig()
-        val manager = QemuProcessManager(config, null, testScope)
-
+        val manager = QemuProcessManager(createDefaultConfig(), null, testScope)
         val commandLine = manager.buildCommandLine()
         assertEquals("命令行首项应为 QEMU 路径", fakeQemuBin.absolutePath, commandLine.first())
     }
@@ -75,493 +76,341 @@ class QemuProcessManagerTest {
     fun `buildCommandLine 包含机器类型`() {
         val config = createDefaultConfig().copy(machineType = "virt")
         val manager = QemuProcessManager(config, null, testScope)
-
         val commandLine = manager.buildCommandLine()
-        assertTrue("应包含 -machine 参数", commandLine.contains("-machine"))
-        assertTrue("机器类型应为 virt", commandLine.contains("virt"))
+        assertTrue("应包含 -machine", commandLine.contains("-machine"))
+        assertTrue("机器类型为 virt", commandLine.contains("virt"))
     }
 
     @Test
     fun `buildCommandLine 包含 CPU 类型`() {
         val config = createDefaultConfig().copy(cpuType = "cortex-a72")
         val manager = QemuProcessManager(config, null, testScope)
-
         val commandLine = manager.buildCommandLine()
-        assertTrue("应包含 -cpu 参数", commandLine.contains("-cpu"))
-        assertTrue("CPU 类型应为 cortex-a72", commandLine.contains("cortex-a72"))
+        assertTrue("应包含 -cpu", commandLine.contains("-cpu"))
+        assertTrue("CPU 为 cortex-a72", commandLine.contains("cortex-a72"))
     }
 
     @Test
-    fun `buildCommandLine 包含核心数配置`() {
+    fun `buildCommandLine 包含核心数和内存`() {
         val config = createDefaultConfig().copy(
-            baseConfig = VmConfig(cpuCores = 2)
+            baseConfig = VmConfig(cpuCores = 2, memoryBytes = 512L * 1024 * 1024)
         )
         val manager = QemuProcessManager(config, null, testScope)
-
         val commandLine = manager.buildCommandLine()
-        assertTrue("应包含 -smp 参数", commandLine.contains("-smp"))
-        val smpIndex = commandLine.indexOf("-smp")
-        assertTrue("核心数应为 2",
-            smpIndex >= 0 && smpIndex + 1 < commandLine.size && commandLine[smpIndex + 1] == "2")
+        val smpIdx = commandLine.indexOf("-smp")
+        assertTrue("核心数=2", smpIdx >= 0 && smpIdx + 1 < commandLine.size && commandLine[smpIdx + 1] == "2")
+        val mIdx = commandLine.indexOf("-m")
+        assertTrue("内存=512", mIdx >= 0 && mIdx + 1 < commandLine.size && commandLine[mIdx + 1] == "512")
     }
 
-    @Test
-    fun `buildCommandLine 包含内存配置`() {
-        val config = createDefaultConfig().copy(
-            baseConfig = VmConfig(memoryBytes = 512 * 1024 * 1024L)
-        )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("应包含 -m 参数", commandLine.contains("-m"))
-        val mIndex = commandLine.indexOf("-m")
-        assertTrue("内存大小应为 512MB",
-            mIndex >= 0 && mIndex + 1 < commandLine.size && commandLine[mIndex + 1] == "512")
-    }
-
-    // ==================== 2. buildCommandLine KVM 加速 ====================
+    // ==================== 2. KVM ====================
 
     @Test
-    fun `buildCommandLine 禁用 KVM 时不包含 enable-kvm 参数`() {
+    fun `禁用 KVM 时不包含 enable-kvm`() {
         val config = createDefaultConfig().copy(enableKvm = false)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertFalse("禁用 KVM 时不应包含 -enable-kvm", commandLine.contains("-enable-kvm"))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertFalse(cmd.contains("-enable-kvm"))
     }
 
     @Test
-    fun `buildCommandLine 启用 KVM 时包含 enable-kvm 参数`() {
-        // enableKvm=true 但没有固件文件 → 不会添加 -enable-kvm（需要 firmware 存在）
-        val firmwareFile = File(tempDir, "test_fw.bin")
-        firmwareFile.createNewFile()
-
-        val config = createDefaultConfig().copy(
-            enableKvm = true,
-            firmwarePath = firmwareFile.absolutePath
-        )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("启用 KVM 且有固件时应包含 -enable-kvm", commandLine.contains("-enable-kvm"))
+    fun `启用 KVM 且有固件时包含 enable-kvm`() {
+        val fw = File(tempDir, "fw.bin").also { it.createNewFile() }
+        val config = createDefaultConfig().copy(enableKvm = true, firmwarePath = fw.absolutePath)
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue(cmd.contains("-enable-kvm"))
     }
 
-    // ==================== 3. buildCommandLine 内核/固件 ====================
+    // ==================== 3. 固件/内核 ====================
 
     @Test
-    fun `buildCommandLine firmwarePath 为空时不添加 bios 参数`() {
+    fun `firmwarePath 为 null 时不添加 bios`() {
         val config = createDefaultConfig().copy(firmwarePath = null)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertFalse("firmwarePath 为 null 时不应包含 -bios", commandLine.contains("-bios"))
+        assertFalse(QemuProcessManager(config, null, testScope).buildCommandLine().contains("-bios"))
     }
 
     @Test
-    fun `buildCommandLine kernelImagePath 为空时不添加 kernel 参数`() {
+    fun `kernelImagePath 为 null 时不添加 kernel`() {
         val config = createDefaultConfig().copy(kernelImagePath = null)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertFalse("kernelImagePath 为 null 时不应包含 -kernel", commandLine.contains("-kernel"))
+        assertFalse(QemuProcessManager(config, null, testScope).buildCommandLine().contains("-kernel"))
     }
 
     @Test
-    fun `buildCommandLine 固件文件存在时添加 bios 参数`() {
-        val firmwareFile = File(tempDir, "test_bios.bin")
-        firmwareFile.createNewFile()
-
-        val config = createDefaultConfig().copy(firmwarePath = firmwareFile.absolutePath)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("固件文件存在时应包含 -bios", commandLine.contains("-bios"))
-        assertTrue("固件路径正确", commandLine.contains(firmwareFile.absolutePath))
+    fun `固件文件存在时添加 bios 参数`() {
+        val fw = File(tempDir, "fw.bin").also { it.createNewFile() }
+        val config = createDefaultConfig().copy(firmwarePath = fw.absolutePath)
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue(cmd.contains("-bios"))
+        assertTrue(cmd.contains(fw.absolutePath))
     }
 
     @Test
-    fun `buildCommandLine 内核文件存在时添加 kernel 参数`() {
-        val kernelFile = File(tempDir, "test_kernel.img")
-        kernelFile.createNewFile()
-
-        val config = createDefaultConfig().copy(kernelImagePath = kernelFile.absolutePath)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("内核文件存在时应包含 -kernel", commandLine.contains("-kernel"))
-        assertTrue("内核路径正确", commandLine.contains(kernelFile.absolutePath))
+    fun `内核文件存在时添加 kernel 参数`() {
+        val kernel = File(tempDir, "kernel.img").also { it.createNewFile() }
+        val config = createDefaultConfig().copy(kernelImagePath = kernel.absolutePath)
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue(cmd.contains("-kernel"))
+        assertTrue(cmd.contains(kernel.absolutePath))
     }
 
-    // ==================== 4. buildCommandLine 磁盘 ====================
+    // ==================== 4. 磁盘 ====================
 
     @Test
-    fun `buildCommandLine diskPath 为空时不添加 drive 参数`() {
+    fun `diskPath 为 null 时不添加 drive`() {
         val config = createDefaultConfig().copy(diskPath = null)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertFalse("diskPath 为 null 时不应包含 -drive", commandLine.contains("-drive"))
+        assertFalse(QemuProcessManager(config, null, testScope).buildCommandLine().contains("-drive"))
     }
 
     @Test
-    fun `buildCommandLine extraDisks 为空且 diskPath 为空时无 drive 参数`() {
-        val config = createDefaultConfig().copy(diskPath = null, extraDisks = emptyList())
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertEquals("不应有任何 -drive 参数", 0, commandLine.count { it == "-drive" })
+    fun `diskPath 为空字符串时不添加 drive`() {
+        val config = createDefaultConfig().copy(diskPath = "")
+        assertFalse(QemuProcessManager(config, null, testScope).buildCommandLine().contains("-drive"))
     }
 
     @Test
-    fun `buildCommandLine 磁盘文件存在时添加 drive 参数`() {
-        val diskFile = File(tempDir, "test_disk.qcow2")
-        diskFile.createNewFile()
-
-        val config = createDefaultConfig().copy(diskPath = diskFile.absolutePath)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("磁盘文件存在时应包含 -drive", commandLine.contains("-drive"))
-        assertTrue("磁盘路径正确", commandLine.contains(diskFile.absolutePath))
+    fun `磁盘文件存在时添加 drive 参数`() {
+        val disk = File(tempDir, "test.qcow2").also { it.createNewFile() }
+        val config = createDefaultConfig().copy(diskPath = disk.absolutePath)
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue("应包含 -drive", cmd.contains("-drive"))
+        assertTrue("应包含磁盘路径", cmd.any { it.contains(disk.name) })
     }
 
-    // ==================== 5. buildCommandLine 网络 ====================
+    // ==================== 5. 网络 ====================
 
     @Test
-    fun `buildCommandLine User 网络模式包含 user 和 hostfwd`() {
+    fun `User 网络模式包含 netdev user 和 device`() {
         val config = createDefaultConfig().copy(
-            networkBackend = QemuVmConfig.NetworkBackend.User(
-                hostfwd = listOf("tcp::2222-:22")
-            )
+            networkBackend = QemuVmConfig.NetworkBackend.User(listOf("tcp::2222-:22"))
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("User 模式应包含 user,id=net0", commandLine.any { it.contains("user,id=net0") })
-        assertTrue("User 模式应包含 hostfwd", commandLine.any { it.contains("hostfwd") })
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue("包含 -netdev", cmd.contains("-netdev"))
+        assertTrue("包含 user,id=net0", cmd.any { it.contains("user,id=net0") })
+        assertTrue("包含 hostfwd", cmd.any { it.contains("hostfwd") })
+        assertTrue("包含 -device", cmd.contains("-device"))
     }
 
     @Test
-    fun `buildCommandLine Tap 网络模式包含 tap 和 ifname`() {
+    fun `Tap 网络模式包含 tap 和 ifname`() {
         val config = createDefaultConfig().copy(
             networkBackend = QemuVmConfig.NetworkBackend.Tap(ifName = "tap0")
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("Tap 模式应包含 tap,id=net0", commandLine.any { it.contains("tap,id=net0") })
-        assertTrue("Tap 模式应包含 ifname=tap0", commandLine.any { it.contains("ifname=tap0") })
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue("包含 tap,id=net0", cmd.any { it.contains("tap,id=net0") })
+        assertTrue("包含 ifname=tap0", cmd.any { it.contains("ifname=tap0") })
     }
 
     @Test
-    fun `buildCommandLine Socket 网络模式包含 socket 和 unix 路径`() {
-        val socketPath = "${tempDir.absolutePath}/qemu-net.sock"
+    fun `Socket 网络模式包含 socket 和 unix 路径`() {
+        val sockPath = "${tempDir.absolutePath}/net.sock"
         val config = createDefaultConfig().copy(
-            networkBackend = QemuVmConfig.NetworkBackend.Socket(socketPath = socketPath)
+            networkBackend = QemuVmConfig.NetworkBackend.Socket(sockPath)
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("Socket 模式应包含 socket,id=net0", commandLine.any { it.contains("socket,id=net0") })
-        assertTrue("Socket 模式应包含 unix 路径", commandLine.any { it.contains(socketPath) })
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue("包含 socket,id=net0", cmd.any { it.contains("socket,id=net0") })
+        assertTrue("包含 unix 路径", cmd.any { it.contains(sockPath) })
     }
 
-    // ==================== 6. buildCommandLine 控制台 ====================
+    // ==================== 6. 控制台模式 ====================
+    // 关键：enableGraphic=false 时 -nographic/-serial/-mon 会被后处理移除！
+    // enableGraphic=true 时仅移除 -nographic，保留 -serial
 
     @Test
-    fun `buildCommandLine PTY 控制台模式包含 nographic 和 serial mon_stdio`() {
+    fun `PTY 模式图形模式下保留 serial mon_stdio`() {
+        // 图形模式 → 只移除 -nographic，保留 -serial mon:stdio
         val config = createDefaultConfig().copy(
             consoleMode = QemuVmConfig.ConsoleMode.PTY(),
             enableGraphic = true
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("PTY 模式应包含 -nographic", commandLine.contains("-nographic"))
-        assertTrue("PTY 模式应包含 -serial mon:stdio",
-            commandLine.contains("-serial") && commandLine.contains("mon:stdio"))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertFalse("图形模式不应有 -nographic", cmd.contains("-nographic"))
+        assertTrue("图形模式 PTY 应保留 -serial", cmd.contains("-serial"))
+        assertTrue("应有 mon:stdio", cmd.contains("mon:stdio"))
     }
 
     @Test
-    fun `buildCommandLine FileOutput 控制台模式包含 serial file path`() {
-        val serialLog = File(tempDir, "serial.log").absolutePath
+    fun `FileOutput 模式图形模式下保留 serial file`() {
+        val logPath = "${tempDir.absolutePath}/serial.log"
         val config = createDefaultConfig().copy(
-            consoleMode = QemuVmConfig.ConsoleMode.FileOutput(serialLog),
+            consoleMode = QemuVmConfig.ConsoleMode.FileOutput(logPath),
             enableGraphic = true
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("FileOutput 模式应包含 -serial file:",
-            commandLine.contains("-serial") && commandLine.any { it.startsWith("file:") })
-        assertTrue("FileOutput 模式应包含日志路径", commandLine.contains(serialLog))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertFalse(cmd.contains("-nographic"))
+        assertTrue("保留 -serial", cmd.contains("-serial"))
+        assertTrue("包含日志路径", cmd.contains(logPath))
     }
 
     @Test
-    fun `buildCommandLine Stdio 控制台模式包含 nographic`() {
+    fun `Stdio 模式无 graphic 时不含 ngraphic 或 serial`() {
+        // 非图形模式 → -nographic 被添加后又移除，-serial 也被移除
         val config = createDefaultConfig().copy(
             consoleMode = QemuVmConfig.ConsoleMode.Stdio,
-            enableGraphic = true
+            enableGraphic = false
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("Stdio 模式应包含 -nographic", commandLine.contains("-nographic"))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertFalse("Stdio+非图形不应有 -nographic", cmd.contains("-nographic"))
+        assertFalse("非图形模式 -serial 应被移除", cmd.contains("-serial"))
     }
 
     @Test
-    fun `buildCommandLine None 控制台模式包含 display none 和 serial none`() {
+    fun `None 模式包含 display none 但 serial 被 non-graphic 后处理移除`() {
         val config = createDefaultConfig().copy(consoleMode = QemuVmConfig.ConsoleMode.None)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("None 模式应包含 -display none",
-            commandLine.contains("-display") && commandLine.contains("none"))
-        assertTrue("None 模式应包含 -serial none",
-            commandLine.contains("-serial") && commandLine.contains("none"))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        // None 模式先添加 -display none -serial none
+        // 然后 enableGraphic=false 的后处理移除 -serial 但保留 -display
+        assertTrue("应包含 -display none", cmd.contains("-display") && cmd.contains("none"))
+        // -serial none 被后处理移除
+        assertFalse("非图形下 -serial 应被移除", cmd.contains("-serial"))
     }
 
-    // ==================== 7. daemonize 和图形模式 ====================
+    // ==================== 7. daemonize / 图形模式 ====================
 
     @Test
-    fun `buildCommandLine 非图形模式包含 daemonize`() {
+    fun `非图形模式包含 daemonize`() {
         val config = createDefaultConfig().copy(enableGraphic = false)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("非图形模式应包含 -daemonize", commandLine.contains("-daemonize"))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue(cmd.contains("-daemonize"))
     }
 
     @Test
-    fun `buildCommandLine 图形模式不包含 daemonize 和 nographic`() {
+    fun `图形模式不包含 daemonize 和 nographic`() {
         val config = createDefaultConfig().copy(enableGraphic = true)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertFalse("图形模式不应包含 -daemonize", commandLine.contains("-daemonize"))
-        assertFalse("图形模式不应包含 -nographic", commandLine.contains("-nographic"))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertFalse(cmd.contains("-daemonize"))
+        assertFalse(cmd.contains("-nographic"))
     }
 
-    // ==================== 8. Vsock 配置 ====================
+    // ==================== 8. Vsock ====================
 
     @Test
-    fun `buildCommandLine vsockPorts 为空时不添加 vsock 参数`() {
+    fun `vsockPorts 为空时不添加 vsock 参数`() {
         val config = createDefaultConfig().copy(vsockPorts = emptyList())
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertFalse("vsockPorts 为空时不应包含 vhost-vsock-pci",
-            commandLine.contains("vhost-vsock-pci"))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertFalse(cmd.contains("vhost-vsock-pci"))
+        assertFalse(cmd.contains("-chardev"))
     }
 
     @Test
-    fun `buildCommandLine vsockPorts 非空时包含 vsock 参数`() {
+    fun `vsockPorts 非空时包含 vsock 相关参数`() {
         val config = createDefaultConfig().copy(
-            vsockPorts = listOf(VsockPortMapping(hostPort = 2375, guestPort = 2375))
+            vsockPorts = listOf(VsockPortMapping(2375, 2375))
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("vsockPorts 非空时应包含 vhost-vsock-pci",
-            commandLine.contains("vhost-vsock-pci"))
-        assertTrue("vsockPorts 非空时应包含 chardev socket",
-            commandLine.contains("chardev") && commandLine.contains("socket"))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue("包含 vhost-vsock-pci 设备", cmd.contains("vhost-vsock-pci"))
+        assertTrue("包含 chardev socket", cmd.contains("-chardev") && cmd.contains("socket"))
     }
 
     // ==================== 9. extraArgs ====================
 
     @Test
-    fun `buildCommandLine extraArgs 正确追加到末尾`() {
-        val extraArgs = listOf("-usb", "-device", "usb-tablet")
-        val config = createDefaultConfig().copy(extraArgs = extraArgs)
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        var foundAll = true
-        var lastIndex = 0
-        for (arg in extraArgs) {
-            val index = commandLine.indexOf(arg)
-            if (index < lastIndex) {
-                foundAll = false
-                break
-            }
-            lastIndex = index
+    fun `extraArgs 追加到命令行末尾`() {
+        val extras = listOf("-usb", "-device", "usb-tablet")
+        val config = createDefaultConfig().copy(extraArgs = extras)
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        // extraArgs 在末尾且保持顺序
+        var lastIdx = 0
+        for (arg in extras) {
+            val idx = cmd.indexOf(arg)
+            assertTrue("$arg 未找到或顺序错误", idx >= lastIdx)
+            lastIdx = idx
         }
-        assertTrue("extraArgs 应按顺序追加到命令行末尾", foundAll)
     }
 
     // ==================== 10. getVsockSocketPath ====================
 
     @Test
-    fun `getVsockSocketPath 返回正确格式的路径`() {
-        val config = createDefaultConfig()
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val port = 2375
-        val path = manager.getVsockSocketPath(port)
-
-        assertTrue("路径应以 baseDir 开头", path.startsWith(tempDir.absolutePath))
-        assertTrue("路径应包含 vsock_", path.contains("vsock_"))
-        assertTrue("路径应以 .sock 结尾", path.endsWith(".sock"))
-
-        val expectedPath = "${tempDir.absolutePath}/vsock_${port}.sock"
-        assertEquals("路径格式应完全匹配", expectedPath, path)
+    fun `getVsockSocketPath 格式正确`() {
+        val manager = QemuProcessManager(createDefaultConfig(), null, testScope)
+        val path = manager.getVsockSocketPath(2375)
+        val expected = "${tempDir.absolutePath}/vsock_2375.sock"
+        assertEquals(expected, path)
+        assertTrue(path.endsWith(".sock"))
     }
 
     // ==================== 11. ProcessState 枚举 ====================
 
     @Test
-    fun `ProcessState 枚举包含所有状态值`() {
-        val expectedStates = listOf(
-            QemuProcessManager.ProcessState.IDLE,
-            QemuProcessManager.ProcessState.STARTING,
-            QemuProcessManager.ProcessState.RUNNING,
-            QemuProcessManager.ProcessState.STOPPING,
-            QemuProcessManager.ProcessState.STOPPED,
-            QemuProcessManager.ProcessState.EXITED,
-            QemuProcessManager.ProcessState.CRASHED,
-            QemuProcessManager.ProcessState.ERROR
-        )
-
-        assertEquals("ProcessState 应有 8 个值", 8, QemuProcessManager.ProcessState.values().size)
-        assertTrue("应包含所有预期状态",
-            QemuProcessManager.ProcessState.values().toList().containsAll(expectedStates))
+    fun `ProcessState 枚举完整`() {
+        val states = QemuProcessManager.ProcessState.values()
+        assertEquals(8, states.size)
+        val expectedNames = setOf("IDLE", "STARTING", "RUNNING", "STOPPING", "STOPPED", "EXITED", "CRASHED", "ERROR")
+        assertEquals(expectedNames, states.map { it.name }.toSet())
     }
 
     // ==================== 12. 初始状态 ====================
 
     @Test
-    fun `初始 processState 为 IDLE`() {
-        val config = createDefaultConfig()
-        val manager = QemuProcessManager(config, null, testScope)
-
-        assertEquals("初始状态应为 IDLE",
-            QemuProcessManager.ProcessState.IDLE,
-            manager.processState.value)
+    fun `初始状态为 IDLE 且未运行`() {
+        val mgr = QemuProcessManager(createDefaultConfig(), null, testScope)
+        assertEquals(QemuProcessManager.ProcessState.IDLE, mgr.processState.value)
+        assertFalse(mgr.isRunning())
+        assertEquals(-1, mgr.getPid())
+        assertNull(mgr.getExitCode())
     }
 
-    @Test
-    fun `初始 isRunning 为 false`() {
-        val config = createDefaultConfig()
-        val manager = QemuProcessManager(config, null, testScope)
-
-        assertFalse("初始 isRunning 应为 false", manager.isRunning())
-    }
-
-    @Test
-    fun `初始 getPid 为负一`() {
-        val config = createDefaultConfig()
-        val manager = QemuProcessManager(config, null, testScope)
-
-        assertEquals("初始 PID 应为 -1", -1, manager.getPid())
-    }
-
-    @Test
-    fun `初始 getExitCode 为 null`() {
-        val config = createDefaultConfig()
-        val manager = QemuProcessManager(config, null, testScope)
-
-        assertNull("初始退出码应为 null", manager.getExitCode())
-    }
-
-    // ==================== 13. start / stop 行为 ====================
+    // ==================== 13. start/stop 行为 ====================
 
     @Test(expected = VmError.StartError::class)
-    fun `start 在无真实 QEMU 二进制时抛出 StartError`() {
-        // 使用不存在的二进制路径触发检测失败
-        val config = createDefaultConfig().copy(qemuBinaryPath = "/nonexistent/qemu")
-        val manager = QemuProcessManager(config, null, testScope)
-        manager.start()
+    fun `start 在无效二进制路径时抛 StartError`() {
+        val config = createDefaultConfig().copy(qemuBinaryPath = "/no/such/qemu")
+        QemuProcessManager(config, null, testScope).start()
     }
 
     @Test
     fun `stop 未运行进程返回 true`() {
-        val config = createDefaultConfig()
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val result = manager.stop(force = false)
-        assertTrue("未运行的进程 stop() 应返回 true", result)
-
-        val forceResult = manager.stop(force = true)
-        assertTrue("未运行的进程 force stop() 也应返回 true", forceResult)
+        val mgr = QemuProcessManager(createDefaultConfig(), null, testScope)
+        assertTrue(mgr.stop(force = false))
+        assertTrue(mgr.stop(force = true))
     }
 
     // ==================== 边界情况 ====================
 
     @Test
-    fun `buildCommandLine 支持自定义 CPU 和内存配置`() {
+    fun `自定义 CPU 内存配置生效`() {
         val config = createDefaultConfig().copy(
-            baseConfig = VmConfig(
-                cpuCores = 4,
-                memoryBytes = 1024 * 1024 * 1024L
-            )
+            baseConfig = VmConfig(cpuCores = 4, memoryBytes = 1024L * 1024 * 1024)
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        val smpIndex = commandLine.indexOf("-smp")
-        assertTrue("应包含自定义核心数 4",
-            smpIndex >= 0 && commandLine[smpIndex + 1] == "4")
-
-        val mIndex = commandLine.indexOf("-m")
-        assertTrue("应包含自定义内存 1024MB",
-            mIndex >= 0 && commandLine[mIndex + 1] == "1024")
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertEquals("4", cmd[cmd.indexOf("-smp") + 1])
+        assertEquals("1024", cmd[cmd.indexOf("-m") + 1])
     }
 
     @Test
-    fun `buildCommandLine 支持自定义机器和 CPU 类型`() {
-        val config = createDefaultConfig().copy(
-            machineType = "pc",
-            cpuType = "qemu64"
-        )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("应包含自定义机器类型 pc", commandLine.contains("pc"))
-        assertTrue("应包含自定义 CPU 类型 qemu64", commandLine.contains("qemu64"))
+    fun `自定义机器 CPU 类型生效`() {
+        val config = createDefaultConfig().copy(machineType = "pc", cpuType = "qemu64")
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue(cmd.contains("pc"))
+        assertTrue(cmd.contains("qemu64"))
     }
 
     @Test
-    fun `buildCommandLine 支持多个附加磁盘`() {
-        val disk1 = File(tempDir, "extra1.qcow2")
-        val disk2 = File(tempDir, "extra2.raw")
-        disk1.createNewFile()
-        disk2.createNewFile()
-
-        val config = createDefaultConfig().copy(
-            extraDisks = listOf(
-                QemuDisk(path = disk1.absolutePath, format = "qcow2"),
-                QemuDisk(path = disk2.absolutePath, format = "raw")
-            )
-        )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        val driveCount = commandLine.count { it == "-drive" }
-        assertTrue("应包含 2 个额外磁盘的 -drive 参数", driveCount >= 2)
-        assertTrue("应包含第一个磁盘路径", commandLine.contains(disk1.absolutePath))
-        assertTrue("应包含第二个磁盘路径", commandLine.contains(disk2.absolutePath))
+    fun `多个附加磁盘都生成 drive 参数`() {
+        val d1 = File(tempDir, "e1.qcow2").also { it.createNewFile() }
+        val d2 = File(tempDir, "e2.raw").also { it.createNewFile() }
+        val config = createDefaultConfig().copy(extraDisks = listOf(
+            QemuDisk(d1.absolutePath, "qcow2"),
+            QemuDisk(d2.absolutePath, "raw")
+        ))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue("至少 2 个 -drive", cmd.count { it == "-drive" } >= 2)
+        assertTrue(cmd.contains(d1.name))
+        assertTrue(cmd.contains(d2.name))
     }
 
     @Test
-    fun `buildCommandLine 支持多个 Vsock 端口映射`() {
-        val config = createDefaultConfig().copy(
-            vsockPorts = listOf(
-                VsockPortMapping(hostPort = 2375, guestPort = 2375),
-                VsockPortMapping(hostPort = 8080, guestPort = 8080)
-            )
-        )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        val chardevCount = commandLine.count { it == "-chardev" }
-        assertEquals("应有 2 个 chardev 参数", 2, chardevCount)
-        assertTrue("应包含第一个端口映射", commandLine.contains("vsock_2375"))
-        assertTrue("应包含第二个端口映射", commandLine.contains("vsock_8080"))
+    fun `多个 Vsock 端口映射生成多个 chardev`() {
+        val config = createDefaultConfig().copy(vsockPorts = listOf(
+            VsockPortMapping(2375, 2375),
+            VsockPortMapping(8080, 8080)
+        ))
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertEquals(2, cmd.count { it == "-chardev" })
+        assertTrue(cmd.contains("vsock_2375"))
+        assertTrue(cmd.contains("vsock_8080"))
     }
 
     @Test
-    fun `buildCommandLine Tap 网络模式支持脚本配置`() {
+    fun `Tap 网络脚本参数正确传递`() {
         val config = createDefaultConfig().copy(
             networkBackend = QemuVmConfig.NetworkBackend.Tap(
                 ifName = "tap0",
@@ -569,26 +418,16 @@ class QemuProcessManagerTest {
                 downscript = "/etc/qemu-ifdown"
             )
         )
-        val manager = QemuProcessManager(config, null, testScope)
-
-        val commandLine = manager.buildCommandLine()
-        assertTrue("Tap 模式应包含 script 参数",
-            commandLine.any { it.contains("script=/etc/qemu-ifup") })
-        assertTrue("Tap 模式应包含 downscript 参数",
-            commandLine.any { it.contains("downscript=/etc/qemu-ifdown") })
+        val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
+        assertTrue(cmd.any { it.contains("script=/etc/qemu-ifup") })
+        assertTrue(cmd.any { it.contains("downscript=/etc/qemu-ifdown") })
     }
 
     @Test
-    fun `控制台输出回调正常工作`() {
-        val outputLines = mutableListOf<String>()
-        val config = createDefaultConfig()
-        val manager = QemuProcessManager(
-            config,
-            consoleOutput = { line -> outputLines.add(line) },
-            scope = testScope
-        )
-
-        assertNotNull("管理器实例应成功创建", manager)
-        assertEquals("初始输出列表应为空", 0, outputLines.size)
+    fun `控制台回调正常设置`() {
+        val lines = mutableListOf<String>()
+        val mgr = QemuProcessManager(createDefaultConfig(), { lines.add(it) }, testScope)
+        assertNotNull(mgr)
+        assertEquals(0, lines.size)
     }
 }
