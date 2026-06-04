@@ -7,6 +7,9 @@ import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.VmConfig
 import com.droidvisor.vm.VmError
 import com.droidvisor.vm.VmStatus
+import com.droidvisor.vm.canStart
+import com.droidvisor.vm.canStop
+import com.droidvisor.vm.isRunning
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

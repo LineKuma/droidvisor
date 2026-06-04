@@ -241,7 +241,7 @@ class VsockService : Service() {
         }
 
         // 尝试 QEMU vsock（通过 unix socket）
-        val qemuRuntime = vmManagerService?.getQemuVmRuntime()
+        val qemuRuntime = vmManagerService?.getQemuRuntime()
         if (qemuRuntime != null && vmManagerService?.getActiveRuntimeType() == com.droidvisor.vm.qemu.VmRuntime.RuntimeType.QEMU) {
             try {
                 val workDir = qemuRuntime.getWorkDirectory()

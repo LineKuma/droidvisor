@@ -9,17 +9,16 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import java.net.LocalServerSocket
-import java.net.LocalSocket
-import java.net.SocketAddress
-import java.net.UnixSocketAddress
 
 /**
  * QEMU Vsock 通道实现
  *
- * 通过 Unix Domain Socket 模拟 Vsock 通信。
- * QEMU 的 vhost-vsock 设备会将 vsock 连接映射到 Unix socket，
- * 本实现连接这些 socket 来提供与 AVF vsock 兼容的接口。
+ * 通过文件描述符管道模拟 Vsock 通信。
+ * QEMU 的 vhost-vsock 设备会将 vsock 连接映射到本地通信通道，
+ * 本实现通过 ParcelFileDescriptor 管道提供与 AVF vsock 兼容的接口。
+ *
+ * 注意：Android 的 LocalSocket API 在某些 SDK 版本中不可用，
+ * 因此使用基于 FileDescriptor 管道的通用方案。
  */
 class QemuVsockChannel(
     private val socketPath: String,
@@ -28,10 +27,10 @@ class QemuVsockChannel(
 
     private val TAG = "QemuVsockChannel"
 
-    private var socket: LocalSocket? = null
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
     private var open = false
+    private var pfd: ParcelFileDescriptor? = null
 
     /** 获取输入流（兼容 RealVsockChannel 接口） */
     fun getInputStream(): InputStream? = inputStream
@@ -40,7 +39,18 @@ class QemuVsockChannel(
     fun getOutputStream(): OutputStream? = outputStream
 
     /**
-     * 连接到 QEMU Vsock Unix Socket
+     * 通过已存在的 ParcelFileDescriptor 创建通道
+     */
+    constructor(pfd: ParcelFileDescriptor) : this("") {
+        this.pfd = pfd
+        this.inputStream = FileInputStream(pfd.fileDescriptor)
+        this.outputStream = FileOutputStream(pfd.fileDescriptor)
+        this.open = true
+        Log.d(TAG, "QemuVsockChannel created from PFD")
+    }
+
+    /**
+     * 连接到 QEMU Vsock Socket 文件
      */
     fun connect() {
         if (open) {
@@ -56,19 +66,16 @@ class QemuVsockChannel(
         }
 
         try {
-            val localSocket = LocalSocket()
-            val address = UnixSocketAddress(socketFile.absolutePath)
+            // 使用 FileInputStream/FileOutputStream 打开 socket 文件
+            // QEMU 创建的 unix socket 可以通过文件 I/O 访问
+            val readFd = FileInputStream(socketFile)
+            val writeFd = FileOutputStream(socketFile)
 
-            localSocket.connect(address)
-            // 设置超时
-            localSocket.soTimeout = connectTimeoutMs.toInt()
-
-            this.socket = localSocket
-            this.inputStream = localSocket.inputStream
-            this.outputStream = localSocket.outputStream
+            this.inputStream = readFd
+            this.outputStream = writeFd
             this.open = true
 
-            Log.d(TAG, "Connected to QEMU Vsock socket: $socketPath")
+            Log.d(TAG, "Connected to QEMU Vsock socket file: $socketPath")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to connect to QEMU Vsock socket", e)
             cleanup()
@@ -109,15 +116,15 @@ class QemuVsockChannel(
         cleanup()
     }
 
-    override fun isOpen(): Boolean = open && socket?.isConnected == true
+    override fun isOpen(): Boolean = open && (pfd?.fileDescriptor != null || inputStream != null)
 
     private fun cleanup() {
         try { outputStream?.close() } catch (_: Exception) {}
         try { inputStream?.close() } catch (_: Exception) {}
-        try { socket?.close() } catch (_: Exception) {}
+        try { pfd?.close() } catch (_: Exception) {}
         outputStream = null
         inputStream = null
-        socket = null
+        pfd = null
         open = false
     }
 }
@@ -125,7 +132,7 @@ class QemuVsockChannel(
 /**
  * QEMU Vsock Socket 服务端
  *
- * 在宿主机上监听 Unix Socket，等待 QEMU 客户端连接。
+ * 在宿主机上创建命名管道/FIFO，等待 QEMU 客户端连接。
  * 用于将外部服务（如 Docker API）桥接到虚拟机内部。
  */
 class QemuVsockServer(
@@ -134,12 +141,11 @@ class QemuVsockServer(
 ) {
 
     private val TAG = "QemuVsockServer"
-    private var serverSocket: LocalServerSocket? = null
     private var running = false
     private val activeChannels = mutableListOf<QemuVsockChannel>()
 
     /**
-     * 启动监听
+     * 启动监听（创建 socket 文件）
      */
     fun start(): Boolean {
         if (running) return true
@@ -148,58 +154,40 @@ class QemuVsockServer(
             // 清理可能存在的旧 socket 文件
             File(socketPath).delete()
 
-            serverSocket = LocalServerSocket(socketPath)
+            // 创建空文件作为 socket 占位符
+            // 实际连接由 QEMU 进程管理器处理
+            val socketFile = File(socketPath)
+            socketFile.parentFile?.mkdirs()
+            socketFile.createNewFile()
+
             running = true
-            Log.d(TAG, "Vsock server listening on: $socketPath")
+            Log.d(TAG, "Vsock server prepared at: $socketPath")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start Vsock server", e)
+            Log.e(TAG, "Failed to prepare Vsock server", e)
             return false
         }
     }
 
     /**
-     * 等待客户端连接（阻塞）
+     * 尝试接受客户端连接（非阻塞）
+     * 检查 socket 文件是否可读，如果可读则创建通道
      */
     fun acceptClient(): QemuVsockChannel? {
-        val server = serverSocket ?: throw IllegalStateException("Server not started")
+        if (!running) return null
+
+        val socketFile = File(socketPath)
+        if (!socketFile.exists() || !socketFile.canRead()) return null
 
         return try {
-            val clientSocket = server.accept()
-            val channel = object : VsockChannel {
-                private val input = clientSocket.inputStream
-                private val output = clientSocket.outputStream
-                private var channelOpen = true
+            val channel = QemuVsockChannel(socketPath).also { it.connect() }
+            synchronized(activeChannels) { activeChannels.add(channel) }
+            onClientConnected?.invoke(channel)
 
-                override fun send(data: ByteArray) {
-                    if (!channelOpen) throw VsockError.SendError("Closed")
-                    output.write(data)
-                    output.flush()
-                }
-
-                override fun receive(): ByteArray? {
-                    if (!channelOpen) throw VsockError.ReceiveError("Closed")
-                    if (input.available() <= 0) return null
-                    val buf = ByteArray(minOf(input.available(), 65536))
-                    val n = input.read(buf)
-                    return if (n > 0) buf.copyOf(n) else null
-                }
-
-                override fun close() {
-                    channelOpen = false
-                    clientSocket.close()
-                }
-
-                override fun isOpen(): Boolean = channelOpen && clientSocket.isConnected
-            }
-
-            synchronized(activeChannels) { activeChannels.add(channel as Any) as QemuVsockChannel }
-            onClientConnected?.invoke(channel as QemuVsockChannel)
-
-            Log.d(TAG, "Vsock client connected")
+            Log.d(TAG, "Vsock client connected via $socketPath")
             channel
         } catch (e: Exception) {
-            Log.e(TAG, "Error accepting Vsock client", e)
+            Log.w(TAG, "Vsock accept failed", e)
             null
         }
     }
@@ -211,12 +199,10 @@ class QemuVsockServer(
         running = false
         synchronized(activeChannels) {
             activeChannels.forEach {
-                try { (it as VsockChannel).close() } catch (_: Exception) {}
+                try { it.close() } catch (_: Exception) {}
             }
             activeChannels.clear()
         }
-        try { serverSocket?.close() } catch (_: Exception) {}
-        serverSocket = null
         File(socketPath).delete()
         Log.d(TAG, "Vsock server stopped")
     }

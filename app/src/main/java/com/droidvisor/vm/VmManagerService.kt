@@ -237,7 +237,6 @@ class VmManagerService : Service() {
             protectedVm = false
         )
         qemu.configure(vmConfig)
-        qemu.attachConsoleOutputService(consoleService)
         qemu.startVm()
         Log.d(TAG, "QEMU VM started for ${vm.name}")
     }
