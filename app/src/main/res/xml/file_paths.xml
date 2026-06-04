@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 应用私有存储：备份文件 -->
+    <files-path name="backups" path="backups" />
+    <!-- 应用私有存储：VM磁盘镜像 -->
+    <files-path name="vm_disks" path="vm_disks" />
+    <!-- 应用缓存目录：临时导出文件 -->
+    <cache-path name="exports" path="exports" />
+</paths>

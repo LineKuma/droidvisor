@@ -1,6 +1,5 @@
 package com.droidvisor.ui.viewmodel
 
-import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -12,7 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 
 data class PermissionState(
     val hasInternetPermission: Boolean = false,
-    val hasStoragePermission: Boolean = false,
     val meetsMinSdk: Boolean = false,
     val avfSupported: Boolean = false,
     val protectedVmSupported: Boolean = false,
@@ -20,8 +18,9 @@ data class PermissionState(
     val vsockSupported: Boolean = false,
     val avfUnavailableReasons: List<AvfCapabilityChecker.AvfUnavailableReason> = emptyList()
 ) {
+    // 存储权限不再需要：所有数据存储在应用私有空间，导出通过分享接口实现
     val allPermissionsGranted: Boolean
-        get() = hasInternetPermission && hasStoragePermission && meetsMinSdk
+        get() = hasInternetPermission && meetsMinSdk
 
     val isAvfFullyAvailable: Boolean
         get() = avfSupported && (protectedVmSupported || nonProtectedVmSupported) && meetsMinSdk
@@ -32,7 +31,6 @@ data class PermissionState(
     val missingPermissions: List<String>
         get() = buildList {
             if (!hasInternetPermission) add("网络访问")
-            if (storagePermissionText.isNotEmpty()) add(storagePermissionText)
             if (!meetsMinSdk) add("Android 14+")
             if (!avfSupported) add("虚拟化框架 (AVF)")
         }
@@ -56,13 +54,6 @@ data class PermissionState(
                 AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "请尝试重启设备或更新系统"
             }
         }
-
-    private val storagePermissionText: String
-        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (!hasStoragePermission) "存储访问" else ""
-        } else {
-            if (!hasStoragePermission) "存储读写" else ""
-        }
 }
 
 class PermissionViewModel : ViewModel() {
@@ -73,20 +64,8 @@ class PermissionViewModel : ViewModel() {
     fun updatePermissionState(context: android.content.Context) {
         val hasInternet = ContextCompat.checkSelfPermission(
             context,
-            Manifest.permission.INTERNET
+            "android.permission.INTERNET"
         ) == PackageManager.PERMISSION_GRANTED
-
-        val hasStorage = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_MEDIA_IMAGES
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-        }
 
         val meetsMinSdk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
@@ -95,7 +74,6 @@ class PermissionViewModel : ViewModel() {
 
         _permissionState.value = PermissionState(
             hasInternetPermission = hasInternet,
-            hasStoragePermission = hasStorage,
             meetsMinSdk = meetsMinSdk,
             avfSupported = capabilities.isAvfSupported,
             protectedVmSupported = capabilities.isProtectedVmSupported,

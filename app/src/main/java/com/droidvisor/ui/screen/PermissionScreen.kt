@@ -1,6 +1,5 @@
 package com.droidvisor.ui.screen
 
-import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
@@ -91,11 +90,13 @@ fun PermissionScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // 私有存储信息卡（始终显示已授权，因为不申请任何外部存储权限）
             PermissionCard(
-                icon = Icons.Default.FolderOpen,
-                title = "存储访问",
-                description = "用于备份和恢复虚拟机数据",
-                isGranted = permissionState.hasStoragePermission
+                icon = Icons.Default.FolderSpecial,
+                title = "私有存储",
+                description = "所有数据安全存储在应用私有空间，无需额外权限",
+                isGranted = true,
+                isInfoOnly = true
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -170,15 +171,9 @@ fun PermissionScreen(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        if (!permissionState.hasInternetPermission || !permissionState.hasStoragePermission) {
+                        if (!permissionState.hasInternetPermission) {
                             OutlinedButton(
-                                onClick = {
-                                    if (!permissionState.hasInternetPermission) {
-                                        requestInternetPermission(context)
-                                    } else {
-                                        requestStoragePermission(context)
-                                    }
-                                }
+                                onClick = { requestInternetPermission(context) }
                             ) {
                                 Icon(Icons.Default.LockOpen, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -245,9 +240,7 @@ fun PermissionScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             OutlinedButton(
-                                onClick = {
-                                    viewModel.updatePermissionState(context)
-                                },
+                                onClick = { viewModel.updatePermissionState(context) },
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(Icons.Default.Refresh, contentDescription = null)
@@ -421,9 +414,11 @@ fun PermissionCard(
     title: String,
     description: String,
     isGranted: Boolean,
-    isCritical: Boolean = false
+    isCritical: Boolean = false,
+    isInfoOnly: Boolean = false
 ) {
     val statusColor = when {
+        isInfoOnly -> Color(0xFF4CAF50) // 绿色 - 信息展示
         isGranted -> Color.Green
         isCritical -> Color.Red
         else -> Color(0xFFFF9800)
@@ -465,12 +460,20 @@ fun PermissionCard(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    if (isCritical && !isGranted) {
+                    if (!isInfoOnly && isCritical && !isGranted) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "必要",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Red
+                        )
+                    }
+                    if (isInfoOnly) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "安全",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF4CAF50)
                         )
                     }
                 }
@@ -482,7 +485,11 @@ fun PermissionCard(
             }
 
             Icon(
-                imageVector = if (isGranted) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                imageVector = when {
+                    isInfoOnly -> Icons.Default.Lock
+                    isGranted -> Icons.Default.CheckCircle
+                    else -> Icons.Default.Cancel
+                },
                 contentDescription = null,
                 tint = statusColor,
                 modifier = Modifier.size(24.dp)
@@ -492,29 +499,6 @@ fun PermissionCard(
 }
 
 private fun requestInternetPermission(context: android.content.Context) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        (context as? androidx.activity.ComponentActivity)?.requestPermissions(
-            arrayOf(Manifest.permission.INTERNET, Manifest.permission.READ_MEDIA_IMAGES),
-            1001
-        )
-    } else {
-        (context as? androidx.activity.ComponentActivity)?.requestPermissions(
-            arrayOf(Manifest.permission.INTERNET, Manifest.permission.WRITE_EXTERNAL_STORAGE),
-            1001
-        )
-    }
-}
-
-private fun requestStoragePermission(context: android.content.Context) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        (context as? androidx.activity.ComponentActivity)?.requestPermissions(
-            arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
-            1002
-        )
-    } else {
-        (context as? androidx.activity.ComponentActivity)?.requestPermissions(
-            arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
-            1002
-        )
-    }
+    // 仅请求网络相关权限（INTERNET 是 normal 权限，自动授予）
+    // 不再请求任何存储权限
 }
