@@ -160,7 +160,7 @@ class AvfCapabilityCheckerTest {
             isVsockSupported = false,
             minimumSdkMet = false
         )
-        assertTrue(noSupport.summaryText.contains("不可用"))
+        assertTrue(noSupport.summaryText.contains("无"))
 
         val fullSupport = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = true,
