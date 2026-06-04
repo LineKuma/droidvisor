@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Computer
@@ -18,7 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -243,8 +242,34 @@ fun DroidvisorApp(
         )
 
         MaterialTheme {
-            Surface(modifier = Modifier.fillMaxSize()) {
-                NavHost(navController = navController, startDestination = "vm") {
+            Scaffold(
+                bottomBar = {
+                    NavigationBar {
+                        navItems.forEachIndexed { index, item ->
+                            NavigationBarItem(
+                                icon = { Icon(item.icon, contentDescription = item.title) },
+                                label = { Text(item.title) },
+                                selected = selectedTabIndex == index,
+                                onClick = {
+                                    selectedTabIndex = index
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            ) { paddingValues ->
+                NavHost(
+                    navController = navController,
+                    startDestination = "vm",
+                    modifier = Modifier.padding(paddingValues)
+                ) {
                     composable("vm") {
                         VmManagementScreen(
                             vmManagerService = vmManagerService,
@@ -262,26 +287,6 @@ fun DroidvisorApp(
                     }
                     composable("settings") {
                         SettingsScreen(viewModel = settingsViewModel)
-                    }
-                }
-
-                NavigationBar {
-                    navItems.forEachIndexed { index, item ->
-                        NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.title) },
-                            label = { Text(item.title) },
-                            selected = selectedTabIndex == index,
-                            onClick = {
-                                selectedTabIndex = index
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        )
                     }
                 }
             }
