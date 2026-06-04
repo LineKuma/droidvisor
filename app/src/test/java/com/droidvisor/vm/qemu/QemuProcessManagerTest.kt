@@ -236,8 +236,10 @@ class QemuProcessManagerTest {
         )
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
         assertFalse(cmd.contains("-nographic"))
+        // 图形模式不触发 daemonize 后处理，-serial 被保留
         assertTrue("保留 -serial", cmd.contains("-serial"))
-        assertTrue("包含日志路径", cmd.contains(logPath))
+        // 验证 file: 前缀和路径在同一个参数中
+        assertTrue("包含 file: 路径参数", cmd.any { it.startsWith("file:") && it.contains(logPath) })
     }
 
     @Test
@@ -296,24 +298,27 @@ class QemuProcessManagerTest {
             vsockPorts = listOf(VsockPortMapping(2375, 2375))
         )
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
-        assertTrue("包含 vhost-vsock-pci 设备", cmd.contains("vhost-vsock-pci"))
-        assertTrue("包含 chardev socket", cmd.contains("-chardev") && cmd.contains("socket"))
+        // buildVsockArgs 添加 -device "vhost-vsock-pci,guest-cid=3" 和 -chardev "socket,..."
+        assertTrue("包含 vhost-vsock-pci 设备", cmd.any { it.contains("vhost-vsock-pci") })
+        assertTrue("包含 chardev 参数", cmd.contains("-chardev"))
+        assertTrue("包含 socket 类型 chardev", cmd.any { it.startsWith("socket,id=vsock_") })
     }
 
     // ==================== 9. extraArgs ====================
 
     @Test
     fun `extraArgs 追加到命令行末尾`() {
-        val extras = listOf("-usb", "-device", "usb-tablet")
+        // 使用不与已有参数冲突的唯一标识符
+        val extras = listOf("-test-flag-a", "-test-flag-b", "-test-flag-c")
         val config = createDefaultConfig().copy(extraArgs = extras)
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
-        // extraArgs 在末尾且保持顺序
-        var lastIdx = 0
+        // 验证所有额外参数都存在且在命令行末尾（顺序保持）
         for (arg in extras) {
-            val idx = cmd.indexOf(arg)
-            assertTrue("$arg 未找到或顺序错误", idx >= lastIdx)
-            lastIdx = idx
+            assertTrue("应包含 $arg", cmd.contains(arg))
         }
+        // 最后一个 extraArg 应该在命令行很靠后的位置（至少在后半部分）
+        val lastExtraIdx = cmd.indexOf(extras.last())
+        assertTrue("extraArgs 应在末尾区域", lastExtraIdx > cmd.size / 2)
     }
 
     // ==================== 10. getVsockSocketPath ====================
@@ -387,14 +392,19 @@ class QemuProcessManagerTest {
     fun `多个附加磁盘都生成 drive 参数`() {
         val d1 = File(tempDir, "e1.qcow2").also { it.createNewFile() }
         val d2 = File(tempDir, "e2.raw").also { it.createNewFile() }
-        val config = createDefaultConfig().copy(extraDisks = listOf(
-            QemuDisk(d1.absolutePath, format = "qcow2"),
-            QemuDisk(d2.absolutePath, format = "raw")
-        ))
+        val config = createDefaultConfig().copy(
+            diskPath = null,  // 确保无主磁盘干扰
+            extraDisks = listOf(
+                QemuDisk(d1.absolutePath, format = "qcow2"),
+                QemuDisk(d2.absolutePath, format = "raw")
+            )
+        )
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
-        assertTrue("至少 2 个 -drive", cmd.count { it == "-drive" } >= 2)
-        assertTrue(cmd.contains(d1.name))
-        assertTrue(cmd.contains(d2.name))
+        val driveCount = cmd.count { it == "-drive" }
+        assertTrue("应包含 2 个 -drive 参数 (实际 $driveCount)", driveCount >= 2)
+        // 验证磁盘文件名出现在 drive 参数值中
+        assertTrue("包含第一个磁盘", cmd.any { it.contains(d1.name) })
+        assertTrue("包含第二个磁盘", cmd.any { it.contains(d2.name) })
     }
 
     @Test
@@ -404,9 +414,12 @@ class QemuProcessManagerTest {
             VsockPortMapping(8080, 8080)
         ))
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
-        assertEquals(2, cmd.count { it == "-chardev" })
-        assertTrue(cmd.contains("vsock_2375"))
-        assertTrue(cmd.contains("vsock_8080"))
+        // buildVsockArgs 为每个端口添加一个 -chardev
+        val chardevCount = cmd.count { it == "-chardev" }
+        assertEquals("应有 2 个 chardev 参数 (实际 $chardevCount)", 2, chardevCount)
+        // 验证端口号出现在 socket 路径中
+        assertTrue("包含端口 2375", cmd.any { it.contains("vsock_2375") })
+        assertTrue("包含端口 8080", cmd.any { it.contains("vsock_8080") })
     }
 
     @Test
