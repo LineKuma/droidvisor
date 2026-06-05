@@ -346,7 +346,7 @@ class VmManagerServiceQemuTest {
         service.setQemuRuntime(null)
         val vm1 = service.createVm("VM 1", testVmTemplate)
         service.startVm(vm1.id)
-        delay(100)
+        delay(500)
         assertEquals(VmRuntime.RuntimeType.SIMULATION, service.getActiveRuntimeType())
 
         // 场景2：添加 QEMU 可用
@@ -355,14 +355,14 @@ class VmManagerServiceQemuTest {
         service.setQemuRuntime(mockQemuRuntime)
         val vm2 = service.createVm("VM 2", testVmTemplate)
         service.startVm(vm2.id)
-        delay(100)
+        delay(500)
         assertEquals(VmRuntime.RuntimeType.QEMU, service.getActiveRuntimeType())
 
         // 场景3：添加 AVF 可用（最高优先级）
         service.setAvfBound(true)
         val vm3 = service.createVm("VM 3", testVmTemplate)
         service.startVm(vm3.id)
-        delay(100)
+        delay(500)
         assertEquals(VmRuntime.RuntimeType.AVF, service.getActiveRuntimeType())
     }
 }
