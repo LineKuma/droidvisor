@@ -3,6 +3,7 @@ package com.droidvisor.e2e
 import android.util.Log
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.droidvisor.MainActivity
 import org.junit.After
