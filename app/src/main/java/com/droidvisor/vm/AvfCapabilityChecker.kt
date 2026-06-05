@@ -38,7 +38,7 @@ class AvfCapabilityChecker(private val context: Context) {
             get() = when (this) {
                 SDK_TOO_LOW -> "请升级到 Android 14 或更高版本"
                 AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，应用将以模拟模式运行"
-                AVF_INSTANCE_FAILED -> "请确认应用已获得虚拟化管理权限，或尝试重启设备"
+                AVF_INSTANCE_FAILED -> "应用缺少 MANAGE_VIRTUAL_MACHINE 系统权限，请查看下方的「通过 ADB 授予虚拟机权限」教程"
                 PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 pKVM，虚拟机安全性无法保障，部分功能可能受限"
                 NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持非保护虚拟机，将尝试使用保护虚拟机"
                 VSOCK_NOT_SUPPORTED -> "Vsock 不可用，Docker 和终端功能将无法正常工作"
