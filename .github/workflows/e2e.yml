@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   e2e-test:
-    name: Instrumented E2E Tests
+    name: Instrumented E2E Tests (User Stories)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -46,20 +46,17 @@ jobs:
             qemu-system-arm ovmf \
             openssh-client wget curl
 
-          # 验证 QEMU 安装
           qemu-system-x86_64 --version
           qemu-img --version
 
-          # 创建测试用磁盘镜像目录
           mkdir -p /tmp/qemu-test-disks
-
-          # 创建一个最小的 qcow2 测试镜像（用于 E2E 测试验证）
           qemu-img create -f qcow2 /tmp/qemu-test-disks/e2e-test-disk.qcow2 1G
 
-          echo "QEMU 安装完成，二进制路径:"
+          echo "QEMU 安装完成"
           which qemu-system-x86_64
           which qemu-img
 
+      # ========== AVD 模拟器设置 ==========
       - name: AVD Cache
         uses: actions/cache@v4
         id: avd-cache
@@ -67,7 +64,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-api-${{ matrix.api-level }}-${{ runner.os }}-v7
+          key: avd-api-${{ matrix.api-level }}-${{ runner.os }}-v8
 
       - name: Create AVD and Generate Snapshot
         if: steps.avd-cache.outputs.cache-hit != 'true'
@@ -77,36 +74,71 @@ jobs:
           arch: x86_64
           target: google_apis
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics -memory 4096
           disable-animations: true
           script: echo "AVD snapshot generated"
 
-      - name: Run E2E Tests
+      # ========== 运行 E2E 测试 ==========
+      - name: Run E2E Tests (User Stories)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
           arch: x86_64
           target: google_apis
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics -memory 4096
           disable-animations: true
           script: |
+            # 编译 APK
             ./gradlew assembleDebug assembleDebugAndroidTest
+
+            # 清理旧安装
             adb uninstall com.droidvisor 2>/dev/null || true
             adb uninstall com.droidvisor.test 2>/dev/null || true
+
+            # 安装 APK
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            
+
             # 授予必要权限
             adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true
             adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true
-            
+
             # 推送 QEMU 测试环境信息到设备
             adb shell "mkdir -p /data/local/tmp/qemu-e2e"
             adb push /tmp/qemu-test-disks/e2e-test-disk.qcow2 /data/local/tmp/qemu-e2e/
-            
-            # 运行完整 E2E 测试套件（包含用户旅程和真实 VM 操作）
-            adb shell am instrument -w -e package com.droidvisor.e2e -e debug false com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
+
+            # 启动 Logcat 捕获（后台），用于收集 E2E-STEP 日志
+            adb logcat -c
+            adb logcat -v time > e2e-logcat.log &
+
+            echo "=========================================="
+            echo "开始运行用户故事 E2E 测试套件"
+            echo "测试结构：US001-US009 共 9 个用户故事"
+            echo "=========================================="
+
+            # 运行完整 E2E 测试套件
+            adb shell am instrument -w \
+              -e package com.droidvisor.e2e \
+              -e debug false \
+              com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
+
+            # 停止 logcat 捕获
+            kill %1 2>/dev/null || true
+
+            echo "=========================================="
+            echo "E2E 测试执行完毕"
+            echo "=========================================="
+
+      # ========== 结果收集与报告 ==========
+      - name: Collect Logcat Logs
+        if: always()
+        run: |
+          if [ -f e2e-logcat.log ]; then
+            echo "===== E2E 步骤日志 (grep E2E-STEP) ====="
+            grep -E "E2E-STEP|E2E-CLEANUP|E2E-RETRY" e2e-logcat.log || echo "(无 E2E 结构化日志)"
+            echo "===== E2E 步骤日志结束 ====="
+          fi
 
       - name: Upload E2E Test Results
         uses: actions/upload-artifact@v4
@@ -116,6 +148,7 @@ jobs:
           path: |
             app/build/reports/androidTests/connected/
             app/build/outputs/androidTest-results/connected/
+            e2e-logcat.log
           retention-days: 14
 
       - name: Publish E2E Test Report
@@ -124,3 +157,4 @@ jobs:
         with:
           report_paths: app/build/outputs/androidTest-results/connected/*.xml
           check_name: E2E Test Results (API ${{ matrix.api-level }})
+          include_passed: false
