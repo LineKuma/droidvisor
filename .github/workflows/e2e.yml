@@ -117,11 +117,8 @@ jobs:
             echo "测试结构：US001-US009 共 9 个用户故事"
             echo "=========================================="
 
-            # 运行完整 E2E 测试套件
-            adb shell am instrument -w \
-              -e package com.droidvisor.e2e \
-              -e debug false \
-              com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
+            # 运行完整 E2E 测试套件（必须单行，android-emulator-runner 的 script 按行分割执行）
+            adb shell am instrument -w -e package com.droidvisor.e2e -e debug false com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
 
             # 停止 logcat 捕获
             kill %1 2>/dev/null || true
