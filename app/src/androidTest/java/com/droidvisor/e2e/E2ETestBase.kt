@@ -2,26 +2,29 @@ package com.droidvisor.e2e
 
 import android.util.Log
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.droidvisor.MainActivity
 import org.junit.After
 import org.junit.Rule
 
 /**
+ * E2E 测试 ComposeRule 类型别名（文件级定义，Kotlin 不支持类内 typealias）
+ * 简化冗长的 AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity> 类型声明
+ */
+typealias E2EComposeRule = AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
+
+/**
  * E2E 测试基类
  *
  * 提供所有 E2E 测试的公共基础设施：
  * - 类型别名简化冗长的 ComposeTestRule 类型声明
- * - 自动截图（测试失败时）
  * - 结构化日志输出（通过 Logcat，可在 CI 日志中查看）
  * - 统一的 @After 清理钩子
  *
  * 所有用户故事 E2E 测试类都应继承此类。
  */
 abstract class E2ETestBase {
-
-    /** 简化类型别名，避免每个方法都写完整的泛型签名 */
-    typealias ComposeRule = AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
 
     companion object {
         private const val TAG = "E2E-Test"

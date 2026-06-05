@@ -44,7 +44,7 @@ object StableComposeHelper {
      * 带超时和重试，兼容不同启动速度
      */
     fun dismissPermissionScreen(
-        rule: E2ETestBase.ComposeRule
+        rule: E2EComposeRule
     ) {
         val deadline = System.currentTimeMillis() + PERMISSION_TIMEOUT_MS
         var dismissed = false
@@ -66,7 +66,7 @@ object StableComposeHelper {
     /**
      * 尝试点击列表中任一文本节点（找到第一个就点击）
      */
-    private fun tryClickAnyText(rule: E2ETestBase.ComposeRule, texts: List<String>): Boolean {
+    private fun tryClickAnyText(rule: E2EComposeRule, texts: List<String>): Boolean {
         for (text in texts) {
             try {
                 val nodes = rule.onAllNodesWithText(text).fetchSemanticsNodes()
@@ -88,7 +88,7 @@ object StableComposeHelper {
      * @return 是否在超时前找到节点
      */
     fun waitForText(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         text: String,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS
     ): Boolean {
@@ -106,7 +106,7 @@ object StableComposeHelper {
      * 等待文本节点消失
      */
     fun waitUntilTextGone(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         text: String,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS
     ) {
@@ -150,7 +150,7 @@ object StableComposeHelper {
      * 安全点击：节点存在则滚动+点击，不存在则静默返回 false
      */
     fun safeClick(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         text: String
     ): Boolean {
         return try {
@@ -165,7 +165,7 @@ object StableComposeHelper {
      * 安全点击 ContentDescription
      */
     fun safeClickContentDescription(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         description: String
     ): Boolean {
         return try {
@@ -180,7 +180,7 @@ object StableComposeHelper {
      * 检查节点是否存在（不抛异常）
      */
     fun nodeExists(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         text: String
     ): Boolean {
         return try {
@@ -195,7 +195,7 @@ object StableComposeHelper {
      * 统计匹配文本的节点数量
      */
     fun countNodes(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         text: String
     ): Int {
         return try {
@@ -211,7 +211,7 @@ object StableComposeHelper {
      * 导航到底部导航栏指定标签页（带验证）
      */
     fun navigateToTab(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         tabName: String
     ) {
         safeClick(rule, tabName)
@@ -229,7 +229,7 @@ object StableComposeHelper {
      * @param memoryMb 内存大小 MB（可选）
      */
     fun createVm(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         vmName: String,
         cpuCores: Int? = null,
         memoryMb: Long? = null
@@ -266,7 +266,7 @@ object StableComposeHelper {
      * @param expectRunning 启动后是否期望看到"运行中"
      */
     fun fullVmLifecycleNoDelete(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         vmName: String,
         expectRunning: Boolean = true
     ) {
@@ -296,7 +296,7 @@ object StableComposeHelper {
      * 删除指定 VM（从清理列表移除）
      */
     fun deleteVm(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         vmName: String
     ) {
         runSafely("删除VM-$vmName") {
@@ -318,7 +318,7 @@ object StableComposeHelper {
      * 停止并删除指定 VM
      */
     fun stopAndDeleteVm(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         vmName: String
     ) {
         runSafely("停止删除VM-$vmName") {
@@ -339,7 +339,7 @@ object StableComposeHelper {
      * 验证按钮处于禁用状态（用于表单验证测试）
      */
     fun assertButtonDisabled(
-        rule: E2ETestBase.ComposeRule,
+        rule: E2EComposeRule,
         buttonText: String
     ) {
         rule.onNodeWithText(buttonText).assertIsNotEnabled()
