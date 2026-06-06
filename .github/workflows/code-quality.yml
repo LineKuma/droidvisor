@@ -2,9 +2,9 @@ name: Code Quality
 
 on:
   push:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, master, develop, agent-develop, trae/solo-agent-HyUTID]
   pull_request:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, master, develop, agent-develop, trae/solo-agent-HyUTID]
   schedule:
     - cron: '0 2 * * 1'
   workflow_dispatch:
