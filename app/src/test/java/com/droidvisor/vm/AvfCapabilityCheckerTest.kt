@@ -280,9 +280,9 @@ class AvfCapabilityCheckerTest {
         assertNotNull("Result should not be null", result)
         assertFalse("AVF should not be supported", result.isAvfSupported)
         assertTrue("Should have reasons", result.avfUnavailableReasons.isNotEmpty())
-        assertEquals("AVF_CLASS_NOT_FOUND should be first reason",
-            AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND,
-            result.avfUnavailableReasons.first())
+        // 在单元测试中 SDK_INT 为 0，所以 SDK_TOO_LOW 也会加入 reasons
+        assertTrue("Should contain AVF_CLASS_NOT_FOUND",
+            result.avfUnavailableReasons.contains(AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND))
     }
 
     @Test

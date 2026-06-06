@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, master, develop, agent-develop, trae/solo-agent-HyUTID]
+    branches: [main, master, develop, agent-develop]
   pull_request:
-    branches: [main, master, develop, agent-develop, trae/solo-agent-HyUTID]
+    branches: [main, master, develop, agent-develop]
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
@@ -47,6 +47,7 @@ jobs:
         with:
           sarif_file: app/build/reports/lint-results-debug.sarif
           category: android-lint
+        continue-on-error: true
 
   unit-test:
     name: Unit & Integration Tests
