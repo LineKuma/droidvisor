@@ -138,23 +138,23 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Intent(this, VmManagerService.class.java).also { intent ->
+        Intent(this, VmManagerService::class.java).also { intent ->
             bindService(intent, vmManagerConnection, Context.BIND_AUTO_CREATE)
         }
 
-        Intent(this, ConsoleOutputService.class.java).also { intent ->
+        Intent(this, ConsoleOutputService::class.java).also { intent ->
             bindService(intent, consoleServiceConnection, Context.BIND_AUTO_CREATE)
         }
 
-        Intent(this, VsockService.class.java).also { intent ->
+        Intent(this, VsockService::class.java).also { intent ->
             bindService(intent, vsockServiceConnection, Context.BIND_AUTO_CREATE)
         }
 
-        Intent(this, BackupManagerService.class.java).also { intent ->
+        Intent(this, BackupManagerService::class.java).also { intent ->
             bindService(intent, backupManagerConnection, Context.BIND_AUTO_CREATE)
         }
 
-        Intent(this, DockerProxyService.class.java).also { intent ->
+        Intent(this, DockerProxyService::class.java).also { intent ->
             bindService(intent, dockerProxyConnection, Context.BIND_AUTO_CREATE)
         }
 
