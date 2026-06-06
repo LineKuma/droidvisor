@@ -15,53 +15,8 @@ permissions:
   contents: read
 
 jobs:
-  docker-hello-world:
-    name: Docker Hello-World Test
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Pull and Run hello-world
-        run: |
-          docker pull hello-world
-          docker run --rm hello-world
-          echo "Docker hello-world test passed"
-
-      - name: Docker Container Lifecycle Test
-        run: |
-          docker run -d --name test-alpine alpine:latest sleep 60
-          docker ps | grep test-alpine
-          docker stop test-alpine
-          docker rm test-alpine
-          echo "Docker container lifecycle test passed"
-
-      - name: Build Android Test Environment
-        run: docker compose build android-test
-
-      - name: Verify Docker Environment Can Build
-        timeout-minutes: 15
-        run: |
-          docker compose run --rm \
-            -e JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
-            -e ANDROID_HOME=/opt/android-sdk \
-            android-test \
-            /workspace/gradlew assembleDebug --stacktrace
-
-      - name: Upload Docker Build Results
-        uses: actions/upload-artifact@v4
-        if: success() || failure()
-        with:
-          name: docker-build-results
-          path: app/build/outputs/apk/debug/
-          retention-days: 7
-
-  docker-vm-test:
-    name: Docker VM Integration Test
+  docker-integration:
+    name: Docker Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -85,7 +40,39 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
+      # ===== Docker 基础功能验证 =====
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Hello-World Test
+        run: |
+          docker pull hello-world
+          docker run --rm hello-world
+          echo "Docker hello-world test passed"
+
+      - name: Docker Container Lifecycle Test
+        run: |
+          docker run -d --name test-alpine alpine:latest sleep 60
+          docker ps | grep test-alpine
+          docker stop test-alpine
+          docker rm test-alpine
+          echo "Docker container lifecycle test passed"
+
+      # ===== Docker Compose 构建环境验证 =====
+      - name: Build Android Test Environment via Compose
+        run: docker compose build android-test
+
+      - name: Verify Docker Compose Environment Can Build
+        timeout-minutes: 15
+        run: |
+          docker compose run --rm \
+            -e JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
+            -e ANDROID_HOME=/opt/android-sdk \
+            android-test \
+            /workspace/gradlew assembleDebug --stacktrace
+
+      # ===== APK 构建验证（原生环境）=====
+      - name: Build Debug APK (Native)
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Verify APK Built
@@ -93,24 +80,11 @@ jobs:
           test -f app/build/outputs/apk/debug/app-debug.apk || (echo "APK not found" && exit 1)
           echo "Debug APK built successfully"
 
-      - name: Run hello-world in Docker VM
-        run: |
-          docker pull hello-world
-          docker run --rm hello-world
-          echo "Docker VM hello-world test passed"
-
-      - name: Docker Container Lifecycle in VM
-        run: |
-          docker run -d --name vm-test-alpine alpine:latest sleep 60
-          docker ps | grep vm-test-alpine
-          docker stop vm-test-alpine
-          docker rm vm-test-alpine
-          echo "Docker VM container lifecycle test passed"
-
-      - name: Upload APK
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
-        if: success()
+        if: success() || failure()
         with:
-          name: docker-vm-test-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: docker-integration-results
+          path: |
+            app/build/outputs/apk/debug/
           retention-days: 7

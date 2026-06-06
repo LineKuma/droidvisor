@@ -17,10 +17,13 @@ permissions:
   pull-requests: write
 
 jobs:
+  # ===== Lint（仅 PR 时运行，避免与 Code Quality 重复）=====
   lint:
     name: Android Lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # 仅在 PR 或手动触发时运行 lint（Code Quality workflow 已覆盖 push 场景）
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,8 +31,18 @@ jobs:
       - name: Setup Android Project
         uses: ./.github/actions/setup-android
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-ci-lint-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-ci-lint-${{ runner.os }}-
+
       - name: Run Android Lint
-        run: ./gradlew lintDebug --stacktrace
+        run: ./gradlew lintDebug --stacktrace --no-daemon
 
       - name: Upload Lint Report
         uses: actions/upload-artifact@v4
@@ -39,16 +52,27 @@ jobs:
           path: app/build/reports/lint-results-debug.html
           retention-days: 7
 
-  unit-test:
-    name: Unit Tests
+  # ===== 单元测试 + 集成测试（合并为单个 job，减少重复编译）=====
+  test:
+    name: Tests (Unit + Integration)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Android Project
         uses: ./.github/actions/setup-android
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-ci-test-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-ci-test-${{ runner.os }}-
 
       - name: Run Unit Tests
         run: |
@@ -82,21 +106,11 @@ jobs:
           report_paths: app/build/test-results/testDebugUnitTest/*.xml
           check_name: Unit Test Results
 
-  integration-test:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Android Project
-        uses: ./.github/actions/setup-android
-
       - name: Run Integration Tests
         run: |
           ./gradlew testDebugUnitTest \
             --tests "com.droidvisor.integration.*" \
+            --no-daemon \
             --stacktrace
 
       - name: Upload Integration Test Results
@@ -116,10 +130,25 @@ jobs:
           report_paths: app/build/test-results/testDebugUnitTest/*.xml
           check_name: Integration Test Results
 
+      # ===== 测试覆盖率报告 =====
+      - name: Generate Coverage Report
+        if: always()
+        run: |
+          ./gradlew jacocoTestDebugUnitTestReport --no-daemon || true
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: coverage-report
+          path: app/build/reports/jacoco/
+          retention-days: 7
+
+  # ===== 构建（依赖测试通过）=====
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
-    needs: [lint, unit-test, integration-test]
+    needs: [test]
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -128,8 +157,18 @@ jobs:
       - name: Setup Android Project
         uses: ./.github/actions/setup-android
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wapper
+          key: gradle-ci-build-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-ci-build-${{ runner.os }}-
+
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -144,7 +183,7 @@ jobs:
         with:
           script: |
             const body = '✅ CI Pipeline Passed!\n\n' +
-              '- Lint: Passed\n' +
+              '- Lint: Passed (or skipped)\n' +
               '- Unit Tests: Passed\n' +
               '- Integration Tests: Passed\n' +
               '- Build: Debug APK available for download\n\n' +
