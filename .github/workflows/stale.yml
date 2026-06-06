@@ -1,0 +1,31 @@
+name: Stale Issue & PR Management
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Close Stale Items
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Close Stale Issues and PRs
+        uses: actions/stale@v9
+        with:
+          days-before-stale: 60
+          days-before-close: 14
+          stale-issue-message: '此 issue 已 60 天无活动，将在 14 天后自动关闭。如需保留，请添加评论或移除 stale 标签。'
+          stale-pr-message: '此 PR 已 60 天无活动，将在 14 天后自动关闭。如需继续，请更新或重新打开。'
+          close-issue-message: '因长期无活动已自动关闭。如需重新打开，请留言。'
+          close-pr-message: '因长期无活动已自动关闭。'
+          exempt-issue-labels: 'pinned,security,enhancement'
+          exempt-pr-labels: 'pinned,security,work-in-progress'
+          stale-issue-label: 'stale'
+          stale-pr-label: 'stale'
+          operations-per-run: 30

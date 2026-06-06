@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, master, develop, agent-develop, trae/solo-agent-HyUTID]
   pull_request:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, master, develop, agent-develop, trae/solo-agent-HyUTID]
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
@@ -40,6 +40,13 @@ jobs:
           name: lint-report
           path: app/build/reports/lint-results-debug.html
           retention-days: 7
+
+      - name: Upload Lint SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: success() || failure()
+        with:
+          sarif_file: app/build/reports/lint-results-debug.sarif
+          category: android-lint
 
   unit-test:
     name: Unit & Integration Tests

@@ -1,15 +1,17 @@
-# Code owners for droidvisor project
+# 默认代码所有者
+* @LineKuma
 
-# Default owner for all files
-* @droidvisor/maintainers
+# CI/CD 工作流
+/.github/workflows/ @LineKuma
+/.github/actions/ @LineKuma
 
-# Android specific files
-/app/build.gradle @droidvisor/android-team
-/app/src/main/ @droidvisor/android-team
+# 虚拟机核心模块
+/app/src/main/java/com/droidvisor/vm/ @LineKuma
+/app/src/main/java/com/droidvisor/vm/qemu/ @LineKuma
 
-# CI/CD
-/.github/workflows/ @droidvisor/devops
+# Docker 相关
+/app/src/main/java/com/droidvisor/docker/ @LineKuma
 
-# Documentation
-*.md @droidvisor/docs-team
-/docs/ @droidvisor/docs-team
+# 构建配置
+*.gradle @LineKuma
+gradle.properties @LineKuma
