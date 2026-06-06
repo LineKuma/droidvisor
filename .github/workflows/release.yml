@@ -34,10 +34,10 @@ jobs:
         uses: ./.github/actions/setup-android
 
       - name: Run Lint
-        run: ./gradlew lintDebug --stacktrace
+        run: ./gradlew lintDebug --no-daemon --stacktrace
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
@@ -70,7 +70,7 @@ jobs:
           sed -i "s/versionName \".*\"/versionName \"$TAG_VERSION\"/" app/build.gradle
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Rename Release APK
         run: |
@@ -82,7 +82,7 @@ jobs:
             app/build/outputs/apk/release/droidvisor-$TAG_VERSION.apk
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Rename Debug APK
         run: |

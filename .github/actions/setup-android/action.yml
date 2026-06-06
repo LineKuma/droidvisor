@@ -40,3 +40,13 @@ runs:
         key: gradle-wrapper-${{ runner.os }}-${{ hashFiles('**/gradle-wrapper.properties') }}
         restore-keys: |
           gradle-wrapper-${{ runner.os }}-
+
+    - name: Cache Gradle dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/build-cache
+        key: gradle-cache-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle.properties', '**/gradle/libs.versions.toml') }}
+        restore-keys: |
+          gradle-cache-${{ runner.os }}-

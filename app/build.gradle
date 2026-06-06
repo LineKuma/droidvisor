@@ -3,6 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'io.gitlab.arturbosch.detekt'
+    id 'jacoco'
 }
 
 android {
@@ -29,7 +30,7 @@ android {
     buildTypes {
         debug {
             debuggable true
-            testCoverageEnabled false
+            testCoverageEnabled true
             minifyEnabled false
         }
         release {
@@ -122,5 +123,38 @@ tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach {
         xml.required = true
         sarif.required = true
         md.required = true
+    }
+}
+
+// Jacoco 测试覆盖率配置
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+tasks.register('jacocoTestReport', JacocoReport) {
+    dependsOn 'testDebugUnitTest'
+    group = "Reporting"
+    description = "Generate Jacoco coverage reports for Debug build"
+
+    def fileFilter = [
+        '**/R.class', '**/R$*.class', '**/BuildConfig.*',
+        '**/Manifest*.*', '**/*Test*.*', 'android/**/*.*',
+        '**/databinding/*', '**/androidx/**'
+    ]
+
+    def debugTree = fileTree(dir: "${project.buildDir}/tmp/kotlin-classes/debug", excludes: fileFilter)
+    def mainSrc = "${project.projectDir}/src/main/java"
+
+    sourceDirectories.setFrom(files([mainSrc]))
+    classDirectories.setFrom(files([debugTree]))
+    executionData.setFrom(fileTree(dir: "${project.buildDir}", includes: [
+        "jacoco/testDebugUnitTest.exec",
+        "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
+    ]))
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
     }
 }
