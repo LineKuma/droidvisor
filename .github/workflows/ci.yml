@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, master, develop, agent-develop, trae/solo-agent-HyUTID]
   pull_request:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, master, develop, agent-develop, trae/solo-agent-HyUTID]
   workflow_dispatch:
 
 concurrency:
