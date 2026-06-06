@@ -1,5 +1,10 @@
 # Droidvisor
 
+[![CI](https://github.com/LineKuma/droidvisor/actions/workflows/ci.yml/badge.svg)](https://github.com/LineKuma/droidvisor/actions/workflows/ci.yml)
+[![Code Quality](https://github.com/LineKuma/droidvisor/actions/workflows/code-quality.yml/badge.svg)](https://github.com/LineKuma/droidvisor/actions/workflows/code-quality.yml)
+[![E2E Tests](https://github.com/LineKuma/droidvisor/actions/workflows/e2e.yml/badge.svg)](https://github.com/LineKuma/droidvisor/actions/workflows/e2e.yml)
+[![Docker Integration](https://github.com/LineKuma/droidvisor/actions/workflows/docker-integration.yml/badge.svg)](https://github.com/LineKuma/droidvisor/actions/workflows/docker-integration.yml)
+
 基于 Android AVF (Android Virtualization Framework) 的虚拟机管理应用，支持 Debian VM 运行和 Docker 容器化。
 
 ## MVP 状态

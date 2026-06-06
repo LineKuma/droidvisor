@@ -14,6 +14,8 @@ import android.util.Log
 import com.droidvisor.datastore.VmStateDataStore
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
+import com.droidvisor.vm.qemu.QemuVmRuntime
+import com.droidvisor.vm.qemu.VmRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,6 +49,18 @@ class VmManagerService : Service() {
     private val _avfCapabilities = MutableStateFlow<AvfCapabilityChecker.AvfCapabilities?>(null)
     val avfCapabilities: StateFlow<AvfCapabilityChecker.AvfCapabilities?> = _avfCapabilities.asStateFlow()
 
+    /** 当前使用的运行时后端 */
+    private var activeRuntime: VmRuntime.RuntimeType = VmRuntime.RuntimeType.SIMULATION
+
+    /** QEMU 运行时实例（AVF 不可用时作为 fallback） */
+    private var qemuRuntime: QemuVmRuntime? = null
+    private val _isQemuAvailable = MutableStateFlow(false)
+    val isQemuAvailable: StateFlow<Boolean> = _isQemuAvailable.asStateFlow()
+
+    /** 实际可用的运行时（AVF 或 QEMU） */
+    val hasRealRuntime: Boolean
+        get() = avfBound || (_isQemuAvailable.value && qemuRuntime != null)
+
     private lateinit var vmStateDataStore: VmStateDataStore
 
     private val avfConnection = object : ServiceConnection {
@@ -75,6 +89,7 @@ class VmManagerService : Service() {
         vmStateDataStore = VmStateDataStore(this)
         restoreState()
         checkAvfCapabilities()
+        initQemuRuntime()
         bindAvfService()
     }
 
@@ -101,6 +116,20 @@ class VmManagerService : Service() {
         _avfCapabilities.value = capabilities
         _isAvfAvailable.value = capabilities.canRunRealVm
         Log.d(TAG, "AVF capabilities: available=${capabilities.isAvfSupported}, canRunRealVm=${capabilities.canRunRealVm}, reasons=${capabilities.avfUnavailableReasons}")
+    }
+
+    private fun initQemuRuntime() {
+        val qemu = QemuVmRuntime(this)
+        val available = qemu.isAvailable()
+        _isQemuAvailable.value = available
+
+        if (available) {
+            qemu.initialize()
+            this.qemuRuntime = qemu
+            Log.d(TAG, "QEMU runtime initialized as fallback")
+        } else {
+            Log.d(TAG, "QEMU runtime not available on this device")
+        }
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -165,9 +194,14 @@ class VmManagerService : Service() {
                 activeVms[vmId] = context
 
                 if (avfBound && avfService != null) {
+                    activeRuntime = VmRuntime.RuntimeType.AVF
                     configureAndStartAvfVm(vm)
+                } else if (qemuRuntime != null && _isQemuAvailable.value) {
+                    activeRuntime = VmRuntime.RuntimeType.QEMU
+                    configureAndStartQemuVm(vm)
                 } else {
-                    Log.w(TAG, "AVF service not available, using simulation")
+                    Log.w(TAG, "No real runtime available, using simulation")
+                    activeRuntime = VmRuntime.RuntimeType.SIMULATION
                     simulateStartVm(vmId)
                 }
 
@@ -192,6 +226,21 @@ class VmManagerService : Service() {
         avf.startVm()
     }
 
+    private fun configureAndStartQemuVm(vm: VmInstance) {
+        val qemu = qemuRuntime ?: throw VmError.StartError("QEMU runtime not initialized")
+
+        val vmConfig = VmConfig(
+            memoryBytes = vm.effectiveMemoryBytes,
+            cpuCores = vm.effectiveCpuCores,
+            diskSizeBytes = vm.effectiveDiskSizeBytes,
+            payloadBinaryName = vm.template.payloadBinaryName,
+            protectedVm = false
+        )
+        qemu.configure(vmConfig)
+        qemu.startVm()
+        Log.d(TAG, "QEMU VM started for ${vm.name}")
+    }
+
     private suspend fun simulateStartVm(vmId: String) {
         kotlinx.coroutines.delay(1500)
         updateVmStatus(vmId, VmStatus.RUNNING)
@@ -209,10 +258,18 @@ class VmManagerService : Service() {
 
                 Log.d(TAG, "Stopping VM: ${vm.name}")
 
-                if (avfBound && avfService != null) {
-                    avfService?.stopVm()
-                } else {
-                    kotlinx.coroutines.delay(500)
+                when (activeRuntime) {
+                    VmRuntime.RuntimeType.AVF -> {
+                        if (avfBound && avfService != null) {
+                            avfService?.stopVm()
+                        }
+                    }
+                    VmRuntime.RuntimeType.QEMU -> {
+                        qemuRuntime?.stopVm()
+                    }
+                    VmRuntime.RuntimeType.SIMULATION -> {
+                        kotlinx.coroutines.delay(500)
+                    }
                 }
 
                 activeVms.remove(vmId)
@@ -265,6 +322,12 @@ class VmManagerService : Service() {
 
     fun getAvfService(): VirtualMachineManagerService? = avfService
 
+    /** 获取当前活跃的运行时类型 */
+    fun getActiveRuntimeType(): VmRuntime.RuntimeType = activeRuntime
+
+    /** 获取 QEMU 运行时实例（如果可用） */
+    fun getQemuRuntime(): QemuVmRuntime? = qemuRuntime
+
     private fun updateVmStatus(vmId: String, status: VmStatus) {
         _vmInstances.value = _vmInstances.value.map {
             if (it.id == vmId) it.copy(status = status) else it
@@ -312,6 +375,8 @@ class VmManagerService : Service() {
             unbindService(avfConnection)
             avfBound = false
         }
+        qemuRuntime?.closeVm()
+        qemuRuntime = null
         activeVms.clear()
         coroutineScope.cancel()
         super.onDestroy()
