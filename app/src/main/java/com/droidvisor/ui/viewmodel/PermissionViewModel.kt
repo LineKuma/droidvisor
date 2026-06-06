@@ -16,7 +16,8 @@ data class PermissionState(
     val protectedVmSupported: Boolean = false,
     val nonProtectedVmSupported: Boolean = false,
     val vsockSupported: Boolean = false,
-    val avfUnavailableReasons: List<AvfCapabilityChecker.AvfUnavailableReason> = emptyList()
+    val avfUnavailableReasons: List<AvfCapabilityChecker.AvfUnavailableReason> = emptyList(),
+    val qemuSupported: Boolean = false
 ) {
     // 存储权限不再需要：所有数据存储在应用私有空间，导出通过分享接口实现
     val allPermissionsGranted: Boolean
@@ -26,13 +27,12 @@ data class PermissionState(
         get() = avfSupported && (protectedVmSupported || nonProtectedVmSupported) && meetsMinSdk
 
     val isSimulationOnly: Boolean
-        get() = !isAvfFullyAvailable
+        get() = !isAvfFullyAvailable && !qemuSupported
 
     val missingPermissions: List<String>
         get() = buildList {
             if (!hasInternetPermission) add("网络访问")
             if (!meetsMinSdk) add("Android 14+")
-            if (!avfSupported) add("虚拟化框架 (AVF)")
         }
 
     val avfWarnings: List<String>
@@ -42,12 +42,29 @@ data class PermissionState(
             if (!vsockSupported) add("Vsock 通信不可用")
         }
 
+    /** 是否存在权限问题（可通过用户操作解决） */
+    val hasPermissionIssues: Boolean
+        get() = avfUnavailableReasons.any { it.isPermissionIssue }
+
+    /** 是否为硬件/固件不支持（无法通过软件方式解决） */
+    val hasHardwareLimitations: Boolean
+        get() = avfUnavailableReasons.any { it.isHardwareLimitation }
+
+    /** 权限相关的不可用原因（可引导用户解决） */
+    val permissionRelatedReasons: List<AvfCapabilityChecker.AvfUnavailableReason>
+        get() = avfUnavailableReasons.filter { it.isPermissionIssue }
+
+    /** 硬件限制相关的不可用原因（需如实告知用户） */
+    val hardwareLimitationReasons: List<AvfCapabilityChecker.AvfUnavailableReason>
+        get() = avfUnavailableReasons.filter { it.isHardwareLimitation }
+
     val avfUnavailableSuggestions: List<String>
         get() = avfUnavailableReasons.map { reason ->
             when (reason) {
                 AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "请升级到 Android 14 或更高版本"
-                AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，应用将以模拟模式运行"
-                AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "请确认应用已获得虚拟化管理权限，或尝试重启设备"
+                AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，无法通过软件方式开启"
+                AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "请尝试重启设备或检查系统更新"
+                AvfCapabilityChecker.AvfUnavailableReason.AVF_PERMISSION_DENIED -> "请通过 ADB 授予虚拟化管理权限，详见下方教程"
                 AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 pKVM，可使用普通虚拟机模式"
                 AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持普通虚拟机，将使用 pKVM 模式"
                 AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "Vsock 不可用，Docker 和终端功能将无法正常工作"
@@ -79,7 +96,8 @@ class PermissionViewModel : ViewModel() {
             protectedVmSupported = capabilities.isProtectedVmSupported,
             nonProtectedVmSupported = capabilities.isNonProtectedVmSupported,
             vsockSupported = capabilities.isVsockSupported,
-            avfUnavailableReasons = capabilities.avfUnavailableReasons
+            avfUnavailableReasons = capabilities.avfUnavailableReasons,
+            qemuSupported = capabilities.isQemuSupported
         )
     }
 }

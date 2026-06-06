@@ -1,8 +1,12 @@
 package com.droidvisor.ui.screen
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -113,9 +118,18 @@ fun PermissionScreen(
             PermissionCard(
                 icon = Icons.Default.Memory,
                 title = "虚拟化框架 (AVF)",
-                description = "Android 虚拟化框架支持（运行真实虚拟机的必要条件）",
+                description = when {
+                    permissionState.avfSupported -> "Android 虚拟化框架已启用"
+                    permissionState.hasPermissionIssues -> "设备支持 AVF，但应用未获得管理权限"
+                    else -> "Android 虚拟化框架支持（运行真实虚拟机的必要条件）"
+                },
                 isGranted = permissionState.avfSupported,
-                isCritical = true
+                isCritical = true,
+                statusLabel = when {
+                    permissionState.avfSupported -> "已启用"
+                    permissionState.hasPermissionIssues -> "需授权"
+                    else -> null
+                }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -270,6 +284,252 @@ private fun AvfUnavailableWarning(
     reasons: List<AvfCapabilityChecker.AvfUnavailableReason>,
     isAvfSupported: Boolean
 ) {
+    val context = LocalContext.current
+    val packageName = context.packageName
+
+    // 将原因分为三类：权限问题、硬件限制、其他
+    val permissionReasons = reasons.filter { it.isPermissionIssue }
+    val hardwareReasons = reasons.filter { it.isHardwareLimitation }
+    val otherReasons = reasons.filter { !it.isPermissionIssue && !it.isHardwareLimitation }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // 权限问题卡片（可解决）
+        if (permissionReasons.isNotEmpty()) {
+            AvfPermissionGuideCard(
+                permissionReasons = permissionReasons,
+                packageName = packageName,
+                context = context
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // 硬件限制卡片（无法解决）
+        if (hardwareReasons.isNotEmpty()) {
+            AvfHardwareLimitationCard(reasons = hardwareReasons)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // 其他原因卡片
+        if (otherReasons.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFF9800).copy(alpha = 0.08f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9800),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "其他问题",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFF9800)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    otherReasons.forEach { reason ->
+                        ReasonItem(reason = reason, tint = Color(0xFFFF9800))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AvfPermissionGuideCard(
+    permissionReasons: List<AvfCapabilityChecker.AvfUnavailableReason>,
+    packageName: String,
+    context: Context
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF2196F3).copy(alpha = 0.08f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = Color(0xFF2196F3),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "需要授予权限",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2196F3)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            permissionReasons.forEach { reason ->
+                Row(
+                    modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = Color(0xFF2196F3).copy(alpha = 0.7f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = reason.displayText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF2196F3).copy(alpha = 0.9f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Color(0xFF2196F3).copy(alpha = 0.2f))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "开启方法",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 步骤 1
+            Text(
+                text = "1. 在电脑上安装 ADB 工具（Android SDK Platform-Tools）",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 步骤 2
+            Text(
+                text = "2. 在手机上开启 USB 调试（设置 → 开发者选项）",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 步骤 3
+            Text(
+                text = "3. 用 USB 连接手机到电脑，执行以下命令：",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ADB 命令卡片 - 可复制
+            val adbCommand = "adb shell pm grant $packageName android.permission.MANAGE_VIRTUAL_MACHINE"
+            AdbCommandCard(command = adbCommand, context = context)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 步骤 4
+            Text(
+                text = "4. 授予后点击「重新检测」验证权限",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 补充说明
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF2196F3).copy(alpha = 0.05f)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.HelpOutline,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "MANAGE_VIRTUAL_MACHINE 是系统级权限，无法通过应用内弹窗授予，必须通过 ADB 命令手动开启。授权后无需重启应用即可生效。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdbCommandCard(command: String, context: Context) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1E1E1E)
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "$",
+                    color = Color(0xFF4CAF50),
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = command,
+                    color = Color.White,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("ADB Command", command))
+                        Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "复制",
+                        tint = Color(0xFF90CAF9),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AvfHardwareLimitationCard(reasons: List<AvfCapabilityChecker.AvfUnavailableReason>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -277,78 +537,63 @@ private fun AvfUnavailableWarning(
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Error,
+                    imageVector = Icons.Default.Block,
                     contentDescription = null,
                     tint = Color.Red,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "虚拟化框架不可用",
+                    text = "设备不支持虚拟化",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.Red
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             reasons.forEach { reason ->
-                Row(
-                    modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = null,
-                        tint = Color.Red.copy(alpha = 0.7f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = when (reason) {
-                                AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "系统版本过低，需要 Android 14+"
-                                AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "设备不支持 Android 虚拟化框架 (AVF)"
-                                AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "AVF 框架初始化失败，可能缺少系统权限"
-                                AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "设备不支持受保护虚拟机 (pKVM)"
-                                AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "设备不支持普通虚拟机 (KVM)"
-                                AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "设备不支持 Vsock 通信"
-                                AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "未知原因"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.Red.copy(alpha = 0.9f)
-                        )
-                        Text(
-                            text = when (reason) {
-                                AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "请升级到 Android 14 或更高版本"
-                                AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，应用将以模拟模式运行"
-                                AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "请确认应用已获得虚拟化管理权限，或尝试重启设备"
-                                AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 pKVM，可使用普通虚拟机模式"
-                                AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持普通虚拟机，将使用 pKVM 模式"
-                                AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "Vsock 不可用，Docker 和终端功能将无法正常工作"
-                                AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "请尝试重启设备或更新系统"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
-                        )
-                    }
-                }
+                ReasonItem(reason = reason, tint = Color.Red)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-
             HorizontalDivider(color = Color.Red.copy(alpha = 0.2f))
-
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "在没有 AVF 的情况下，应用将以模拟模式运行。模拟模式下所有虚拟机操作、Docker 管理和终端交互均为演示数据，不会创建真实的虚拟机。",
+                text = "这是设备硬件/固件层面的限制，无法通过软件方式解决。应用将以模拟模式运行，虚拟机操作均为演示数据。",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReasonItem(reason: AvfCapabilityChecker.AvfUnavailableReason, tint: Color) {
+    Row(
+        modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = null,
+            tint = tint.copy(alpha = 0.7f),
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(
+                text = reason.displayText,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = tint.copy(alpha = 0.9f)
+            )
+            Text(
+                text = reason.suggestion,
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
@@ -415,7 +660,8 @@ fun PermissionCard(
     description: String,
     isGranted: Boolean,
     isCritical: Boolean = false,
-    isInfoOnly: Boolean = false
+    isInfoOnly: Boolean = false,
+    statusLabel: String? = null
 ) {
     val statusColor = when {
         isInfoOnly -> Color(0xFF4CAF50) // 绿色 - 信息展示
@@ -474,6 +720,14 @@ fun PermissionCard(
                             text = "安全",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF4CAF50)
+                        )
+                    }
+                    if (statusLabel != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = statusLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = statusColor
                         )
                     }
                 }

@@ -18,6 +18,7 @@ class AvfCapabilityChecker(private val context: Context) {
         SDK_TOO_LOW,
         AVF_CLASS_NOT_FOUND,
         AVF_INSTANCE_FAILED,
+        AVF_PERMISSION_DENIED,
         PROTECTED_VM_NOT_SUPPORTED,
         NON_PROTECTED_VM_NOT_SUPPORTED,
         VSOCK_NOT_SUPPORTED,
@@ -27,7 +28,8 @@ class AvfCapabilityChecker(private val context: Context) {
             get() = when (this) {
                 SDK_TOO_LOW -> "系统版本过低，需要 Android 14+"
                 AVF_CLASS_NOT_FOUND -> "设备不支持 Android 虚拟化框架 (AVF)"
-                AVF_INSTANCE_FAILED -> "AVF 框架初始化失败，可能缺少系统权限"
+                AVF_INSTANCE_FAILED -> "AVF 框架初始化失败"
+                AVF_PERMISSION_DENIED -> "应用未获得虚拟化管理权限"
                 PROTECTED_VM_NOT_SUPPORTED -> "设备不支持受保护虚拟机 (pKVM)"
                 NON_PROTECTED_VM_NOT_SUPPORTED -> "设备不支持非保护虚拟机"
                 VSOCK_NOT_SUPPORTED -> "设备不支持 Vsock 通信"
@@ -37,13 +39,22 @@ class AvfCapabilityChecker(private val context: Context) {
         val suggestion: String
             get() = when (this) {
                 SDK_TOO_LOW -> "请升级到 Android 14 或更高版本"
-                AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，应用将以模拟模式运行"
-                AVF_INSTANCE_FAILED -> "请确认应用已获得虚拟化管理权限，或尝试重启设备"
+                AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，无法通过软件方式开启"
+                AVF_INSTANCE_FAILED -> "请尝试重启设备或检查系统更新"
+                AVF_PERMISSION_DENIED -> "请通过 ADB 授予虚拟化管理权限，详见下方教程"
                 PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 pKVM，虚拟机安全性无法保障，部分功能可能受限"
                 NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持非保护虚拟机，将尝试使用保护虚拟机"
                 VSOCK_NOT_SUPPORTED -> "Vsock 不可用，Docker 和终端功能将无法正常工作"
                 UNKNOWN -> "请尝试重启设备或更新系统"
             }
+
+        /** 是否为权限问题（可通过用户操作解决） */
+        val isPermissionIssue: Boolean
+            get() = this == AVF_PERMISSION_DENIED
+
+        /** 是否为硬件/固件不支持（无法通过软件方式解决） */
+        val isHardwareLimitation: Boolean
+            get() = this == AVF_CLASS_NOT_FOUND || this == SDK_TOO_LOW
     }
 
     data class AvfCapabilities(
@@ -113,16 +124,69 @@ class AvfCapabilityChecker(private val context: Context) {
         return try {
             val hasFeature = context.packageManager.hasSystemFeature(FEATURE_VIRTUALIZATION_FRAMEWORK)
             if (hasFeature) {
-                Log.d(TAG, "AVF is supported")
-                true
+                // 设备声明支持 AVF，进一步检查权限
+                val hasPermission = checkAvfPermission(reasons)
+                if (hasPermission) {
+                    Log.d(TAG, "AVF is supported and permission granted")
+                    true
+                } else {
+                    // 有 AVF 特征但缺少权限
+                    Log.w(TAG, "AVF feature present but permission denied")
+                    false
+                }
             } else {
                 Log.w(TAG, "AVF feature not found on device")
                 reasons.add(AvfUnavailableReason.AVF_CLASS_NOT_FOUND)
                 false
             }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "AVF permission denied", e)
+            reasons.add(AvfUnavailableReason.AVF_PERMISSION_DENIED)
+            false
         } catch (e: Exception) {
             Log.e(TAG, "AVF not supported", e)
             reasons.add(AvfUnavailableReason.AVF_INSTANCE_FAILED)
+            false
+        }
+    }
+
+    /**
+     * 检查应用是否拥有 AVF 虚拟化管理权限
+     *
+     * Android 14+ 中，使用 VirtualMachineManager 需要持有
+     * MANAGE_VIRTUAL_MACHINE 权限（signature|privileged 级别）。
+     * 该权限通常需要通过 ADB 授予：
+     *   adb shell pm grant <package> android.permission.MANAGE_VIRTUAL_MACHINE
+     */
+    private fun checkAvfPermission(reasons: MutableList<AvfUnavailableReason>): Boolean {
+        return try {
+            // 尝试获取 VirtualMachineManager 来验证权限
+            val vmmClass = Class.forName(VMM_CLASS_NAME)
+            val method = Context::class.java.getMethod("getSystemService", Class::class.java)
+            val vmManager = method.invoke(context, vmmClass)
+
+            if (vmManager != null) {
+                // 成功获取 VMM 实例，说明权限已授予
+                Log.d(TAG, "AVF permission granted (VirtualMachineManager available)")
+                true
+            } else {
+                // VMM 为 null，可能是权限未授予
+                Log.w(TAG, "VirtualMachineManager is null, likely permission denied")
+                reasons.add(AvfUnavailableReason.AVF_PERMISSION_DENIED)
+                false
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "AVF permission denied via SecurityException", e)
+            reasons.add(AvfUnavailableReason.AVF_PERMISSION_DENIED)
+            false
+        } catch (e: ClassNotFoundException) {
+            // VMM 类存在但无法实例化，可能是权限问题
+            Log.w(TAG, "VMM class found but cannot be instantiated", e)
+            reasons.add(AvfUnavailableReason.AVF_PERMISSION_DENIED)
+            false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking AVF permission", e)
+            // 其他异常不一定是权限问题，保持原有逻辑
             false
         }
     }

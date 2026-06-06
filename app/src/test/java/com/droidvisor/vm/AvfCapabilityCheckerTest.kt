@@ -49,9 +49,34 @@ class AvfCapabilityCheckerTest {
     }
 
     @Test
-    fun `AVF_INSTANCE_FAILED displayText mentions permission`() {
-        val text = AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED.displayText
-        assertTrue("AVF_INSTANCE_FAILED should mention permission", text.contains("权限"))
+    fun `AVF_PERMISSION_DENIED displayText mentions permission`() {
+        val text = AvfCapabilityChecker.AvfUnavailableReason.AVF_PERMISSION_DENIED.displayText
+        assertTrue("AVF_PERMISSION_DENIED should mention permission", text.contains("权限"))
+    }
+
+    @Test
+    fun `AVF_PERMISSION_DENIED isPermissionIssue is true`() {
+        assertTrue("AVF_PERMISSION_DENIED should be a permission issue",
+            AvfCapabilityChecker.AvfUnavailableReason.AVF_PERMISSION_DENIED.isPermissionIssue)
+    }
+
+    @Test
+    fun `AVF_CLASS_NOT_FOUND isHardwareLimitation is true`() {
+        assertTrue("AVF_CLASS_NOT_FOUND should be a hardware limitation",
+            AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND.isHardwareLimitation)
+    }
+
+    @Test
+    fun `SDK_TOO_LOW isHardwareLimitation is true`() {
+        assertTrue("SDK_TOO_LOW should be a hardware limitation",
+            AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW.isHardwareLimitation)
+    }
+
+    @Test
+    fun `AVF_INSTANCE_FAILED is not permission or hardware`() {
+        val reason = AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED
+        assertFalse("AVF_INSTANCE_FAILED should not be a permission issue", reason.isPermissionIssue)
+        assertFalse("AVF_INSTANCE_FAILED should not be a hardware limitation", reason.isHardwareLimitation)
     }
 
     // ========== AvfCapabilities 数据类测试 ==========
