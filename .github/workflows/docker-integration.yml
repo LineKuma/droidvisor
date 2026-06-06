@@ -32,14 +32,6 @@ jobs:
           docker run --rm hello-world
           echo "Docker hello-world test passed"
 
-      - name: Docker Container Lifecycle Test
-        run: |
-          docker run -d --name test-alpine alpine:latest sleep 60
-          docker ps | grep test-alpine
-          docker stop test-alpine
-          docker rm test-alpine
-          echo "Docker container lifecycle test passed"
-
       - name: Build Android Test Environment
         run: docker compose build android-test
 

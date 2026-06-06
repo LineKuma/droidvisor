@@ -102,6 +102,20 @@ jobs:
             app/build/outputs/androidTest-results/connected/
           retention-days: 14
 
+      - name: Capture Logcat on Failure
+        if: failure()
+        run: |
+          adb logcat -d > /tmp/logcat-e2e-api${{ matrix.api-level }}.txt
+          echo "Logcat captured for debugging"
+
+      - name: Upload Logcat
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: logcat-e2e-api${{ matrix.api-level }}
+          path: /tmp/logcat-e2e-api${{ matrix.api-level }}.txt
+          retention-days: 7
+
       - name: Publish E2E Test Report
         uses: mikepenz/action-junit-report@v4
         if: success() || failure()
