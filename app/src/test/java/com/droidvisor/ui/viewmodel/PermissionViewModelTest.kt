@@ -175,10 +175,11 @@ class PermissionViewModelTest {
     }
 
     @Test
-    fun permissionState_missingPermissions_includesAvfWhenNotSupported() {
+    fun permissionState_missingPermissions_doesNotIncludeAvf() {
+        // AVF 不再作为 missingPermissions 的一部分，因为它是硬件/权限问题而非可请求的权限
         val state = viewModel.permissionState.value
         assertFalse(state.avfSupported)
-        assertTrue(state.missingPermissions.contains("虚拟化框架 (AVF)"))
+        assertFalse(state.missingPermissions.contains("虚拟化框架 (AVF)"))
     }
 
     @Test
