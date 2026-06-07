@@ -74,10 +74,10 @@ class DockerDashboardViewModel : ViewModel() {
     private val _imageCleanupSuggestions = MutableStateFlow<Map<String, Long>>(emptyMap())
     val imageCleanupSuggestions: StateFlow<Map<String, Long>> = _imageCleanupSuggestions.asStateFlow()
 
-    private var dockerProxyService: DockerProxyService? = null
+    private var dockerProxyService: IDockerProxyService? = null
     private var useRealData = false
 
-    fun attachDockerProxyService(service: DockerProxyService) {
+    fun attachDockerProxyService(service: IDockerProxyService) {
         dockerProxyService = service
         useRealData = true
 

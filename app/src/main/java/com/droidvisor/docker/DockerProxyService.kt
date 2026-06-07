@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class DockerProxyService : Service() {
+class DockerProxyService : Service(), IDockerProxyService {
 
     private val TAG = "DockerProxyService"
     private val binder = LocalBinder()
