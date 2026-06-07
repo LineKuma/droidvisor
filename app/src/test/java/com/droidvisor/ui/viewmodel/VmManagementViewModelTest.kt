@@ -20,7 +20,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.`when`
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 
@@ -298,8 +299,8 @@ class VmManagementViewModelTest {
     fun clearError_setsErrorMessageToNull() {
         // Trigger an error by making createVm throw
         val mockService = createMockVmManagerService(emptyList(), null)
-        `when`(mockService.createVm(org.mockito.Mockito.anyString(), org.mockito.Mockito.any()))
-            .thenThrow(RuntimeException("Test error"))
+        doThrow(RuntimeException("Test error"))
+            .`when`(mockService).createVm("Test", testVmTemplate.copy(protectedVm = true))
         viewModel.bindService(mockService)
 
         viewModel.createVm("Test", testVmTemplate)
@@ -442,8 +443,7 @@ class VmManagementViewModelTest {
 
         viewModel.unbindService()
 
-        // After unbinding, calling selectVm should not propagate to service
-        // The state should still update locally but service.selectVm won't be called
+        // After unbinding, calling selectVm should still update local state
         viewModel.selectVm("new-id")
         assertEquals("new-id", viewModel.state.value.selectedVmId)
     }
@@ -488,10 +488,8 @@ class VmManagementViewModelTest {
 
         viewModel.createVm("Test VM", testVmTemplate)
 
-        verify(mockService).createVm(
-            org.mockito.Mockito.eq("Test VM"),
-            org.mockito.Mockito.argThat { arg -> arg.protectedVm }
-        )
+        // Verify the service was called with the expected name and a template with protectedVm=true
+        verify(mockService).createVm("Test VM", testVmTemplate.copy(protectedVm = true))
     }
 
     @Test
@@ -501,17 +499,14 @@ class VmManagementViewModelTest {
 
         viewModel.createVm("Test VM", testVmTemplate, protectedVm = false)
 
-        verify(mockService).createVm(
-            org.mockito.Mockito.eq("Test VM"),
-            org.mockito.Mockito.argThat { arg -> !arg.protectedVm }
-        )
+        verify(mockService).createVm("Test VM", testVmTemplate.copy(protectedVm = false))
     }
 
     @Test
     fun createVm_onError_setsErrorMessageAndResetsLoading() {
         val mockService = createMockVmManagerService(emptyList(), null)
-        `when`(mockService.createVm(org.mockito.Mockito.anyString(), org.mockito.Mockito.any()))
-            .thenThrow(RuntimeException("Creation failed"))
+        doThrow(RuntimeException("Creation failed"))
+            .`when`(mockService).createVm("Test VM", testVmTemplate.copy(protectedVm = true))
         viewModel.bindService(mockService)
 
         viewModel.createVm("Test VM", testVmTemplate)
@@ -545,8 +540,8 @@ class VmManagementViewModelTest {
     @Test
     fun startVm_onError_setsErrorMessageAndResetsLoading() {
         val mockService = createMockVmManagerService(emptyList(), null)
-        `when`(mockService.startVm(org.mockito.Mockito.anyString()))
-            .thenThrow(RuntimeException("Start failed"))
+        doThrow(RuntimeException("Start failed"))
+            .`when`(mockService).startVm("vm-1")
         viewModel.bindService(mockService)
 
         viewModel.startVm("vm-1")
@@ -580,8 +575,8 @@ class VmManagementViewModelTest {
     @Test
     fun stopVm_onError_setsErrorMessageAndResetsLoading() {
         val mockService = createMockVmManagerService(emptyList(), null)
-        `when`(mockService.stopVm(org.mockito.Mockito.anyString()))
-            .thenThrow(RuntimeException("Stop failed"))
+        doThrow(RuntimeException("Stop failed"))
+            .`when`(mockService).stopVm("vm-1")
         viewModel.bindService(mockService)
 
         viewModel.stopVm("vm-1")
@@ -615,8 +610,8 @@ class VmManagementViewModelTest {
     @Test
     fun restartVm_onError_setsErrorMessageAndResetsLoading() {
         val mockService = createMockVmManagerService(emptyList(), null)
-        `when`(mockService.restartVm(org.mockito.Mockito.anyString()))
-            .thenThrow(RuntimeException("Restart failed"))
+        doThrow(RuntimeException("Restart failed"))
+            .`when`(mockService).restartVm("vm-1")
         viewModel.bindService(mockService)
 
         viewModel.restartVm("vm-1")
@@ -650,8 +645,8 @@ class VmManagementViewModelTest {
     @Test
     fun deleteVm_onError_setsErrorMessageAndResetsLoading() {
         val mockService = createMockVmManagerService(emptyList(), null)
-        `when`(mockService.deleteVm(org.mockito.Mockito.anyString()))
-            .thenThrow(RuntimeException("Delete failed"))
+        doThrow(RuntimeException("Delete failed"))
+            .`when`(mockService).deleteVm("vm-1")
         viewModel.bindService(mockService)
 
         viewModel.deleteVm("vm-1")
@@ -664,18 +659,17 @@ class VmManagementViewModelTest {
 
     @Test
     fun vmOperation_clearsErrorMessageBeforeStarting() {
-        // First, set an error
+        // First, set an error via startVm
         val mockService = createMockVmManagerService(emptyList(), null)
-        `when`(mockService.startVm(org.mockito.Mockito.anyString()))
-            .thenThrow(RuntimeException("First error"))
+        doThrow(RuntimeException("First error"))
+            .`when`(mockService).startVm("vm-1")
         viewModel.bindService(mockService)
 
         viewModel.startVm("vm-1")
         assertNotNull(viewModel.state.value.errorMessage)
 
         // Now, configure for success and start again
-        `when`(mockService.startVm(org.mockito.Mockito.anyString()))
-            .thenReturn(Unit)
+        doAnswer { }.`when`(mockService).startVm("vm-1")
         viewModel.startVm("vm-1")
 
         // errorMessage should be cleared (set to null before operation, and stays null on success)
@@ -710,9 +704,9 @@ class VmManagementViewModelTest {
         val mockSelectedVmId = MutableStateFlow(selectedVmId)
         val mockIsAvfAvailable = MutableStateFlow(isAvfAvailable)
 
-        `when`(mockService.vmInstances).thenReturn(mockVmInstances)
-        `when`(mockService.selectedVmId).thenReturn(mockSelectedVmId)
-        `when`(mockService.isAvfAvailable).thenReturn(mockIsAvfAvailable)
+        doAnswer { mockVmInstances }.`when`(mockService).vmInstances
+        doAnswer { mockSelectedVmId }.`when`(mockService).selectedVmId
+        doAnswer { mockIsAvfAvailable }.`when`(mockService).isAvfAvailable
 
         return mockService
     }
