@@ -31,6 +31,10 @@ object Logger {
         log(LogLevel.DEBUG, tag, message)
     }
 
+    fun d(tag: String, message: String, throwable: Throwable) {
+        log(LogLevel.DEBUG, tag, "$message\n${throwable.stackTraceToString()}")
+    }
+
     fun i(message: String) {
         log(LogLevel.INFO, TAG, message)
     }
@@ -45,6 +49,10 @@ object Logger {
 
     fun w(tag: String, message: String) {
         log(LogLevel.WARN, tag, message)
+    }
+
+    fun w(tag: String, message: String, throwable: Throwable) {
+        log(LogLevel.WARN, tag, "$message\n${throwable.stackTraceToString()}")
     }
 
     fun e(message: String) {
