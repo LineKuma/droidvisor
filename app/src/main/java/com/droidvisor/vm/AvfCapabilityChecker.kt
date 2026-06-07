@@ -5,7 +5,7 @@ package com.droidvisor.vm
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
-import android.util.Log
+import com.droidvisor.util.Logger
 import androidx.annotation.RequiresApi
 
 @RequiresApi(34)
@@ -127,24 +127,24 @@ class AvfCapabilityChecker(private val context: Context) {
                 // 设备声明支持 AVF，进一步检查权限
                 val hasPermission = checkAvfPermission(reasons)
                 if (hasPermission) {
-                    Log.d(TAG, "AVF is supported and permission granted")
+                    Logger.d(TAG, "AVF is supported and permission granted")
                     true
                 } else {
                     // 有 AVF 特征但缺少权限
-                    Log.w(TAG, "AVF feature present but permission denied")
+                    Logger.w(TAG, "AVF feature present but permission denied")
                     false
                 }
             } else {
-                Log.w(TAG, "AVF feature not found on device")
+                Logger.w(TAG, "AVF feature not found on device")
                 reasons.add(AvfUnavailableReason.AVF_CLASS_NOT_FOUND)
                 false
             }
         } catch (e: SecurityException) {
-            Log.e(TAG, "AVF permission denied", e)
+            Logger.e(TAG, "AVF permission denied", e)
             reasons.add(AvfUnavailableReason.AVF_PERMISSION_DENIED)
             false
         } catch (e: Exception) {
-            Log.e(TAG, "AVF not supported", e)
+            Logger.e(TAG, "AVF not supported", e)
             reasons.add(AvfUnavailableReason.AVF_INSTANCE_FAILED)
             false
         }
@@ -167,25 +167,25 @@ class AvfCapabilityChecker(private val context: Context) {
 
             if (vmManager != null) {
                 // 成功获取 VMM 实例，说明权限已授予
-                Log.d(TAG, "AVF permission granted (VirtualMachineManager available)")
+                Logger.d(TAG, "AVF permission granted (VirtualMachineManager available)")
                 true
             } else {
                 // VMM 为 null，可能是权限未授予
-                Log.w(TAG, "VirtualMachineManager is null, likely permission denied")
+                Logger.w(TAG, "VirtualMachineManager is null, likely permission denied")
                 reasons.add(AvfUnavailableReason.AVF_PERMISSION_DENIED)
                 false
             }
         } catch (e: SecurityException) {
-            Log.w(TAG, "AVF permission denied via SecurityException", e)
+            Logger.w(TAG, "AVF permission denied via SecurityException", e)
             reasons.add(AvfUnavailableReason.AVF_PERMISSION_DENIED)
             false
         } catch (e: ClassNotFoundException) {
             // VMM 类存在但无法实例化，可能是权限问题
-            Log.w(TAG, "VMM class found but cannot be instantiated", e)
+            Logger.w(TAG, "VMM class found but cannot be instantiated", e)
             reasons.add(AvfUnavailableReason.AVF_PERMISSION_DENIED)
             false
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking AVF permission", e)
+            Logger.e(TAG, "Error checking AVF permission", e)
             // 其他异常不一定是权限问题，保持原有逻辑
             false
         }
@@ -219,10 +219,10 @@ class AvfCapabilityChecker(private val context: Context) {
                 reasons.add(AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED)
             }
 
-            Log.d(TAG, "Protected VM support: $hasProtectedVm")
+            Logger.d(TAG, "Protected VM support: $hasProtectedVm")
             hasProtectedVm
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to check Protected VM support", e)
+            Logger.e(TAG, "Failed to check Protected VM support", e)
             reasons.add(AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED)
             false
         }
@@ -245,10 +245,10 @@ class AvfCapabilityChecker(private val context: Context) {
                 reasons.add(AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED)
             }
 
-            Log.d(TAG, "Non-protected VM support: $hasNonProtectedVm")
+            Logger.d(TAG, "Non-protected VM support: $hasNonProtectedVm")
             hasNonProtectedVm
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to check Non-protected VM support", e)
+            Logger.e(TAG, "Failed to check Non-protected VM support", e)
             reasons.add(AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED)
             false
         }
@@ -258,15 +258,15 @@ class AvfCapabilityChecker(private val context: Context) {
         return try {
             val vmManager = getVirtualMachineManager()
             if (vmManager != null) {
-                Log.d(TAG, "Vsock is supported (AVF present)")
+                Logger.d(TAG, "Vsock is supported (AVF present)")
                 true
             } else {
-                Log.e(TAG, "Vsock is not supported")
+                Logger.e(TAG, "Vsock is not supported")
                 reasons.add(AvfUnavailableReason.VSOCK_NOT_SUPPORTED)
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Vsock is not supported", e)
+            Logger.e(TAG, "Vsock is not supported", e)
             reasons.add(AvfUnavailableReason.VSOCK_NOT_SUPPORTED)
             false
         }
@@ -285,14 +285,14 @@ class AvfCapabilityChecker(private val context: Context) {
             val supported = qemuBinary && qemuImg
 
             if (supported) {
-                Log.d(TAG, "QEMU runtime is available as fallback")
+                Logger.d(TAG, "QEMU runtime is available as fallback")
             } else {
-                Log.d(TAG, "QEMU not available (binary=$qemuBinary, img=$qemuImg)")
+                Logger.d(TAG, "QEMU not available (binary=$qemuBinary, img=$qemuImg)")
             }
 
             supported
         } catch (e: Exception) {
-            Log.w(TAG, "Error checking QEMU support", e)
+            Logger.w(TAG, "Error checking QEMU support", e)
             false
         }
     }

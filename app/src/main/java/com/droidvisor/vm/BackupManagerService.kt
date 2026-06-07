@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
+import com.droidvisor.util.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -86,7 +86,6 @@ class BackupManagerService : Service() {
         } else null
 
         val backupId = UUID.randomUUID().toString()
-        val checksum = generateChecksum(backupId + vmId + System.currentTimeMillis().toString())
 
         val backup = Backup(
             id = backupId,
@@ -99,7 +98,7 @@ class BackupManagerService : Service() {
             status = BackupStatus.CREATING,
             type = type,
             parentBackupId = parentBackupId,
-            checksum = checksum,
+            checksum = null,
             verificationStatus = VerificationStatus.NOT_VERIFIED
         )
 
@@ -129,15 +128,19 @@ class BackupManagerService : Service() {
 
                 createBackupArchive(backupId, diskImageFile, backupFile, type, parentBackupId)
 
+                val actualChecksum = calculateFileChecksum(backupFile)
                 val currentBackup = _backups.value.find { it.id == backupId }
                 if (currentBackup != null) {
                     _backups.value = _backups.value.map {
-                        if (it.id == backupId) it.copy(status = BackupStatus.AVAILABLE) else it
+                        if (it.id == backupId) it.copy(
+                            status = BackupStatus.AVAILABLE,
+                            checksum = actualChecksum
+                        ) else it
                     }
                     verifyBackup(backupId)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to create backup", e)
+                Logger.e(TAG, "Failed to create backup", e)
                 _lastError.value = "Failed to create backup: ${e.message}"
                 _backups.value = _backups.value.map {
                     if (it.id == backupId) it.copy(status = BackupStatus.ERROR) else it
@@ -148,12 +151,6 @@ class BackupManagerService : Service() {
         }
 
         return BackupResult.Success(backup)
-    }
-
-    private fun generateChecksum(data: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(data.toByteArray())
-        return hashBytes.joinToString("") { "%02x".format(it) }
     }
 
     private fun calculateBackupSize(vmId: String, type: BackupType, parentBackupId: String?): Long {
@@ -298,7 +295,7 @@ class BackupManagerService : Service() {
         try {
             val backupFile = File(getBackupDirectory(), "${backupId}.zip")
             if (!backupFile.exists()) {
-                Log.w(TAG, "Backup file not found for verification: $backupId")
+                Logger.w(TAG, "Backup file not found for verification: $backupId")
                 _backups.value = _backups.value.map {
                     if (it.id == backupId) it.copy(verificationStatus = VerificationStatus.VERIFICATION_FAILED) else it
                 }
@@ -321,7 +318,7 @@ class BackupManagerService : Service() {
                 } else it
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to verify backup", e)
+            Logger.e(TAG, "Failed to verify backup", e)
             _backups.value = _backups.value.map {
                 if (it.id == backupId) it.copy(verificationStatus = VerificationStatus.VERIFICATION_FAILED) else it
             }
@@ -378,7 +375,7 @@ class BackupManagerService : Service() {
                 }
                 _restoreProgress.value = null
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to restore backup", e)
+                Logger.e(TAG, "Failed to restore backup", e)
                 _lastError.value = "Failed to restore backup: ${e.message}"
                 _backups.value = _backups.value.map {
                     if (it.id == backupId) it.copy(status = BackupStatus.ERROR) else it
@@ -413,7 +410,7 @@ class BackupManagerService : Service() {
 
                 _backups.value = _backups.value.filter { it.id != backupId }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to delete backup", e)
+                Logger.e(TAG, "Failed to delete backup", e)
                 _lastError.value = "Failed to delete backup: ${e.message}"
                 _backups.value = _backups.value.map {
                     if (it.id == backupId) it.copy(status = BackupStatus.AVAILABLE) else it

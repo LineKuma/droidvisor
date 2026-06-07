@@ -1,7 +1,7 @@
 package com.droidvisor.vm.qemu
 
 import android.os.ParcelFileDescriptor
-import android.util.Log
+import com.droidvisor.util.Logger
 import com.droidvisor.vm.vsock.VsockChannel
 import com.droidvisor.vm.vsock.VsockError
 import java.io.File
@@ -46,7 +46,7 @@ class QemuVsockChannel(
         this.inputStream = FileInputStream(pfd.fileDescriptor)
         this.outputStream = FileOutputStream(pfd.fileDescriptor)
         this.open = true
-        Log.d(TAG, "QemuVsockChannel created from PFD")
+        Logger.d(TAG, "QemuVsockChannel created from PFD")
     }
 
     /**
@@ -75,9 +75,9 @@ class QemuVsockChannel(
             this.outputStream = writeFd
             this.open = true
 
-            Log.d(TAG, "Connected to QEMU Vsock socket file: $socketPath")
+            Logger.d(TAG, "Connected to QEMU Vsock socket file: $socketPath")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to connect to QEMU Vsock socket", e)
+            Logger.e(TAG, "Failed to connect to QEMU Vsock socket", e)
             cleanup()
             throw VsockError.ConnectionError(
                 "Failed to connect to $socketPath: ${e.message}"
@@ -161,10 +161,10 @@ class QemuVsockServer(
             socketFile.createNewFile()
 
             running = true
-            Log.d(TAG, "Vsock server prepared at: $socketPath")
+            Logger.d(TAG, "Vsock server prepared at: $socketPath")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to prepare Vsock server", e)
+            Logger.e(TAG, "Failed to prepare Vsock server", e)
             return false
         }
     }
@@ -184,10 +184,10 @@ class QemuVsockServer(
             synchronized(activeChannels) { activeChannels.add(channel) }
             onClientConnected?.invoke(channel)
 
-            Log.d(TAG, "Vsock client connected via $socketPath")
+            Logger.d(TAG, "Vsock client connected via $socketPath")
             channel
         } catch (e: Exception) {
-            Log.w(TAG, "Vsock accept failed", e)
+            Logger.w(TAG, "Vsock accept failed", e)
             null
         }
     }
@@ -204,7 +204,7 @@ class QemuVsockServer(
             activeChannels.clear()
         }
         File(socketPath).delete()
-        Log.d(TAG, "Vsock server stopped")
+        Logger.d(TAG, "Vsock server stopped")
     }
 
     /** 是否正在运行 */

@@ -10,8 +10,8 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
 import com.droidvisor.datastore.VmStateDataStore
+import com.droidvisor.util.Logger
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
 import com.droidvisor.vm.qemu.QemuVmRuntime
@@ -68,14 +68,14 @@ class VmManagerService : Service() {
             val binder = service as VirtualMachineManagerService.LocalBinder
             avfService = binder.getService()
             avfBound = true
-            Log.d(TAG, "VirtualMachineManagerService connected")
+            Logger.d(TAG, "VirtualMachineManagerService connected")
             observeAvfStatus()
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             avfService = null
             avfBound = false
-            Log.d(TAG, "VirtualMachineManagerService disconnected")
+            Logger.d(TAG, "VirtualMachineManagerService disconnected")
         }
     }
 
@@ -98,14 +98,14 @@ class VmManagerService : Service() {
             val savedInstances = vmStateDataStore.vmInstancesFlow.first()
             if (savedInstances.isNotEmpty()) {
                 _vmInstances.value = savedInstances
-                Log.d(TAG, "Restored ${savedInstances.size} VM instances from state")
+                Logger.d(TAG, "Restored ${savedInstances.size} VM instances from state")
             }
         }
         coroutineScope.launch {
             val savedVmId = vmStateDataStore.selectedVmIdFlow.first()
             if (savedVmId != null) {
                 _selectedVmId.value = savedVmId
-                Log.d(TAG, "Restored selected VM id: $savedVmId")
+                Logger.d(TAG, "Restored selected VM id: $savedVmId")
             }
         }
     }
@@ -115,7 +115,7 @@ class VmManagerService : Service() {
         val capabilities = checker.checkCapabilities()
         _avfCapabilities.value = capabilities
         _isAvfAvailable.value = capabilities.canRunRealVm
-        Log.d(TAG, "AVF capabilities: available=${capabilities.isAvfSupported}, canRunRealVm=${capabilities.canRunRealVm}, reasons=${capabilities.avfUnavailableReasons}")
+        Logger.d(TAG, "AVF capabilities: available=${capabilities.isAvfSupported}, canRunRealVm=${capabilities.canRunRealVm}, reasons=${capabilities.avfUnavailableReasons}")
     }
 
     private fun initQemuRuntime() {
@@ -126,9 +126,9 @@ class VmManagerService : Service() {
         if (available) {
             qemu.initialize()
             this.qemuRuntime = qemu
-            Log.d(TAG, "QEMU runtime initialized as fallback")
+            Logger.d(TAG, "QEMU runtime initialized as fallback")
         } else {
-            Log.d(TAG, "QEMU runtime not available on this device")
+            Logger.d(TAG, "QEMU runtime not available on this device")
         }
     }
 
@@ -161,7 +161,7 @@ class VmManagerService : Service() {
         val vm = VmInstance(name = name, template = template)
         _vmInstances.value = _vmInstances.value + vm
         saveState()
-        Log.d(TAG, "Created VM: ${vm.name} (${vm.id})")
+        Logger.d(TAG, "Created VM: ${vm.name} (${vm.id})")
         return vm
     }
 
@@ -185,7 +185,7 @@ class VmManagerService : Service() {
                 val vm = _vmInstances.value.find { it.id == vmId }
                     ?: throw VmError.StartError("VM not found: $vmId")
 
-                Log.d(TAG, "Starting VM: ${vm.name}")
+                Logger.d(TAG, "Starting VM: ${vm.name}")
 
                 val context = ActiveVmContext(
                     vmId = vmId,
@@ -200,13 +200,13 @@ class VmManagerService : Service() {
                     activeRuntime = VmRuntime.RuntimeType.QEMU
                     configureAndStartQemuVm(vm)
                 } else {
-                    Log.w(TAG, "No real runtime available, using simulation")
+                    Logger.w(TAG, "No real runtime available, using simulation")
                     activeRuntime = VmRuntime.RuntimeType.SIMULATION
                     simulateStartVm(vmId)
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to start VM", e)
+                Logger.e(TAG, "Failed to start VM", e)
                 updateVmStatus(vmId, VmStatus.ERROR)
             }
         }
@@ -238,14 +238,14 @@ class VmManagerService : Service() {
         )
         qemu.configure(vmConfig)
         qemu.startVm()
-        Log.d(TAG, "QEMU VM started for ${vm.name}")
+        Logger.d(TAG, "QEMU VM started for ${vm.name}")
     }
 
     private suspend fun simulateStartVm(vmId: String) {
         kotlinx.coroutines.delay(1500)
         updateVmStatus(vmId, VmStatus.RUNNING)
         updateVmStartedAt(vmId, System.currentTimeMillis())
-        Log.d(TAG, "VM started (simulation)")
+        Logger.d(TAG, "VM started (simulation)")
     }
 
     fun stopVm(vmId: String) {
@@ -256,7 +256,7 @@ class VmManagerService : Service() {
                 val vm = _vmInstances.value.find { it.id == vmId }
                     ?: throw VmError.StopError("VM not found: $vmId")
 
-                Log.d(TAG, "Stopping VM: ${vm.name}")
+                Logger.d(TAG, "Stopping VM: ${vm.name}")
 
                 when (activeRuntime) {
                     VmRuntime.RuntimeType.AVF -> {
@@ -276,14 +276,14 @@ class VmManagerService : Service() {
                 updateVmStatus(vmId, VmStatus.STOPPED)
                 updateVmStartedAt(vmId, null)
 
-                Log.d(TAG, "VM stopped successfully: ${vm.name}")
+                Logger.d(TAG, "VM stopped successfully: ${vm.name}")
 
                 if (activeVms.isEmpty()) {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                 }
 
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to stop VM", e)
+                Logger.e(TAG, "Failed to stop VM", e)
                 updateVmStatus(vmId, VmStatus.ERROR)
             }
         }
@@ -303,7 +303,16 @@ class VmManagerService : Service() {
             if (vm != null) {
                 if (vm.isRunning) {
                     stopVm(vmId)
-                    kotlinx.coroutines.delay(500)
+                    // Wait for VM to actually stop (stopVm is async)
+                    val maxWaitMs = 5000L
+                    val checkIntervalMs = 100L
+                    var waited = 0L
+                    while (waited < maxWaitMs) {
+                        val currentVm = _vmInstances.value.find { it.id == vmId }
+                        if (currentVm == null || !currentVm.isRunning) break
+                        kotlinx.coroutines.delay(checkIntervalMs)
+                        waited += checkIntervalMs
+                    }
                 }
                 activeVms.remove(vmId)
                 _vmInstances.value = _vmInstances.value.filter { it.id != vmId }
@@ -311,7 +320,7 @@ class VmManagerService : Service() {
                     _selectedVmId.value = _vmInstances.value.firstOrNull()?.id
                 }
                 saveState()
-                Log.d(TAG, "Deleted VM: ${vm.name}")
+                Logger.d(TAG, "Deleted VM: ${vm.name}")
             }
         }
     }

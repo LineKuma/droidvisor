@@ -1,6 +1,6 @@
 package com.droidvisor.ui.viewmodel
 
-import android.util.Log
+import com.droidvisor.util.Logger
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.droidvisor.vm.ConsoleOutputService
@@ -125,7 +125,7 @@ class TerminalViewModel : ViewModel() {
                     try {
                         outputStream.write((command + "\n").toByteArray())
                         outputStream.flush()
-                        Log.d(TAG, "Command sent via Vsock: $command")
+                        Logger.d(TAG, "Command sent via Vsock: $command")
                         return@launch
                     } catch (e: Exception) {
                         appendOutputLine("[发送失败: ${e.message}]")
@@ -141,7 +141,7 @@ class TerminalViewModel : ViewModel() {
         viewModelScope.launch {
             val inputStream = vsockService?.getInputStream()
             if (inputStream == null) {
-                Log.w(TAG, "No input stream available for receiving output")
+                Logger.w(TAG, "No input stream available for receiving output")
                 return@launch
             }
 
@@ -152,14 +152,14 @@ class TerminalViewModel : ViewModel() {
                     if (bytesRead > 0) {
                         val output = String(buffer, 0, bytesRead)
                         appendOutput(output)
-                        Log.d(TAG, "Received ${bytesRead} bytes from VM: ${output.take(100)}")
+                        Logger.d(TAG, "Received ${bytesRead} bytes from VM: ${output.take(100)}")
                     } else if (bytesRead == -1) {
                         appendOutputLine("[VM连接已关闭]")
                         break
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error receiving output from VM", e)
+                Logger.e(TAG, "Error receiving output from VM", e)
                 appendOutputLine("[接收输出错误: ${e.message}]")
             }
         }

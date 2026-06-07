@@ -8,7 +8,7 @@ import android.content.ServiceConnection
 import android.os.Binder
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
-import android.util.Log
+import com.droidvisor.util.Logger
 import com.droidvisor.vm.VirtualMachineManagerService
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.qemu.QemuVsockChannel
@@ -62,13 +62,13 @@ class VsockService : Service() {
             val binder = service as VirtualMachineManagerService.LocalBinder
             avfService = binder.getService()
             avfBound = true
-            Log.d(TAG, "VirtualMachineManagerService connected")
+            Logger.d(TAG, "VirtualMachineManagerService connected")
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             avfService = null
             avfBound = false
-            Log.d(TAG, "VirtualMachineManagerService disconnected")
+            Logger.d(TAG, "VirtualMachineManagerService disconnected")
         }
     }
 
@@ -104,16 +104,16 @@ class VsockService : Service() {
                 _error.value = null
                 _reconnecting.value = false
 
-                Log.d(TAG, "Connecting to Vsock port $port (Guest CID: $GUEST_CID)")
+                Logger.d(TAG, "Connecting to Vsock port $port (Guest CID: $GUEST_CID)")
 
                 vsockChannel = createVsockChannel(port)
                 _connectionState.value = VsockConnectionState.CONNECTED
                 _reconnecting.value = false
 
-                Log.d(TAG, "Vsock connection established on port $port")
+                Logger.d(TAG, "Vsock connection established on port $port")
 
             } catch (e: VsockError) {
-                Log.e(TAG, "Vsock connection failed", e)
+                Logger.e(TAG, "Vsock connection failed", e)
                 _error.value = e
                 _connectionState.value = VsockConnectionState.DISCONNECTED
 
@@ -137,10 +137,10 @@ class VsockService : Service() {
                 vsockChannel = null
 
                 _connectionState.value = VsockConnectionState.DISCONNECTED
-                Log.d(TAG, "Vsock connection closed")
+                Logger.d(TAG, "Vsock connection closed")
 
             } catch (e: VsockError) {
-                Log.e(TAG, "Error disconnecting Vsock", e)
+                Logger.e(TAG, "Error disconnecting Vsock", e)
                 _error.value = e
                 _connectionState.value = VsockConnectionState.DISCONNECTED
             }
@@ -155,9 +155,9 @@ class VsockService : Service() {
                 }
 
                 vsockChannel?.send((command + "\n").toByteArray())
-                Log.d(TAG, "Command sent: $command")
+                Logger.d(TAG, "Command sent: $command")
             } catch (e: VsockError) {
-                Log.e(TAG, "Error sending command", e)
+                Logger.e(TAG, "Error sending command", e)
                 _error.value = e
             }
         }
@@ -171,9 +171,9 @@ class VsockService : Service() {
                 }
 
                 vsockChannel?.send(byteArrayOf(keyCode.toByte()))
-                Log.d(TAG, "Special key sent: $keyCode")
+                Logger.d(TAG, "Special key sent: $keyCode")
             } catch (e: VsockError) {
-                Log.e(TAG, "Error sending special key", e)
+                Logger.e(TAG, "Error sending special key", e)
                 _error.value = e
             }
         }
@@ -187,9 +187,9 @@ class VsockService : Service() {
                 }
 
                 vsockChannel?.send(data)
-                Log.d(TAG, "Raw data sent: ${data.size} bytes")
+                Logger.d(TAG, "Raw data sent: ${data.size} bytes")
             } catch (e: VsockError) {
-                Log.e(TAG, "Error sending raw data", e)
+                Logger.e(TAG, "Error sending raw data", e)
                 _error.value = e
             }
         }
@@ -202,10 +202,10 @@ class VsockService : Service() {
             }
 
             vsockChannel?.receive()?.also {
-                Log.d(TAG, "Received ${it.size} bytes via Vsock")
+                Logger.d(TAG, "Received ${it.size} bytes via Vsock")
             }
         } catch (e: VsockError) {
-            Log.e(TAG, "Error receiving data", e)
+            Logger.e(TAG, "Error receiving data", e)
             _error.value = e
             null
         }
@@ -225,7 +225,7 @@ class VsockService : Service() {
      */
     fun attachVmManagerService(service: VmManagerService) {
         this.vmManagerService = service
-        Log.d(TAG, "VmManagerService attached for QEMU vsock support")
+        Logger.d(TAG, "VmManagerService attached for QEMU vsock support")
     }
 
     fun isConnected(): Boolean = _connectionState.value.isConnected()
@@ -235,7 +235,7 @@ class VsockService : Service() {
         if (avfBound && avfService != null) {
             val pfd = avfService?.connectVsock(port) as? ParcelFileDescriptor
             if (pfd != null) {
-                Log.d(TAG, "Created real Vsock channel via AVF on port $port")
+                Logger.d(TAG, "Created real Vsock channel via AVF on port $port")
                 return RealVsockChannel(pfd)
             }
         }
@@ -250,15 +250,15 @@ class VsockService : Service() {
                 if (socketFile.exists()) {
                     val qemuChannel = QemuVsockChannel(socketPath)
                     qemuChannel.connect()
-                    Log.d(TAG, "Created QEMU Vsock channel on port $port via $socketPath")
+                    Logger.d(TAG, "Created QEMU Vsock channel on port $port via $socketPath")
                     return QemuVsockChannelWrapper(qemuChannel)
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "QEMU vsock connection failed for port $port", e)
+                Logger.w(TAG, "QEMU vsock connection failed for port $port", e)
             }
         }
 
-        Log.w(TAG, "AVF and QEMU Vsock not available, creating simulation channel on port $port")
+        Logger.w(TAG, "AVF and QEMU Vsock not available, creating simulation channel on port $port")
         return SimulationVsockChannel(port)
     }
 
@@ -277,7 +277,7 @@ class VsockService : Service() {
         _reconnecting.value = true
         delay(DEFAULT_RECONNECT_DELAY)
         if (_connectionState.value == VsockConnectionState.DISCONNECTED && autoReconnect) {
-            Log.d(TAG, "Attempting to reconnect to Vsock port $currentPort")
+            Logger.d(TAG, "Attempting to reconnect to Vsock port $currentPort")
             connect(currentPort, autoReconnect)
         }
     }

@@ -1,6 +1,6 @@
 package com.droidvisor.docker
 
-import android.util.Log
+import com.droidvisor.util.Logger
 import com.droidvisor.vm.vsock.VsockService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,7 +27,7 @@ class DockerHttpClient(private val vsockService: VsockService) {
 
     fun enableVsockMode(enabled: Boolean) {
         useVsock = enabled
-        Log.d(TAG, "Vsock mode: $enabled")
+        Logger.d(TAG, "Vsock mode: $enabled")
     }
 
     suspend fun get(path: String): String {
@@ -71,7 +71,7 @@ class DockerHttpClient(private val vsockService: VsockService) {
                 val response = readVsockResponse(inputStream)
 
                 if (response.statusCode in 200..299) {
-                    Log.d(TAG, "Vsock request $method $path succeeded: ${response.statusCode}")
+                    Logger.d(TAG, "Vsock request $method $path succeeded: ${response.statusCode}")
                     response.body
                 } else {
                     val sanitizedError = sanitizeLog(response.body)
@@ -84,7 +84,7 @@ class DockerHttpClient(private val vsockService: VsockService) {
             } catch (e: DockerError) {
                 throw e
             } catch (e: Exception) {
-                Log.e(TAG, "Vsock request failed: ${e.message}", e)
+                Logger.e(TAG, "Vsock request failed: ${e.message}", e)
                 throw DockerError.ConnectionError("Vsock connection failed: ${e.message}")
             }
         }
@@ -216,7 +216,7 @@ class DockerHttpClient(private val vsockService: VsockService) {
                 val responseBody = readStream(connection.inputStream)
 
                 if (responseCode in 200..299) {
-                    Log.d(TAG, "Request $method $path succeeded: $responseCode")
+                    Logger.d(TAG, "Request $method $path succeeded: $responseCode")
                     responseBody
                 } else {
                     val errorBody = readStream(connection.errorStream)
@@ -230,7 +230,7 @@ class DockerHttpClient(private val vsockService: VsockService) {
             } catch (e: DockerError) {
                 throw e
             } catch (e: Exception) {
-                Log.e(TAG, "HTTP request failed: ${e.message}", e)
+                Logger.e(TAG, "HTTP request failed: ${e.message}", e)
                 throw DockerError.ConnectionError("Connection failed")
             }
         }

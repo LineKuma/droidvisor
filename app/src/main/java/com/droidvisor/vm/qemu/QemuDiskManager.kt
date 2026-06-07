@@ -1,6 +1,6 @@
 package com.droidvisor.vm.qemu
 
-import android.util.Log
+import com.droidvisor.util.Logger
 import java.io.File
 import java.io.IOException
 
@@ -49,7 +49,7 @@ class QemuDiskManager(private val baseDir: File) {
         val diskFile = File(baseDir, "$name$extension")
 
         if (diskFile.exists()) {
-            Log.d(TAG, "Disk image already exists: ${diskFile.absolutePath}")
+            Logger.d(TAG, "Disk image already exists: ${diskFile.absolutePath}")
             return diskFile
         }
 
@@ -76,7 +76,7 @@ class QemuDiskManager(private val baseDir: File) {
             add(diskFile.absolutePath)
         }
 
-        Log.d(TAG, "Creating disk image: ${args.joinToString(" ")}")
+        Logger.d(TAG, "Creating disk image: ${args.joinToString(" ")}")
 
         val process = ProcessBuilder(*args.toTypedArray())
             .redirectErrorStream(true)
@@ -90,7 +90,7 @@ class QemuDiskManager(private val baseDir: File) {
             throw IOException("Failed to create disk image (exit=$exitCode): $output")
         }
 
-        Log.d(TAG, "Disk image created: ${diskFile.absolutePath} (${diskFile.length()} bytes)")
+        Logger.d(TAG, "Disk image created: ${diskFile.absolutePath} (${diskFile.length()} bytes)")
         return diskFile
     }
 
@@ -113,7 +113,7 @@ class QemuDiskManager(private val baseDir: File) {
 
             if (process.exitValue() == 0) output else null
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to get disk info for ${diskFile.name}", e)
+            Logger.w(TAG, "Failed to get disk info for ${diskFile.name}", e)
             null
         }
     }
@@ -140,7 +140,7 @@ class QemuDiskManager(private val baseDir: File) {
             throw IOException("Failed to resize disk (exit=$exitCode): $output")
         }
 
-        Log.d(TAG, "Disk resized: ${diskFile.name} -> ${newSizeGb}G")
+        Logger.d(TAG, "Disk resized: ${diskFile.name} -> ${newSizeGb}G")
     }
 
     /**
@@ -149,7 +149,7 @@ class QemuDiskManager(private val baseDir: File) {
     fun deleteDisk(diskFile: File): Boolean {
         return if (diskFile.exists() && diskFile.parentFile?.absolutePath == baseDir.absolutePath) {
             val deleted = diskFile.delete()
-            Log.d(TAG, "Disk ${diskFile.name} deleted: $deleted")
+            Logger.d(TAG, "Disk ${diskFile.name} deleted: $deleted")
             deleted
         } else false
     }
@@ -180,7 +180,7 @@ class QemuDiskManager(private val baseDir: File) {
                 .start()
             process.waitFor() == 0
         } catch (e: Exception) {
-            Log.w(TAG, "qemu-img not available", e)
+            Logger.w(TAG, "qemu-img not available", e)
             false
         }
     }

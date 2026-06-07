@@ -24,23 +24,43 @@ object Logger {
     }
 
     fun d(message: String) {
-        log(LogLevel.DEBUG, message)
+        log(LogLevel.DEBUG, TAG, message)
+    }
+
+    fun d(tag: String, message: String) {
+        log(LogLevel.DEBUG, tag, message)
     }
 
     fun i(message: String) {
-        log(LogLevel.INFO, message)
+        log(LogLevel.INFO, TAG, message)
+    }
+
+    fun i(tag: String, message: String) {
+        log(LogLevel.INFO, tag, message)
     }
 
     fun w(message: String) {
-        log(LogLevel.WARN, message)
+        log(LogLevel.WARN, TAG, message)
+    }
+
+    fun w(tag: String, message: String) {
+        log(LogLevel.WARN, tag, message)
     }
 
     fun e(message: String) {
-        log(LogLevel.ERROR, message)
+        log(LogLevel.ERROR, TAG, message)
+    }
+
+    fun e(tag: String, message: String) {
+        log(LogLevel.ERROR, tag, message)
     }
 
     fun e(message: String, throwable: Throwable) {
-        log(LogLevel.ERROR, "$message\n${throwable.stackTraceToString()}")
+        log(LogLevel.ERROR, TAG, "$message\n${throwable.stackTraceToString()}")
+    }
+
+    fun e(tag: String, message: String, throwable: Throwable) {
+        log(LogLevel.ERROR, tag, "$message\n${throwable.stackTraceToString()}")
     }
 
     private fun sanitizeLog(message: String): String {
@@ -61,16 +81,16 @@ object Logger {
         return sanitized
     }
 
-    private fun log(level: LogLevel, message: String) {
+    private fun log(level: LogLevel, tag: String, message: String) {
         val sanitizedMessage = sanitizeLog(message)
         val timestamp = dateFormat.format(Date())
-        val logMessage = "[$timestamp] [${level.name}] $sanitizedMessage"
+        val logMessage = "[$timestamp] [$tag] [${level.name}] $sanitizedMessage"
 
         when (level) {
-            LogLevel.DEBUG -> Log.d(TAG, sanitizedMessage)
-            LogLevel.INFO -> Log.i(TAG, sanitizedMessage)
-            LogLevel.WARN -> Log.w(TAG, sanitizedMessage)
-            LogLevel.ERROR -> Log.e(TAG, sanitizedMessage)
+            LogLevel.DEBUG -> Log.d(tag, sanitizedMessage)
+            LogLevel.INFO -> Log.i(tag, sanitizedMessage)
+            LogLevel.WARN -> Log.w(tag, sanitizedMessage)
+            LogLevel.ERROR -> Log.e(tag, sanitizedMessage)
         }
 
         logFile?.let { file ->

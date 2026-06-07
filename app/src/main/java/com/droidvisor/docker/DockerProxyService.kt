@@ -4,7 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import android.util.Log
+import com.droidvisor.util.Logger
 import com.droidvisor.docker.model.Container
 import com.droidvisor.docker.model.Image
 import com.droidvisor.vm.vsock.VsockService
@@ -98,9 +98,9 @@ class DockerProxyService : Service() {
             _daemonHealthy.value = true
             _dockerVersion.value = version.Version
             _reconnecting.value = false
-            Log.d(TAG, "Docker daemon healthy: ${version.Version}")
+            Logger.d(TAG, "Docker daemon healthy: ${version.Version}")
         } catch (e: DockerError) {
-            Log.e(TAG, "Docker daemon unhealthy, attempting recovery", e)
+            Logger.e(TAG, "Docker daemon unhealthy, attempting recovery", e)
             _daemonHealthy.value = false
             if (!_reconnecting.value && _isConnected.value) {
                 _reconnecting.value = true
@@ -113,13 +113,13 @@ class DockerProxyService : Service() {
         try {
             vsockService?.let { service ->
                 val currentPort = VsockService.DEFAULT_DOCKER_PORT
-                Log.d(TAG, "Attempting to recover Docker daemon connection on port $currentPort")
+                Logger.d(TAG, "Attempting to recover Docker daemon connection on port $currentPort")
                 service.disconnect()
                 delay(2000)
                 service.connect(currentPort)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to recover Docker daemon", e)
+            Logger.e(TAG, "Failed to recover Docker daemon", e)
         } finally {
             _reconnecting.value = false
         }
@@ -144,7 +144,7 @@ class DockerProxyService : Service() {
             _containers.value = result
             result
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to list containers", e)
+            Logger.e(TAG, "Failed to list containers", e)
             emptyList()
         }
     }
@@ -155,7 +155,7 @@ class DockerProxyService : Service() {
             refreshContainers()
             true
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to start container $containerId", e)
+            Logger.e(TAG, "Failed to start container $containerId", e)
             false
         }
     }
@@ -166,7 +166,7 @@ class DockerProxyService : Service() {
             refreshContainers()
             true
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to stop container $containerId", e)
+            Logger.e(TAG, "Failed to stop container $containerId", e)
             false
         }
     }
@@ -177,7 +177,7 @@ class DockerProxyService : Service() {
             refreshContainers()
             true
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to remove container $containerId", e)
+            Logger.e(TAG, "Failed to remove container $containerId", e)
             false
         }
     }
@@ -188,7 +188,7 @@ class DockerProxyService : Service() {
             _images.value = result
             result
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to list images", e)
+            Logger.e(TAG, "Failed to list images", e)
             emptyList()
         }
     }
@@ -199,7 +199,7 @@ class DockerProxyService : Service() {
             refreshImages()
             true
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to pull image $imageName", e)
+            Logger.e(TAG, "Failed to pull image $imageName", e)
             false
         }
     }
@@ -211,7 +211,7 @@ class DockerProxyService : Service() {
             refreshContainers()
             true
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to create container", e)
+            Logger.e(TAG, "Failed to create container", e)
             false
         }
     }
@@ -221,7 +221,7 @@ class DockerProxyService : Service() {
             val rawLogs = apiClient.getContainerLogs(containerId)
             parseContainerLogs(rawLogs)
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to get container logs $containerId", e)
+            Logger.e(TAG, "Failed to get container logs $containerId", e)
             emptyList()
         }
     }
@@ -258,9 +258,9 @@ class DockerProxyService : Service() {
         try {
             val version = apiClient.getDockerVersion()
             _dockerVersion.value = version.Version
-            Log.d(TAG, "Docker version: ${version.Version}")
+            Logger.d(TAG, "Docker version: ${version.Version}")
         } catch (e: DockerError) {
-            Log.e(TAG, "Failed to get Docker version", e)
+            Logger.e(TAG, "Failed to get Docker version", e)
         }
     }
 

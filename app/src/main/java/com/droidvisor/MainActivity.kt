@@ -49,14 +49,17 @@ import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.vsock.VsockService
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class MainActivity : ComponentActivity() {
 
-    private var vmManagerService: VmManagerService? = null
-    private var consoleService: ConsoleOutputService? = null
-    private var vsockService: VsockService? = null
-    private var backupManagerService: BackupManagerService? = null
-    private var dockerProxyService: DockerProxyService? = null
+    private val _vmManagerService = MutableStateFlow<VmManagerService?>(null)
+    private val _consoleService = MutableStateFlow<ConsoleOutputService?>(null)
+    private val _vsockService = MutableStateFlow<VsockService?>(null)
+    private val _backupManagerService = MutableStateFlow<BackupManagerService?>(null)
+    private val _dockerProxyService = MutableStateFlow<DockerProxyService?>(null)
 
     private var vmManagerBound = false
     private var consoleServiceBound = false
@@ -67,71 +70,71 @@ class MainActivity : ComponentActivity() {
     private val vmManagerConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as VmManagerService.LocalBinder
-            vmManagerService = binder.getService()
+            _vmManagerService.value = binder.getService()
             vmManagerBound = true
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
             vmManagerBound = false
-            vmManagerService = null
+            _vmManagerService.value = null
         }
     }
 
     private val consoleServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as ConsoleOutputService.LocalBinder
-            consoleService = binder.getService()
+            _consoleService.value = binder.getService()
             consoleServiceBound = true
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
             consoleServiceBound = false
-            consoleService = null
+            _consoleService.value = null
         }
     }
 
     private val vsockServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as VsockService.LocalBinder
-            vsockService = binder.getService()
+            _vsockService.value = binder.getService()
             vsockServiceBound = true
 
-            dockerProxyService?.attachVsockService(vsockService!!)
+            _dockerProxyService.value?.attachVsockService(binder.getService())
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
             vsockServiceBound = false
-            vsockService = null
+            _vsockService.value = null
         }
     }
 
     private val backupManagerConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as BackupManagerService.LocalBinder
-            backupManagerService = binder.getService()
+            _backupManagerService.value = binder.getService()
             backupManagerBound = true
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
             backupManagerBound = false
-            backupManagerService = null
+            _backupManagerService.value = null
         }
     }
 
     private val dockerProxyConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as DockerProxyService.LocalBinder
-            dockerProxyService = binder.getService()
+            _dockerProxyService.value = binder.getService()
             dockerProxyBound = true
 
-            if (vsockService != null) {
-                dockerProxyService?.attachVsockService(vsockService!!)
+            _vsockService.value?.let { vsock ->
+                binder.getService().attachVsockService(vsock)
             }
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
             dockerProxyBound = false
-            dockerProxyService = null
+            _dockerProxyService.value = null
         }
     }
 
@@ -160,11 +163,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             DroidvisorApp(
-                vmManagerService = vmManagerService,
-                consoleOutputService = consoleService,
-                backupManagerService = backupManagerService,
-                vsockService = vsockService,
-                dockerProxyService = dockerProxyService
+                vmManagerServiceFlow = _vmManagerService.asStateFlow(),
+                consoleOutputServiceFlow = _consoleService.asStateFlow(),
+                backupManagerServiceFlow = _backupManagerService.asStateFlow(),
+                vsockServiceFlow = _vsockService.asStateFlow(),
+                dockerProxyServiceFlow = _dockerProxyService.asStateFlow()
             )
         }
     }
@@ -202,12 +205,18 @@ data class NavItem(
 
 @Composable
 fun DroidvisorApp(
-    vmManagerService: VmManagerService?,
-    consoleOutputService: ConsoleOutputService?,
-    backupManagerService: BackupManagerService?,
-    vsockService: VsockService?,
-    dockerProxyService: DockerProxyService?
+    vmManagerServiceFlow: StateFlow<VmManagerService?>,
+    consoleOutputServiceFlow: StateFlow<ConsoleOutputService?>,
+    backupManagerServiceFlow: StateFlow<BackupManagerService?>,
+    vsockServiceFlow: StateFlow<VsockService?>,
+    dockerProxyServiceFlow: StateFlow<DockerProxyService?>
 ) {
+    val vmManagerService by vmManagerServiceFlow.collectAsState()
+    val consoleOutputService by consoleOutputServiceFlow.collectAsState()
+    val backupManagerService by backupManagerServiceFlow.collectAsState()
+    val vsockService by vsockServiceFlow.collectAsState()
+    val dockerProxyService by dockerProxyServiceFlow.collectAsState()
+
     val navController = rememberNavController()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var hasPassedPermissionCheck by remember { mutableStateOf(false) }

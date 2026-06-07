@@ -12,8 +12,8 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
-import android.util.Log
 import androidx.annotation.RequiresApi
+import com.droidvisor.util.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -151,20 +151,20 @@ class VirtualMachineManagerService : Service() {
 
             val featureName = ReflectCache.featureVirtualizationFramework
             if (featureName != null && !packageManager.hasSystemFeature(featureName)) {
-                Log.w(TAG, "FEATURE_VIRTUALIZATION_FRAMEWORK not available on this device")
+                Logger.w(TAG, "FEATURE_VIRTUALIZATION_FRAMEWORK not available on this device")
                 false
             } else {
                 avfVmManager = getSystemService(vmmClass)
                 if (avfVmManager != null) {
-                    Log.d(TAG, "AVF VirtualMachineManager initialized successfully")
+                    Logger.d(TAG, "AVF VirtualMachineManager initialized successfully")
                     true
                 } else {
-                    Log.w(TAG, "AVF VirtualMachineManager is null, falling back to simulation mode")
+                    Logger.w(TAG, "AVF VirtualMachineManager is null, falling back to simulation mode")
                     false
                 }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "AVF not available, falling back to simulation mode", e)
+            Logger.w(TAG, "AVF not available, falling back to simulation mode", e)
             false
         }
     }
@@ -191,11 +191,11 @@ class VirtualMachineManagerService : Service() {
                 attemptStartAvfVmWithRetry()
 
             } catch (e: VmError) {
-                Log.e(TAG, "Failed to start VM", e)
+                Logger.e(TAG, "Failed to start VM", e)
                 consoleOutputService?.appendOutput("Error: ${e.message}")
                 _status.value = VmStatus.STOPPED
             } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error starting VM", e)
+                Logger.e(TAG, "Unexpected error starting VM", e)
                 consoleOutputService?.appendOutput("Unexpected error: ${e.message}")
                 _status.value = VmStatus.STOPPED
             }
@@ -215,11 +215,11 @@ class VirtualMachineManagerService : Service() {
                 vmStartRetryCount++
                 if (vmStartRetryCount <= maxRetries) {
                     val delayMs = baseRetryDelayMs * (1 shl (vmStartRetryCount - 1))
-                    Log.w(TAG, "VM start attempt $vmStartRetryCount failed, retrying in ${delayMs}ms", e)
+                    Logger.w(TAG, "VM start attempt $vmStartRetryCount failed, retrying in ${delayMs}ms", e)
                     consoleOutputService?.appendOutput("VM start failed, retry ${vmStartRetryCount}/${maxRetries} in ${delayMs}ms...")
                     kotlinx.coroutines.delay(delayMs)
                 } else {
-                    Log.e(TAG, "VM start failed after $vmStartRetryCount attempts", e)
+                    Logger.e(TAG, "VM start failed after $vmStartRetryCount attempts", e)
                     consoleOutputService?.appendOutput("VM start failed after $vmStartRetryCount attempts: ${e.message}")
                     throw e
                 }
@@ -246,10 +246,10 @@ class VirtualMachineManagerService : Service() {
                 stopForeground(STOP_FOREGROUND_REMOVE)
 
             } catch (e: VmError) {
-                Log.e(TAG, "Failed to stop VM", e)
+                Logger.e(TAG, "Failed to stop VM", e)
                 consoleOutputService?.appendOutput("Error: ${e.message}")
             } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error stopping VM", e)
+                Logger.e(TAG, "Unexpected error stopping VM", e)
                 consoleOutputService?.appendOutput("Unexpected error: ${e.message}")
                 _status.value = VmStatus.STOPPED
             }
@@ -272,7 +272,7 @@ class VirtualMachineManagerService : Service() {
                 stopForeground(STOP_FOREGROUND_REMOVE)
 
             } catch (e: Exception) {
-                Log.e(TAG, "Error closing VM", e)
+                Logger.e(TAG, "Error closing VM", e)
                 _status.value = VmStatus.STOPPED
             }
         }
@@ -303,7 +303,7 @@ class VirtualMachineManagerService : Service() {
         runMethod.invoke(vm)
 
         consoleOutputService?.appendOutput("AVF VM starting...")
-        Log.d(TAG, "AVF VM run() called, waiting for callback")
+        Logger.d(TAG, "AVF VM run() called, waiting for callback")
     }
 
     private fun buildAvfVmConfig(): Any {
@@ -343,28 +343,28 @@ class VirtualMachineManagerService : Service() {
                 "onPayloadStarted" -> {
                     _status.value = VmStatus.RUNNING
                     consoleOutputService?.appendOutput("Payload started")
-                    Log.d(TAG, "AVF VM payload started")
+                    Logger.d(TAG, "AVF VM payload started")
                 }
                 "onPayloadReady" -> {
-                    Log.d(TAG, "AVF VM payload ready")
+                    Logger.d(TAG, "AVF VM payload ready")
                 }
                 "onPayloadFinished" -> {
                     val exitCode = args?.getOrNull(1) as? Int ?: -1
                     consoleOutputService?.appendOutput("Payload finished with exit code: $exitCode")
-                    Log.d(TAG, "AVF VM payload finished with exit code: $exitCode")
+                    Logger.d(TAG, "AVF VM payload finished with exit code: $exitCode")
                 }
                 "onStopped" -> {
                     _status.value = VmStatus.STOPPED
                     val reason = args?.getOrNull(1) as? Int ?: -1
                     consoleOutputService?.appendOutput("VM stopped")
-                    Log.d(TAG, "AVF VM stopped, reason: $reason")
+                    Logger.d(TAG, "AVF VM stopped, reason: $reason")
                 }
                 "onError" -> {
                     _status.value = VmStatus.ERROR
                     val errorCode = args?.getOrNull(1) as? Int ?: -1
                     val message = args?.getOrNull(2) as? String ?: "Unknown error"
                     consoleOutputService?.appendOutput("VM error: $message")
-                    Log.e(TAG, "AVF VM error, code: $errorCode, message: $message")
+                    Logger.e(TAG, "AVF VM error, code: $errorCode, message: $message")
                 }
                 else -> null
             }
@@ -379,14 +379,14 @@ class VirtualMachineManagerService : Service() {
             val stopMethod = ReflectCache.vmStop
                 ?: throw VmError.AvfNotSupportedError("VirtualMachine.stop method not found")
             stopMethod.invoke(vm)
-            Log.d(TAG, "AVF VM stop() called, releasing resources...")
-            Log.d(TAG, "Memory release: VM instance cleared, preparing for garbage collection")
+            Logger.d(TAG, "AVF VM stop() called, releasing resources...")
+            Logger.d(TAG, "Memory release: VM instance cleared, preparing for garbage collection")
             vmInstance = null
             System.gc()
         } catch (e: VmError) {
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "AVF VM stop failed", e)
+            Logger.e(TAG, "AVF VM stop failed", e)
             throw VmError.StopError("Failed to stop AVF VM: ${e.message}")
         }
     }
@@ -396,13 +396,13 @@ class VirtualMachineManagerService : Service() {
             val vm = vmInstance ?: return
             val closeMethod = ReflectCache.vmClose
             closeMethod?.invoke(vm)
-            Log.d(TAG, "AVF VM closed, cleaning up resources")
-            Log.d(TAG, "Memory cleanup: vmInstance=null, consoleOutputService cleanup triggered")
+            Logger.d(TAG, "AVF VM closed, cleaning up resources")
+            Logger.d(TAG, "Memory cleanup: vmInstance=null, consoleOutputService cleanup triggered")
             vmInstance = null
             consoleOutputService = null
             System.gc()
         } catch (e: Exception) {
-            Log.e(TAG, "Error closing AVF VM", e)
+            Logger.e(TAG, "Error closing AVF VM", e)
         }
     }
 
@@ -413,7 +413,7 @@ class VirtualMachineManagerService : Service() {
                 ?: throw VmError.AvfNotSupportedError("VirtualMachine.connectVsock method not found")
             connectMethod.invoke(vm, port) as? ParcelFileDescriptor
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to connect vsock on port $port", e)
+            Logger.e(TAG, "Failed to connect vsock on port $port", e)
             null
         }
     }

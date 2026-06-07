@@ -1,6 +1,6 @@
 package com.droidvisor.vm.qemu
 
-import android.util.Log
+import com.droidvisor.util.Logger
 import com.droidvisor.vm.VmError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -151,7 +151,7 @@ class QemuProcessManager(
         // 额外参数
         args.addAll(config.extraArgs)
 
-        Log.d(TAG, "QEMU command line: ${args.joinToString(" ")}")
+        Logger.d(TAG, "QEMU command line: ${args.joinToString(" ")}")
 
         return args
     }
@@ -173,7 +173,7 @@ class QemuProcessManager(
 
         for (candidate in candidates) {
             if (File(candidate).canExecute()) {
-                Log.d(TAG, "Found QEMU binary: $candidate")
+                Logger.d(TAG, "Found QEMU binary: $candidate")
                 return candidate
             }
         }
@@ -185,7 +185,7 @@ class QemuProcessManager(
                 .start()
             val output = process.inputStream.bufferedReader().readText().trim()
             if (process.waitFor() == 0 && output.isNotEmpty() && File(output).canExecute()) {
-                Log.d(TAG, "Found QEMU via which: $output")
+                Logger.d(TAG, "Found QEMU via which: $output")
                 return output
             }
         } catch (_: Exception) {}
@@ -295,7 +295,7 @@ class QemuProcessManager(
             _running.set(true)
             _exitCode.set(null)
             _processState.value = ProcessState.RUNNING
-            Log.d(TAG, "QEMU process started, pid=$pid")
+            Logger.d(TAG, "QEMU process started, pid=$pid")
 
         } catch (e: IOException) {
             _processState.value = ProcessState.ERROR
@@ -324,7 +324,7 @@ class QemuProcessManager(
         pid = extractPidFromOutput(output) ?: -1
         qemuProcess = null  // daemon 模式不持有进程引用
 
-        Log.d(TAG, "QEMU started in daemon mode, reference pid=$pid")
+        Logger.d(TAG, "QEMU started in daemon mode, reference pid=$pid")
     }
 
     private fun startForeground(commandLine: List<String>) {
@@ -346,7 +346,7 @@ class QemuProcessManager(
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     line?.let {
-                        Log.d(TAG, "[QEMU stdout] $it")
+                        Logger.d(TAG, "[QEMU stdout] $it")
                         consoleOutput?.invoke(it)
                     }
                 }
@@ -357,13 +357,13 @@ class QemuProcessManager(
 
                 if (exitCode == 0) {
                     _processState.value = ProcessState.EXITED
-                    Log.d(TAG, "QEMU process exited normally (code=$exitCode)")
+                    Logger.d(TAG, "QEMU process exited normally (code=$exitCode)")
                 } else {
                     _processState.value = ProcessState.CRASHED
-                    Log.e(TAG, "QEMU process crashed (exit code=$exitCode)")
+                    Logger.e(TAG, "QEMU process crashed (exit code=$exitCode)")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error monitoring QEMU process", e)
+                Logger.e(TAG, "Error monitoring QEMU process", e)
                 _processState.value = ProcessState.ERROR
                 _running.set(false)
             }
@@ -379,7 +379,7 @@ class QemuProcessManager(
      */
     fun stop(force: Boolean = false, timeoutMs: Long = 5000L): Boolean {
         if (!_running.get()) {
-            Log.w(TAG, "QEMU process not running")
+            Logger.w(TAG, "QEMU process not running")
             return true
         }
 
@@ -392,7 +392,7 @@ class QemuProcessManager(
                 gracefulShutdown(timeoutMs)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error stopping QEMU process", e)
+            Logger.e(TAG, "Error stopping QEMU process", e)
             killProcess()
         } finally {
             cleanup()
