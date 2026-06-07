@@ -122,6 +122,7 @@ class BackupManagerServiceTest {
             backupName = "full-1",
             type = BackupType.FULL
         )
+        testScope.testScheduler.advanceUntilIdle()
         val fullBackup1 = service.backups.value[0]
 
         // Create second full backup (more recent)
@@ -131,6 +132,7 @@ class BackupManagerServiceTest {
             backupName = "full-2",
             type = BackupType.FULL
         )
+        testScope.testScheduler.advanceUntilIdle()
         val fullBackup2 = service.backups.value[1]
 
         // Create incremental backup
@@ -198,6 +200,7 @@ class BackupManagerServiceTest {
             backupName = "full-other",
             type = BackupType.FULL
         )
+        testScope.testScheduler.advanceUntilIdle()
 
         // Create incremental for vm-123 - should not find parent from vm-456
         val result = service.createBackup(
@@ -630,6 +633,8 @@ class BackupManagerServiceTest {
         )
         val backupId = (result as BackupResult.Success).backup.id
 
+        testScope.testScheduler.advanceUntilIdle()
+
         val deleteResult = service.deleteBackup(backupId)
 
         assertTrue(deleteResult is BackupResult.Success)
@@ -646,6 +651,8 @@ class BackupManagerServiceTest {
         val result = service.createBackup(vmId = "vm-123", vmName = "Test VM", backupName = "backup-1")
         val backupId = (result as BackupResult.Success).backup.id
 
+        testScope.testScheduler.advanceUntilIdle()
+
         service.deleteBackup(backupId)
         assertNull(service.lastError.value)
     }
@@ -659,6 +666,7 @@ class BackupManagerServiceTest {
         )
         val backupId = (result as BackupResult.Success).backup.id
 
+        testScope.testScheduler.advanceUntilIdle()
         assertEquals(1, service.getBackupsForVm("vm-123").size)
 
         service.deleteBackup(backupId)
@@ -700,9 +708,10 @@ class BackupManagerServiceTest {
         )
         val backupId = (result as BackupResult.Success).backup.id
 
+        testScope.testScheduler.advanceUntilIdle()
+
         service.deleteBackup(backupId)
 
-        // The backup should be in DELETING status initially (set by coroutine)
         // After advanceUntilIdle, it should be removed from the list
         testScope.testScheduler.advanceUntilIdle()
 
@@ -847,8 +856,8 @@ class BackupManagerServiceTest {
         disk2.writeText("content B")
 
         val result1 = service.createBackup(vmId = "vm-1", vmName = "VM 1", backupName = "backup-1")
+        testScope.testScheduler.advanceUntilIdle()
         val result2 = service.createBackup(vmId = "vm-2", vmName = "VM 2", backupName = "backup-2")
-
         testScope.testScheduler.advanceUntilIdle()
 
         val backup1 = service.getBackup((result1 as BackupResult.Success).backup.id)
@@ -978,6 +987,7 @@ class BackupManagerServiceTest {
 
         val backupFile = File(backupDir, "${backupId}.zip")
         assertTrue(backupFile.exists())
+        // verifyBackup updates sizeBytes to the backup zip file size
         assertEquals(backupFile.length(), backup!!.sizeBytes)
     }
 
@@ -1351,6 +1361,8 @@ class TestableBackupManagerService(
     }
 
     private fun addFileToZip(zipOut: ZipOutputStream, file: File, entryName: String) {
+        val entry = ZipEntry(entryName)
+        zipOut.putNextEntry(entry)
         FileInputStream(file).use { fis ->
             val buffer = ByteArray(8192)
             var length: Int
@@ -1358,6 +1370,7 @@ class TestableBackupManagerService(
                 zipOut.write(buffer, 0, length)
             }
         }
+        zipOut.closeEntry()
     }
 
     private fun buildMetadata(
