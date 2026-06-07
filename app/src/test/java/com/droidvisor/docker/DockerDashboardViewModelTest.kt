@@ -3,6 +3,11 @@ package com.droidvisor.docker
 import com.droidvisor.docker.model.Container
 import com.droidvisor.docker.model.Image
 import com.droidvisor.docker.model.PortBinding
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,23 +22,14 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.mockito.Mock
-import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.doThrow
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.verify
-import org.mockito.junit.MockitoJUnitRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(MockitoJUnitRunner::class)
 class DockerDashboardViewModelTest {
 
     private lateinit var viewModel: DockerDashboardViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
-    @Mock
-    private lateinit var mockDockerProxyService: DockerProxyService
+    private val mockDockerProxyService: DockerProxyService = mockk(relaxed = true)
 
     private val mockIsConnected = MutableStateFlow(false)
     private val mockDaemonHealthy = MutableStateFlow(false)
@@ -82,9 +78,9 @@ class DockerDashboardViewModelTest {
         Dispatchers.setMain(testDispatcher)
 
         // Set up mock service flows
-        doReturn(mockIsConnected).`when`(mockDockerProxyService).isConnected
-        doReturn(mockDaemonHealthy).`when`(mockDockerProxyService).daemonHealthy
-        doReturn(mockReconnecting).`when`(mockDockerProxyService).reconnecting
+        every { mockDockerProxyService.isConnected } returns mockIsConnected
+        every { mockDockerProxyService.daemonHealthy } returns mockDaemonHealthy
+        every { mockDockerProxyService.reconnecting } returns mockReconnecting
 
         viewModel = DockerDashboardViewModel()
     }
@@ -214,8 +210,8 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun attachDockerProxyService_whenConnected_triggersRefreshAll() {
-        doReturn(listOf(testContainer1)).`when`(mockDockerProxyService).listContainers()
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1)
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
 
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -223,8 +219,8 @@ class DockerDashboardViewModelTest {
         mockIsConnected.value = true
 
         // refreshAll should have been triggered, which calls listContainers and listImages
-        verify(mockDockerProxyService).listContainers()
-        verify(mockDockerProxyService).listImages()
+        coVerify { mockDockerProxyService.listContainers() }
+        coVerify { mockDockerProxyService.listImages() }
     }
 
     @Test
@@ -300,7 +296,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun refreshContainers_withRealDataAndConnected_updatesContainersFromService() {
-        doReturn(listOf(testContainer1, testContainer2)).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1, testContainer2)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -326,7 +322,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun refreshContainers_withRealDataAndServiceThrows_setsEmptyList() {
-        doThrow(DockerError.ConnectionError("Connection failed")).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.listContainers() } throws DockerError.ConnectionError("Connection failed")
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -337,7 +333,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun refreshContainers_withRealData_setsIsLoadingToFalseAfterCompletion() {
-        doReturn(listOf(testContainer1)).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -361,7 +357,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun refreshImages_withRealDataAndConnected_updatesImagesFromService() {
-        doReturn(listOf(testImage1, testImage2)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1, testImage2)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -386,7 +382,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun refreshImages_withRealDataAndServiceThrows_setsEmptyList() {
-        doThrow(DockerError.ApiError("API error", 500)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.listImages() } throws DockerError.ApiError("API error", 500)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -397,7 +393,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun refreshImages_setsIsLoadingToFalseAfterCompletion() {
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -412,15 +408,15 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun refreshAll_withRealDataAndConnected_refreshesContainersAndImages() {
-        doReturn(listOf(testContainer1)).`when`(mockDockerProxyService).listContainers()
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1)
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
         viewModel.refreshAll()
 
-        verify(mockDockerProxyService).listContainers()
-        verify(mockDockerProxyService).listImages()
+        coVerify { mockDockerProxyService.listContainers() }
+        coVerify { mockDockerProxyService.listImages() }
         assertEquals(1, viewModel.containers.value.size)
         assertEquals(1, viewModel.images.value.size)
     }
@@ -431,15 +427,15 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun startContainer_withRealDataAndConnected_callsServiceAndRefreshes() {
-        doReturn(true).`when`(mockDockerProxyService).startContainer("container-1")
-        doReturn(listOf(testContainer1.copy(State = "running"))).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.startContainer("container-1") } returns true
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1.copy(State = "running"))
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
         viewModel.startContainer("container-1")
 
-        verify(mockDockerProxyService).startContainer("container-1")
-        verify(mockDockerProxyService).listContainers()
+        coVerify { mockDockerProxyService.startContainer("container-1") }
+        coVerify { mockDockerProxyService.listContainers() }
     }
 
     @Test
@@ -470,15 +466,15 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun stopContainer_withRealDataAndConnected_callsServiceAndRefreshes() {
-        doReturn(true).`when`(mockDockerProxyService).stopContainer("container-1")
-        doReturn(listOf(testContainer1.copy(State = "exited"))).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.stopContainer("container-1") } returns true
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1.copy(State = "exited"))
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
         viewModel.stopContainer("container-1")
 
-        verify(mockDockerProxyService).stopContainer("container-1")
-        verify(mockDockerProxyService).listContainers()
+        coVerify { mockDockerProxyService.stopContainer("container-1") }
+        coVerify { mockDockerProxyService.listContainers() }
     }
 
     @Test
@@ -498,15 +494,15 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun removeContainer_withRealDataAndConnected_callsServiceAndRefreshes() {
-        doReturn(true).`when`(mockDockerProxyService).removeContainer("container-1")
-        doReturn(emptyList<Container>()).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.removeContainer("container-1") } returns true
+        coEvery { mockDockerProxyService.listContainers() } returns emptyList()
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
         viewModel.removeContainer("container-1")
 
-        verify(mockDockerProxyService).removeContainer("container-1")
-        verify(mockDockerProxyService).listContainers()
+        coVerify { mockDockerProxyService.removeContainer("container-1") }
+        coVerify { mockDockerProxyService.listContainers() }
     }
 
     @Test
@@ -562,15 +558,15 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun pullImage_withRealDataAndConnected_callsServiceAndRefreshesImages() {
-        doReturn(true).`when`(mockDockerProxyService).pullImage("alpine:latest")
-        doReturn(listOf(testImage1, testImage2)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.pullImage("alpine:latest") } returns true
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1, testImage2)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
         viewModel.pullImage("alpine", "latest")
 
-        verify(mockDockerProxyService).pullImage("alpine:latest")
-        verify(mockDockerProxyService).listImages()
+        coVerify { mockDockerProxyService.pullImage("alpine:latest") }
+        coVerify { mockDockerProxyService.listImages() }
     }
 
     @Test
@@ -586,20 +582,20 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun pullImage_withCustomTag_constructsCorrectImageName() {
-        doReturn(true).`when`(mockDockerProxyService).pullImage("myimage:v2.0")
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.pullImage("myimage:v2.0") } returns true
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
         viewModel.pullImage("myimage", "v2.0")
 
-        verify(mockDockerProxyService).pullImage("myimage:v2.0")
+        coVerify { mockDockerProxyService.pullImage("myimage:v2.0") }
     }
 
     @Test
     fun pullImage_setsIsLoadingToFalseAfterCompletion() {
-        doReturn(true).`when`(mockDockerProxyService).pullImage("alpine:latest")
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.pullImage("alpine:latest") } returns true
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -649,13 +645,13 @@ class DockerDashboardViewModelTest {
                 isError = true
             )
         )
-        doReturn(logEntries).`when`(mockDockerProxyService).getContainerLogs("container-1")
+        coEvery { mockDockerProxyService.getContainerLogs("container-1") } returns logEntries
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
         viewModel.fetchContainerLogs("container-1")
 
-        verify(mockDockerProxyService).getContainerLogs("container-1")
+        coVerify { mockDockerProxyService.getContainerLogs("container-1") }
         assertEquals(2, viewModel.containerLogs.value.size)
         assertEquals("Server started", viewModel.containerLogs.value[0].message)
         assertEquals("Error occurred", viewModel.containerLogs.value[1].message)
@@ -694,7 +690,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun fetchContainerLogs_withServiceError_returnsErrorLog() {
-        doThrow(DockerError.ConnectionError("Connection failed")).`when`(mockDockerProxyService).getContainerLogs("container-1")
+        coEvery { mockDockerProxyService.getContainerLogs("container-1") } throws DockerError.ConnectionError("Connection failed")
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -968,7 +964,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun stateFlow_containers_updatesOnRefresh() {
-        doReturn(listOf(testContainer1)).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -980,7 +976,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun stateFlow_images_updatesOnRefresh() {
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -992,7 +988,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun stateFlow_isLoading_togglesDuringOperations() {
-        doReturn(listOf(testContainer1)).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -1008,14 +1004,14 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun pullImageWithProgress_withRealDataAndConnected_callsServiceAndUpdatesProgress() {
-        doReturn(true).`when`(mockDockerProxyService).pullImage("alpine:latest")
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.pullImage("alpine:latest") } returns true
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
         viewModel.pullImageWithProgress("alpine", "latest")
 
-        verify(mockDockerProxyService).pullImage("alpine:latest")
+        coVerify { mockDockerProxyService.pullImage("alpine:latest") }
         // After completion, pulling should be false
         assertFalse(viewModel.pullProgress.value.isPulling)
         assertEquals(1f, viewModel.pullProgress.value.progress, 0.001f)
@@ -1023,8 +1019,8 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun pullImageWithProgress_setsInitialPullState() {
-        doReturn(true).`when`(mockDockerProxyService).pullImage("alpine:latest")
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
+        coEvery { mockDockerProxyService.pullImage("alpine:latest") } returns true
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -1038,7 +1034,7 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun pullImageWithProgress_withServiceError_setsErrorState() {
-        doThrow(DockerError.ConnectionError("Connection failed")).`when`(mockDockerProxyService).pullImage("alpine:latest")
+        coEvery { mockDockerProxyService.pullImage("alpine:latest") } throws DockerError.ConnectionError("Connection failed")
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -1066,10 +1062,10 @@ class DockerDashboardViewModelTest {
 
     @Test
     fun multipleOperationsInSequence_doNotCorruptState() {
-        doReturn(listOf(testContainer1)).`when`(mockDockerProxyService).listContainers()
-        doReturn(listOf(testImage1)).`when`(mockDockerProxyService).listImages()
-        doReturn(true).`when`(mockDockerProxyService).startContainer("c1")
-        doReturn(true).`when`(mockDockerProxyService).stopContainer("c1")
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1)
+        coEvery { mockDockerProxyService.listImages() } returns listOf(testImage1)
+        coEvery { mockDockerProxyService.startContainer("c1") } returns true
+        coEvery { mockDockerProxyService.stopContainer("c1") } returns true
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -1084,7 +1080,7 @@ class DockerDashboardViewModelTest {
     @Test
     fun attachDetachReattach_worksCorrectly() {
         // First attach
-        doReturn(listOf(testContainer1)).`when`(mockDockerProxyService).listContainers()
+        coEvery { mockDockerProxyService.listContainers() } returns listOf(testContainer1)
         mockIsConnected.value = true
         viewModel.attachDockerProxyService(mockDockerProxyService)
 
@@ -1095,14 +1091,14 @@ class DockerDashboardViewModelTest {
         viewModel.detachDockerProxyService()
 
         // Reattach
-        val newMockService: DockerProxyService = mock(DockerProxyService::class.java)
+        val newMockService: DockerProxyService = mockk(relaxed = true)
         val newIsConnected = MutableStateFlow(true)
         val newDaemonHealthy = MutableStateFlow(true)
         val newReconnecting = MutableStateFlow(false)
-        doReturn(newIsConnected).`when`(newMockService).isConnected
-        doReturn(newDaemonHealthy).`when`(newMockService).daemonHealthy
-        doReturn(newReconnecting).`when`(newMockService).reconnecting
-        doReturn(listOf(testContainer2)).`when`(newMockService).listContainers()
+        every { newMockService.isConnected } returns newIsConnected
+        every { newMockService.daemonHealthy } returns newDaemonHealthy
+        every { newMockService.reconnecting } returns newReconnecting
+        coEvery { newMockService.listContainers() } returns listOf(testContainer2)
 
         viewModel.attachDockerProxyService(newMockService)
 
