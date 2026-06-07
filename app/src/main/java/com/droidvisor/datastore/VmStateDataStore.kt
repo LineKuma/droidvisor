@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.droidvisor.util.Logger
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
@@ -18,6 +19,8 @@ import kotlinx.serialization.json.Json
 private val Context.vmStateDataStore: DataStore<Preferences> by preferencesDataStore(name = "vm_state")
 
 class VmStateDataStore(private val context: Context, private val customDataStore: DataStore<Preferences>? = null) {
+
+    private val TAG = "VmStateDataStore"
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -42,6 +45,7 @@ class VmStateDataStore(private val context: Context, private val customDataStore
                 try {
                     json.decodeFromString<List<VmInstanceData>>(instancesJson).map { it.toVmInstance() }
                 } catch (e: Exception) {
+                    Logger.e(TAG, "Failed to parse VM instances data, data may be corrupted", e)
                     emptyList()
                 }
             }

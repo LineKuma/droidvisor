@@ -203,7 +203,7 @@ fun TerminalScreen(
                         }
                     }
                 ),
-                colors = androidx.compose.material3.TextFieldDefaults.outlinedTextFieldColors(
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 )

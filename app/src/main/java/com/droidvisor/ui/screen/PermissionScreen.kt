@@ -224,7 +224,7 @@ fun PermissionScreen(
                             onClick = onAllPermissionsGranted,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.ArrowForward, contentDescription = null)
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("开始使用")
                         }
@@ -265,7 +265,7 @@ fun PermissionScreen(
                                 onClick = onAllPermissionsGranted,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Icon(Icons.Default.ArrowForward, contentDescription = null)
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("继续使用")
                             }
@@ -461,7 +461,7 @@ private fun AvfPermissionGuideCard(
                     verticalAlignment = Alignment.Top
                 ) {
                     Icon(
-                        imageVector = Icons.Default.HelpOutline,
+                        imageVector = Icons.AutoMirrored.Filled.HelpOutline,
                         contentDescription = null,
                         tint = Color.Gray,
                         modifier = Modifier.size(14.dp)

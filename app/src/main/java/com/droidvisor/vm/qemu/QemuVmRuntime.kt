@@ -54,6 +54,9 @@ class QemuVmRuntime(
     /** 进程管理器 */
     private var processManager: QemuProcessManager? = null
 
+    /** VM 启动时间戳 */
+    private var startedAtMs: Long = 0L
+
     /** Vsock 服务端列表 (port -> server) */
     private val vsockServers = mutableMapOf<Int, QemuVsockServer>()
 
@@ -125,6 +128,7 @@ class QemuVmRuntime(
             launchQemuProcess()
 
             _status.value = VmStatus.RUNNING
+            startedAtMs = System.currentTimeMillis()
             consoleService?.appendOutput("[QEMU] Virtual machine is running")
             Logger.d(TAG, "QEMU VM started successfully")
 
@@ -147,16 +151,22 @@ class QemuVmRuntime(
 
         try {
             processManager?.stop(force = false, timeoutMs = 8000L)
-            cleanupResources()
+        } catch (e: Exception) {
+            Logger.e(TAG, "Error stopping QEMU process", e)
+            consoleService?.appendOutput("[QEMU] Stop error: ${e.message}")
+        }
 
+        // Always cleanup resources regardless of stop success
+        cleanupResources()
+        startedAtMs = 0L
+
+        if (processManager?.getExitCode() != 0 && processManager?.getExitCode() != null) {
+            _status.value = VmStatus.ERROR
+            consoleService?.appendOutput("[QEMU] Process exited with error")
+        } else {
             _status.value = VmStatus.STOPPED
             consoleService?.appendOutput("[QEMU] Virtual machine stopped")
             Logger.d(TAG, "QEMU VM stopped successfully")
-
-        } catch (e: Exception) {
-            Logger.e(TAG, "Error stopping QEMU VM", e)
-            consoleService?.appendOutput("[QEMU] Stop error: ${e.message}")
-            _status.value = VmStatus.ERROR
         }
     }
 
@@ -235,8 +245,8 @@ class QemuVmRuntime(
             pid = processManager?.getPid() ?: -1,
             diskUsageBytes = diskManager.getTotalDiskUsage(),
             activeVsockConnections = activeVsockChannels.size,
-            uptimeMs = if (_status.value == VmStatus.RUNNING) {
-                System.currentTimeMillis() - (processManager?.let { 0L } ?: 0L)
+            uptimeMs = if (_status.value == VmStatus.RUNNING && startedAtMs > 0) {
+                System.currentTimeMillis() - startedAtMs
             } else 0L
         )
     }
