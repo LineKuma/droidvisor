@@ -30,13 +30,13 @@ class DockerProxyService : Service(), IDockerProxyService {
     private lateinit var apiClient: DockerApiClient
 
     private val _isConnected = MutableStateFlow(false)
-    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+    override val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
     private val _daemonHealthy = MutableStateFlow(false)
-    val daemonHealthy: StateFlow<Boolean> = _daemonHealthy.asStateFlow()
+    override val daemonHealthy: StateFlow<Boolean> = _daemonHealthy.asStateFlow()
 
     private val _reconnecting = MutableStateFlow(false)
-    val reconnecting: StateFlow<Boolean> = _reconnecting.asStateFlow()
+    override val reconnecting: StateFlow<Boolean> = _reconnecting.asStateFlow()
 
     private val _dockerVersion = MutableStateFlow<String?>(null)
     val dockerVersion: StateFlow<String?> = _dockerVersion.asStateFlow()
@@ -138,7 +138,7 @@ class DockerProxyService : Service(), IDockerProxyService {
         _dockerVersion.value = null
     }
 
-    suspend fun listContainers(): List<Container> {
+    override suspend fun listContainers(): List<Container> {
         return try {
             val result = apiClient.listContainers(all = true)
             _containers.value = result
@@ -149,7 +149,7 @@ class DockerProxyService : Service(), IDockerProxyService {
         }
     }
 
-    suspend fun startContainer(containerId: String): Boolean {
+    override suspend fun startContainer(containerId: String): Boolean {
         return try {
             apiClient.startContainer(containerId)
             refreshContainers()
@@ -160,7 +160,7 @@ class DockerProxyService : Service(), IDockerProxyService {
         }
     }
 
-    suspend fun stopContainer(containerId: String): Boolean {
+    override suspend fun stopContainer(containerId: String): Boolean {
         return try {
             apiClient.stopContainer(containerId)
             refreshContainers()
@@ -171,7 +171,7 @@ class DockerProxyService : Service(), IDockerProxyService {
         }
     }
 
-    suspend fun removeContainer(containerId: String): Boolean {
+    override suspend fun removeContainer(containerId: String): Boolean {
         return try {
             apiClient.removeContainer(containerId, force = true)
             refreshContainers()
@@ -182,7 +182,7 @@ class DockerProxyService : Service(), IDockerProxyService {
         }
     }
 
-    suspend fun listImages(): List<Image> {
+    override suspend fun listImages(): List<Image> {
         return try {
             val result = apiClient.listImages()
             _images.value = result
@@ -193,7 +193,7 @@ class DockerProxyService : Service(), IDockerProxyService {
         }
     }
 
-    suspend fun pullImage(imageName: String): Boolean {
+    override suspend fun pullImage(imageName: String): Boolean {
         return try {
             apiClient.pullImage(imageName)
             refreshImages()
@@ -216,7 +216,7 @@ class DockerProxyService : Service(), IDockerProxyService {
         }
     }
 
-    suspend fun getContainerLogs(containerId: String): List<ContainerLogEntry> {
+    override suspend fun getContainerLogs(containerId: String): List<ContainerLogEntry> {
         return try {
             val rawLogs = apiClient.getContainerLogs(containerId)
             parseContainerLogs(rawLogs)
