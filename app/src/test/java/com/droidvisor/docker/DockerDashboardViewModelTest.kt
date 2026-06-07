@@ -12,7 +12,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -570,10 +572,11 @@ class DockerDashboardViewModelTest {
     }
 
     @Test
-    fun pullImage_withoutService_addsImageToList() {
+    fun pullImage_withoutService_addsImageToList() = runTest {
         val initialCount = viewModel.images.value.size
 
         viewModel.pullImage("alpine", "latest")
+        advanceUntilIdle()
 
         assertEquals(initialCount + 1, viewModel.images.value.size)
         val newImage = viewModel.images.value.last()
@@ -1046,9 +1049,10 @@ class DockerDashboardViewModelTest {
     }
 
     @Test
-    fun pullImageWithProgress_withoutService_simulatesProgress() {
+    fun pullImageWithProgress_withoutService_simulatesProgress() = runTest {
         // No service attached
         viewModel.pullImageWithProgress("alpine", "latest")
+        advanceUntilIdle()
 
         // After completion with simulated progress
         val progress = viewModel.pullProgress.value
