@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -72,7 +73,7 @@ fun NetworkConfigScreen(
                 title = { Text("$vmName 网络配置") },
                 navigationIcon = {
                     IconButton(onClick = { /* 关闭界面 */ }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {

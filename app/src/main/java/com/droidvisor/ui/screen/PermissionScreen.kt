@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -224,7 +226,7 @@ fun PermissionScreen(
                             onClick = onAllPermissionsGranted,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                            Icon(ArrowForward, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("开始使用")
                         }
@@ -265,7 +267,7 @@ fun PermissionScreen(
                                 onClick = onAllPermissionsGranted,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                                Icon(ArrowForward, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("继续使用")
                             }
@@ -461,7 +463,7 @@ private fun AvfPermissionGuideCard(
                     verticalAlignment = Alignment.Top
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                        imageVector = HelpOutline,
                         contentDescription = null,
                         tint = Color.Gray,
                         modifier = Modifier.size(14.dp)
