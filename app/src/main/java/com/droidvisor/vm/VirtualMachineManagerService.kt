@@ -248,10 +248,11 @@ class VirtualMachineManagerService : Service() {
             } catch (e: VmError) {
                 Logger.e(TAG, "Failed to stop VM", e)
                 consoleOutputService?.appendOutput("Error: ${e.message}")
+                _status.value = VmStatus.ERROR
             } catch (e: Exception) {
                 Logger.e(TAG, "Unexpected error stopping VM", e)
                 consoleOutputService?.appendOutput("Unexpected error: ${e.message}")
-                _status.value = VmStatus.STOPPED
+                _status.value = VmStatus.ERROR
             }
         }
     }
@@ -259,8 +260,13 @@ class VirtualMachineManagerService : Service() {
     fun closeVm() {
         coroutineScope.launch {
             try {
-                if (_status.value == VmStatus.RUNNING) {
-                    stopVm()
+                if (_status.value == VmStatus.RUNNING || _status.value == VmStatus.STARTING) {
+                    try {
+                        _status.value = VmStatus.STOPPING
+                        stopAvfVm()
+                    } catch (e: Exception) {
+                        Logger.e(TAG, "Error stopping VM during close", e)
+                    }
                 }
 
                 closeAvfVm()
@@ -273,7 +279,7 @@ class VirtualMachineManagerService : Service() {
 
             } catch (e: Exception) {
                 Logger.e(TAG, "Error closing VM", e)
-                _status.value = VmStatus.STOPPED
+                _status.value = VmStatus.ERROR
             }
         }
     }
@@ -380,9 +386,7 @@ class VirtualMachineManagerService : Service() {
                 ?: throw VmError.AvfNotSupportedError("VirtualMachine.stop method not found")
             stopMethod.invoke(vm)
             Logger.d(TAG, "AVF VM stop() called, releasing resources...")
-            Logger.d(TAG, "Memory release: VM instance cleared, preparing for garbage collection")
             vmInstance = null
-            System.gc()
         } catch (e: VmError) {
             throw e
         } catch (e: Exception) {
@@ -397,10 +401,7 @@ class VirtualMachineManagerService : Service() {
             val closeMethod = ReflectCache.vmClose
             closeMethod?.invoke(vm)
             Logger.d(TAG, "AVF VM closed, cleaning up resources")
-            Logger.d(TAG, "Memory cleanup: vmInstance=null, consoleOutputService cleanup triggered")
             vmInstance = null
-            consoleOutputService = null
-            System.gc()
         } catch (e: Exception) {
             Logger.e(TAG, "Error closing AVF VM", e)
         }

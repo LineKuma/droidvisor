@@ -292,7 +292,16 @@ class VmManagerService : Service() {
     fun restartVm(vmId: String) {
         coroutineScope.launch {
             stopVm(vmId)
-            kotlinx.coroutines.delay(1000)
+            // Wait for VM to actually stop (stopVm is async)
+            val maxWaitMs = 10000L
+            val checkIntervalMs = 100L
+            var waited = 0L
+            while (waited < maxWaitMs) {
+                val vm = _vmInstances.value.find { it.id == vmId }
+                if (vm == null || !vm.isRunning) break
+                kotlinx.coroutines.delay(checkIntervalMs)
+                waited += checkIntervalMs
+            }
             startVm(vmId)
         }
     }
