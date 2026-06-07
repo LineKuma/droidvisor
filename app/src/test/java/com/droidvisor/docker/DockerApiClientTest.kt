@@ -351,9 +351,9 @@ class DockerApiClientTest {
     fun startContainer_sanitizesContainerId() = runBlocking {
         coEvery { mockHttpClient.post(any(), any()) } returns ""
 
-        apiClient.startContainer("abc123!@#XYZ")
+        apiClient.startContainer("abc123!@#def")
 
-        coVerify { mockHttpClient.post("/containers/abc123xyz/start", any()) }
+        coVerify { mockHttpClient.post("/containers/abc123def/start", any()) }
     }
 
     // ==================== stopContainer ====================
