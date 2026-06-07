@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, master, develop, agent-develop, trae/*]
   pull_request:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, master, develop, agent-develop, trae/*]
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
