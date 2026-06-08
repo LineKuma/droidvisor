@@ -102,9 +102,10 @@ class QemuProcessManager(
                     }
                 }
 
-            // 内核启动参数
-            args.add("-append")
-            args.add("console=ttyS0 root=/dev/vda rw panic=-1")
+                // 内核启动参数
+                args.add("-append")
+                args.add("console=ttyS0 root=/dev/vda rw panic=-1")
+            }
         }
 
         // 磁盘配置
