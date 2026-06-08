@@ -1,6 +1,4 @@
 # Droidvisor Docker Compose Configuration for Testing
-version: '3.8'
-
 services:
   # Android SDK 测试环境服务
   android-test:
