@@ -63,6 +63,9 @@ class QemuVmRuntime(
     /** 活跃的 Vsock 连接 */
     private val activeVsockChannels = mutableMapOf<Int, QemuVsockChannel>()
 
+    /** VM 启动时间戳 */
+    private var startedAtMs: Long = 0L
+
     /** 控制台输出服务引用 */
     private var consoleService: ConsoleOutputService? = null
 
@@ -364,7 +367,6 @@ class QemuVmRuntime(
 
     private fun forceCleanup() {
         cleanupResources()
-        System.gc()
     }
 
     private fun rebuildProcessManager(newConfig: QemuVmConfig) {
@@ -380,10 +382,9 @@ class QemuVmRuntime(
 
     private fun createPfdFromChannel(channel: QemuVsockChannel): ParcelFileDescriptor? {
         return try {
-            // 通过 pipe 创建一个可传递给 AVF 兼容层的 FD
             val pipe = ParcelFileDescriptor.createPipe()
-            // 在实际使用中，这里需要将 socket fd 转换为 PFD
-            // 目前返回一个有效的 PFD 作为占位符
+            // Close the write end — we only return the read end to the caller
+            pipe[1].close()
             pipe[0]
         } catch (e: Exception) {
             Logger.e(TAG, "Failed to create PFD from channel", e)
