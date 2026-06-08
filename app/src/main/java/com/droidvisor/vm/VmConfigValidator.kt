@@ -26,11 +26,14 @@ class VmConfigValidator {
             return ValidationResult(false, "CPU cores must not exceed $MAX_CPU_CORES")
         }
 
+        if (config.diskSizeBytes < 0) {
+            return ValidationResult(false, "disk size cannot be negative")
+        }
+        if (config.diskSizeBytes > 0 && config.diskSizeBytes < MIN_DISK_SIZE_BYTES) {
+            return ValidationResult(false, "disk size must be at least ${MIN_DISK_SIZE_BYTES / (1024 * 1024)} MB")
+        }
         if (config.diskSizeBytes > MAX_DISK_SIZE_BYTES) {
             return ValidationResult(false, "disk size must not exceed ${MAX_DISK_SIZE_BYTES / (1024 * 1024 * 1024)} GB")
-        }
-        if (config.diskSizeBytes > 0 && config.diskPath != null && config.diskSizeBytes < MIN_DISK_SIZE_BYTES) {
-            return ValidationResult(false, "disk size must be at least ${MIN_DISK_SIZE_BYTES / (1024 * 1024)} MB")
         }
 
         if (config.payloadBinaryName.isEmpty()) {
