@@ -319,9 +319,9 @@ private class RealVsockChannel(
 
     override fun close() {
         open = false
-        try { inputStream.close() } catch (_: Exception) {}
-        try { outputStream.close() } catch (_: Exception) {}
-        try { pfd.close() } catch (_: Exception) {}
+        try { inputStream.close() } catch (e: Exception) { Logger.d(TAG, "Error closing input stream", e) }
+        try { outputStream.close() } catch (e: Exception) { Logger.d(TAG, "Error closing output stream", e) }
+        try { pfd.close() } catch (e: Exception) { Logger.d(TAG, "Error closing PFD", e) }
     }
 
     override fun isOpen(): Boolean = open

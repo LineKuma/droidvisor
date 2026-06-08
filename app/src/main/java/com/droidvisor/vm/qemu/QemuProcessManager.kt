@@ -82,20 +82,25 @@ class QemuProcessManager(
         }
 
         // 固件/BIOS
-        if (config.firmwarePath != null && File(config.firmwarePath).exists()) {
-            args.add("-bios")
-            args.add(config.firmwarePath!!)
+        config.firmwarePath?.let { path ->
+            if (File(path).exists()) {
+                args.add("-bios")
+                args.add(path)
+            }
         }
 
         // 内核镜像
-        if (config.kernelImagePath != null && File(config.kernelImagePath).exists()) {
-            args.add("-kernel")
-            args.add(config.kernelImagePath!!)
+        config.kernelImagePath?.let { kernelPath ->
+            if (File(kernelPath).exists()) {
+                args.add("-kernel")
+                args.add(kernelPath)
 
-            if (config.initrdPath != null && File(config.initrdPath).exists()) {
-                args.add("-initrd")
-                args.add(config.initrdPath!!)
-            }
+                config.initrdPath?.let { initrdPath ->
+                    if (File(initrdPath).exists()) {
+                        args.add("-initrd")
+                        args.add(initrdPath)
+                    }
+                }
 
             // 内核启动参数
             args.add("-append")
@@ -183,12 +188,14 @@ class QemuProcessManager(
             val process = ProcessBuilder("which", "qemu-system-aarch64")
                 .redirectErrorStream(true)
                 .start()
-            val output = process.inputStream.bufferedReader().readText().trim()
+            val output = process.inputStream.bufferedReader().use { it.readText().trim() }
             if (process.waitFor() == 0 && output.isNotEmpty() && File(output).canExecute()) {
                 Logger.d(TAG, "Found QEMU via which: $output")
                 return output
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Logger.d(TAG, "which qemu-system-aarch64 failed", e)
+        }
 
         throw VmError.StartError(
             "QEMU binary not found. Tried: ${candidates.joinToString(", ")}"
@@ -312,7 +319,7 @@ class QemuProcessManager(
             .redirectErrorStream(true)
             .start()
 
-        val output = process.inputStream.bufferedReader().readText()
+        val output = process.inputStream.bufferedReader().use { it.readText() }
         val exitCode = process.waitFor()
 
         if (exitCode != 0) {
@@ -331,18 +338,19 @@ class QemuProcessManager(
         val builder = ProcessBuilder(*commandLine.toTypedArray())
         config.workingDirectory?.let { builder.directory(it) }
 
-        qemuProcess = builder
+        val process = builder
             .redirectErrorStream(true)
             .start()
 
-        pid = getPid(qemuProcess!!)
-        setupProcessMonitor(qemuProcess!!)
+        qemuProcess = process
+        pid = getPid(process)
+        setupProcessMonitor(process)
     }
 
     private fun setupProcessMonitor(process: Process) {
         monitorJob = scope.launch {
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
             try {
-                val reader = BufferedReader(InputStreamReader(process.inputStream))
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     line?.let {
@@ -366,6 +374,8 @@ class QemuProcessManager(
                 Logger.e(TAG, "Error monitoring QEMU process", e)
                 _processState.value = ProcessState.ERROR
                 _running.set(false)
+            } finally {
+                try { reader.close() } catch (_: Exception) {}
             }
         }
     }
@@ -423,7 +433,9 @@ class QemuProcessManager(
         if (pid > 0) {
             try {
                 Runtime.getRuntime().exec(arrayOf("kill", "-9", pid.toString()))
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Logger.w(TAG, "Failed to kill process $pid", e)
+            }
         }
         return true
     }
@@ -469,7 +481,8 @@ class QemuProcessManager(
                 val pidField = process.javaClass.getDeclaredField("pid")
                 pidField.isAccessible = true
                 pidField.getInt(process)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Logger.d(TAG, "Could not get process PID via reflection", e)
                 -1
             }
         }

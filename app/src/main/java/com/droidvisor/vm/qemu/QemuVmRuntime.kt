@@ -270,8 +270,8 @@ class QemuVmRuntime(
             // 更新配置中的磁盘路径
             rebuildProcessManager(qemuConfig.copy(diskPath = mainDisk.absolutePath))
         } else {
-            val existingDisk = File(currentConfig.diskPath!!)
-            if (!existingDisk.exists()) {
+            val existingDisk = currentConfig.diskPath?.let { File(it) }
+            if (existingDisk != null && !existingDisk.exists()) {
                 diskManager.createDisk(
                     name = "vm_main",
                     sizeGb = diskSizeGb,
@@ -352,7 +352,7 @@ class QemuVmRuntime(
 
     private fun cleanupResources() {
         // 关闭 Vsock 连接
-        activeVsockChannels.values.forEach { try { it.close() } catch (_: Exception) {} }
+        activeVsockChannels.values.forEach { try { it.close() } catch (e: Exception) { Logger.d(TAG, "Error closing vsock channel", e) } }
         activeVsockChannels.clear()
 
         // 停止 Vsock 服务端

@@ -311,7 +311,8 @@ class AvfCapabilityChecker(private val context: Context) {
                 val process = Runtime.getRuntime().exec(arrayOf("which", "qemu-system-aarch64"))
                 process.waitFor() == 0
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Logger.d(TAG, "QEMU binary check failed", e)
             false
         }
     }
@@ -320,7 +321,8 @@ class AvfCapabilityChecker(private val context: Context) {
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("qemu-img", "--version"))
             process.waitFor() == 0
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Logger.d(TAG, "qemu-img check failed", e)
             false
         }
     }

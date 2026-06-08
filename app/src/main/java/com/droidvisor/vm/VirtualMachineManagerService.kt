@@ -424,7 +424,8 @@ class VirtualMachineManagerService : Service() {
         val getCapabilitiesMethod = ReflectCache.vmmGetCapabilities ?: return 0
         return try {
             getCapabilitiesMethod.invoke(vmm) as? Int ?: 0
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Logger.d(TAG, "Failed to get AVF capabilities", e)
             0
         }
     }

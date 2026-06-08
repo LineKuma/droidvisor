@@ -119,9 +119,9 @@ class QemuVsockChannel(
     override fun isOpen(): Boolean = open && (pfd?.fileDescriptor != null || inputStream != null)
 
     private fun cleanup() {
-        try { outputStream?.close() } catch (_: Exception) {}
-        try { inputStream?.close() } catch (_: Exception) {}
-        try { pfd?.close() } catch (_: Exception) {}
+        try { outputStream?.close() } catch (e: Exception) { Logger.d(TAG, "Error closing output stream", e) }
+        try { inputStream?.close() } catch (e: Exception) { Logger.d(TAG, "Error closing input stream", e) }
+        try { pfd?.close() } catch (e: Exception) { Logger.d(TAG, "Error closing PFD", e) }
         outputStream = null
         inputStream = null
         pfd = null
@@ -199,7 +199,7 @@ class QemuVsockServer(
         running = false
         synchronized(activeChannels) {
             activeChannels.forEach {
-                try { it.close() } catch (_: Exception) {}
+                try { it.close() } catch (e: Exception) { Logger.d(TAG, "Error closing channel", e) }
             }
             activeChannels.clear()
         }
