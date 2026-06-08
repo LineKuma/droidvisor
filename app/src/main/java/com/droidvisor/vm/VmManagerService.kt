@@ -63,6 +63,8 @@ class VmManagerService : Service() {
 
     private lateinit var vmStateDataStore: VmStateDataStore
 
+    private val vmConfigValidator = VmConfigValidator()
+
     private val avfConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as VirtualMachineManagerService.LocalBinder
@@ -222,6 +224,13 @@ class VmManagerService : Service() {
             payloadBinaryName = vm.template.payloadBinaryName,
             protectedVm = vm.template.protectedVm
         )
+
+        val validationResult = vmConfigValidator.validate(vmConfig)
+        if (!validationResult.isValid) {
+            Logger.e(TAG, "VM config validation failed: ${validationResult.errorMessage}")
+            throw VmError.ConfigurationError(validationResult.errorMessage ?: "Invalid VM configuration")
+        }
+
         avf.configure(vmConfig, vm.template.protectedVm)
         avf.startVm()
     }
@@ -236,6 +245,13 @@ class VmManagerService : Service() {
             payloadBinaryName = vm.template.payloadBinaryName,
             protectedVm = false
         )
+
+        val validationResult = vmConfigValidator.validate(vmConfig)
+        if (!validationResult.isValid) {
+            Logger.e(TAG, "QEMU VM config validation failed: ${validationResult.errorMessage}")
+            throw VmError.ConfigurationError(validationResult.errorMessage ?: "Invalid VM configuration")
+        }
+
         qemu.configure(vmConfig)
         qemu.startVm()
         Logger.d(TAG, "QEMU VM started for ${vm.name}")
