@@ -63,9 +63,6 @@ class QemuVmRuntime(
     /** 活跃的 Vsock 连接 */
     private val activeVsockChannels = mutableMapOf<Int, QemuVsockChannel>()
 
-    /** VM 启动时间戳 */
-    private var startedAtMs: Long = 0L
-
     /** 控制台输出服务引用 */
     private var consoleService: ConsoleOutputService? = null
 
