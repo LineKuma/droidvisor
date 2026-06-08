@@ -483,7 +483,7 @@ class QemuProcessManager(
                 pidField.isAccessible = true
                 pidField.getInt(process)
             } catch (e: Exception) {
-                Logger.d(TAG, "Could not get process PID via reflection", e)
+                Logger.d("QemuProcessManager", "Could not get process PID via reflection", e)
                 -1
             }
         }

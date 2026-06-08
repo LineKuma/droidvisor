@@ -298,6 +298,8 @@ private class RealVsockChannel(
     private val pfd: ParcelFileDescriptor
 ) : VsockChannel {
 
+    private val TAG = "RealVsockChannel"
+
     val inputStream: InputStream = FileInputStream(pfd.fileDescriptor)
     val outputStream: OutputStream = FileOutputStream(pfd.fileDescriptor)
 
