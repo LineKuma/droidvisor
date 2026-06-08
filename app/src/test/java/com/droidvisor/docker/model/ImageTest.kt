@@ -214,7 +214,7 @@ class ImageTest {
             Size = 50000000L
         )
 
-        val jsonString = json.encodeToString(Image.serializer(), image)
+        val jsonString = json.encodeToString<Image>(image)
         assertTrue(jsonString.contains("sha256:test123"))
         assertTrue(jsonString.contains("test:1.0"))
     }
