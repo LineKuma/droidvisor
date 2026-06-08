@@ -17,12 +17,10 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  VERSION_NAME: ${{ inputs.version || github.ref_name }}
 
 permissions:
   contents: write
-
-env:
-  VERSION_NAME: ${{ inputs.version || github.ref_name }}
 
 jobs:
   test:

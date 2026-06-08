@@ -11,14 +11,12 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
-permissions:
-  contents: read
-
-env:
   # 日期编码版本号格式: YYYYMMDD.BUILD_NUMBER
   # 例如: 20260604.57
   DATE_VERSION: ${{ github.run_number }}
+
+permissions:
+  contents: read
 
 jobs:
   build-dev:
