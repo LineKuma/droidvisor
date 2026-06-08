@@ -488,7 +488,6 @@ class DockerDashboardViewModel : ViewModel() {
     }
 
     private fun loadMockContainerLogs(containerId: String) {
-        val container = _containers.value.find { it.Id == containerId }
         val logs = mutableListOf<ContainerLog>()
         val logMessages = listOf(
             "Starting application...",
@@ -505,8 +504,17 @@ class DockerDashboardViewModel : ViewModel() {
         val random = java.util.Random()
         val baseTime = System.currentTimeMillis()
 
+        // 确保至少有一条 Error 日志，避免随机生成导致测试不稳定
+        val errorMessage = "Error: Connection timeout to database"
+        val warningMessage = "Warning: High memory usage detected"
+        val normalMessages = logMessages.filter { it != errorMessage && it != warningMessage }
+
         for (i in 0 until 20) {
-            val message = logMessages[random.nextInt(logMessages.size)]
+            val message = when (i) {
+                5 -> errorMessage   // 保证至少有一条 Error 日志
+                10 -> warningMessage // 保证至少有一条 Warning 日志
+                else -> normalMessages[random.nextInt(normalMessages.size)]
+            }
             val isError = message.startsWith("Error:")
             val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
                 java.util.Date(baseTime - (20 - i) * 60000L)
