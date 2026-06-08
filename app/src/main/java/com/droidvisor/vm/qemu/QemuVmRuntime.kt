@@ -160,12 +160,13 @@ class QemuVmRuntime(
         }
 
         // Always cleanup resources regardless of stop success
+        val exitCode = processManager?.getExitCode()
         cleanupResources()
         startedAtMs = 0L
 
-        if (processManager?.getExitCode() != 0 && processManager?.getExitCode() != null) {
+        if (exitCode != null && exitCode != 0) {
             _status.value = VmStatus.ERROR
-            consoleService?.appendOutput("[QEMU] Process exited with error")
+            consoleService?.appendOutput("[QEMU] Process exited with error (code=$exitCode)")
         } else {
             _status.value = VmStatus.STOPPED
             consoleService?.appendOutput("[QEMU] Virtual machine stopped")
@@ -180,6 +181,7 @@ class QemuVmRuntime(
             }
 
             forceCleanup()
+            startedAtMs = 0L
             _status.value = VmStatus.STOPPED
             consoleService?.appendOutput("[QEMU] VM closed, all resources released")
 
