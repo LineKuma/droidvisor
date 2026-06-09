@@ -276,7 +276,10 @@ fun DockerOverviewTab(viewModel: DockerDashboardViewModel, onNavigateToContainer
         }
 
         item {
-            RunningContainersPreview(containers = containers.filter { it.State == "running" })
+            RunningContainersPreview(
+                containers = containers.filter { it.State == "running" },
+                onNavigateToContainers = onNavigateToContainers
+            )
         }
     }
 }
@@ -366,7 +369,7 @@ fun ResourceUsageCard(dockerInfo: DockerInfo?) {
 }
 
 @Composable
-fun RunningContainersPreview(containers: List<Container>) {
+fun RunningContainersPreview(containers: List<Container>, onNavigateToContainers: () -> Unit = {}) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
