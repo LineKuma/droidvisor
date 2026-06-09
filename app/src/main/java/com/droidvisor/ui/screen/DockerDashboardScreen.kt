@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -120,11 +121,11 @@ fun DockerDashboardScreen(viewModel: DockerDashboardViewModel) {
                 DockerNotConnectedView()
             } else {
                 when (selectedTabIndex) {
-                    0 -> DockerOverviewTab(viewModel)
-                    1 -> DockerContainersTab(viewModel)
+                    0 -> DockerOverviewTab(viewModel, onNavigateToContainers = { selectedTabIndex = 1 })
+                    1 -> DockerContainersTab(viewModel, onNavigateToImages = { selectedTabIndex = 2 })
                     2 -> DockerImagesTab(viewModel)
-                    3 -> DockerVolumesTab()
-                    4 -> DockerNetworksTab()
+                    3 -> DockerVolumesTab(viewModel)
+                    4 -> DockerNetworksTab(viewModel)
                 }
             }
         }
@@ -208,7 +209,7 @@ fun DockerNotConnectedView() {
 }
 
 @Composable
-fun DockerOverviewTab(viewModel: DockerDashboardViewModel) {
+fun DockerOverviewTab(viewModel: DockerDashboardViewModel, onNavigateToContainers: () -> Unit = {}) {
     val dockerInfo by viewModel.dockerInfo.collectAsState()
     val containers by viewModel.containers.collectAsState()
 
@@ -377,7 +378,7 @@ fun RunningContainersPreview(containers: List<Container>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("运行中的容器", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                TextButton(onClick = {}) { Text("查看全部") }
+                TextButton(onClick = onNavigateToContainers) { Text("查看全部") }
             }
 
             if (containers.isEmpty()) {
@@ -416,7 +417,7 @@ fun RunningContainerItem(container: Container) {
 }
 
 @Composable
-fun DockerContainersTab(viewModel: DockerDashboardViewModel) {
+fun DockerContainersTab(viewModel: DockerDashboardViewModel, onNavigateToImages: () -> Unit = {}) {
     val containers by viewModel.containers.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedContainer by viewModel.selectedContainerId.collectAsState()
@@ -439,10 +440,10 @@ fun DockerContainersTab(viewModel: DockerDashboardViewModel) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("刷新")
             }
-            Button(onClick = {}) {
+            Button(onClick = onNavigateToImages) {
                 Icon(Icons.Default.Download, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("拉取")
+                Text("拉取镜像")
             }
         }
 
@@ -1024,33 +1025,395 @@ fun ContainerLogsDialog(containerId: String, viewModel: DockerDashboardViewModel
 }
 
 @Composable
-fun DockerVolumesTab() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.SdStorage,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = Color.Gray
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("暂无存储卷", color = Color.Gray)
+fun DockerVolumesTab(viewModel: DockerDashboardViewModel) {
+    val volumes by viewModel.volumes.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf<String?>(null) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = { viewModel.refreshVolumes() },
+                enabled = !isLoading
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("刷新")
+            }
+            Button(onClick = { showCreateDialog = true }) {
+                Icon(Icons.Default.Download, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("创建卷")
+            }
+        }
+
+        if (volumes.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.SdStorage,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("暂无存储卷", color = Color.Gray)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp)
+            ) {
+                items(volumes) { volume ->
+                    VolumeCard(
+                        volume = volume,
+                        onRemove = { showDeleteConfirm = volume.Name }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+
+    if (showCreateDialog) {
+        CreateVolumeDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { name, driver ->
+                viewModel.createVolume(name, driver)
+                showCreateDialog = false
+            }
+        )
+    }
+
+    if (showDeleteConfirm != null) {
+        DeleteConfirmDialog(
+            itemName = showDeleteConfirm!!,
+            itemType = "存储卷",
+            onConfirm = {
+                viewModel.removeVolume(showDeleteConfirm!!)
+                showDeleteConfirm = null
+            },
+            onDismiss = { showDeleteConfirm = null }
+        )
+    }
+}
+
+@Composable
+fun VolumeCard(volume: com.droidvisor.docker.model.DockerVolume, onRemove: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(volume.displayName, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row {
+                    Text("驱动: ", fontSize = 12.sp, color = Color.Gray)
+                    Text(volume.displayDriver, fontSize = 12.sp)
+                }
+                Row {
+                    Text("挂载点: ", fontSize = 12.sp, color = Color.Gray)
+                    Text(volume.displayMountpoint, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+                if (volume.CreatedAt.isNotEmpty()) {
+                    Text("创建: ${volume.CreatedAt}", fontSize = 11.sp, color = Color.Gray)
+                }
+            }
+            IconButton(onClick = onRemove) {
+                Icon(Icons.Default.Delete, contentDescription = "删除", tint = Color.Red)
+            }
         }
     }
 }
 
 @Composable
-fun DockerNetworksTab() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.NetworkCheck,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = Color.Gray
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("暂无自定义网络", color = Color.Gray)
+fun CreateVolumeDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
+    var volumeName by remember { mutableStateOf("") }
+    var volumeDriver by remember { mutableStateOf("local") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("创建存储卷", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = volumeName,
+                    onValueChange = { volumeName = it },
+                    label = { Text("卷名称") },
+                    placeholder = { Text("e.g., my_data") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = volumeDriver,
+                    onValueChange = { volumeDriver = it },
+                    label = { Text("驱动") },
+                    placeholder = { Text("e.g., local") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("取消")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = { onCreate(volumeName, volumeDriver) },
+                        enabled = volumeName.isNotBlank()
+                    ) {
+                        Text("创建")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeleteConfirmDialog(
+    itemName: String,
+    itemType: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("确认删除", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("是否确认删除${itemType} \"$itemName\"？此操作不可撤销。")
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("取消")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onConfirm,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) {
+                        Text("删除")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DockerNetworksTab(viewModel: DockerDashboardViewModel) {
+    val networks by viewModel.networks.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf<String?>(null) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = { viewModel.refreshNetworks() },
+                enabled = !isLoading
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("刷新")
+            }
+            Button(onClick = { showCreateDialog = true }) {
+                Icon(Icons.Default.Download, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("创建网络")
+            }
+        }
+
+        if (networks.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.NetworkCheck,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("暂无自定义网络", color = Color.Gray)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp)
+            ) {
+                items(networks) { network ->
+                    NetworkCard(
+                        network = network,
+                        onRemove = { showDeleteConfirm = network.Id }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+
+    if (showCreateDialog) {
+        CreateNetworkDialog(
+            onDismiss = { showCreateDialog = false },
+            onCreate = { name, driver ->
+                viewModel.createNetwork(name, driver)
+                showCreateDialog = false
+            }
+        )
+    }
+
+    if (showDeleteConfirm != null) {
+        DeleteConfirmDialog(
+            itemName = showDeleteConfirm!!,
+            itemType = "网络",
+            onConfirm = {
+                viewModel.removeNetwork(showDeleteConfirm!!)
+                showDeleteConfirm = null
+            },
+            onDismiss = { showDeleteConfirm = null }
+        )
+    }
+}
+
+@Composable
+fun NetworkCard(network: com.droidvisor.docker.model.DockerNetwork, onRemove: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(network.Name, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+                    if (network.Name in listOf("bridge", "host", "none")) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(color = Color.Gray.copy(alpha = 0.15f), shape = RoundedCornerShape(4.dp)) {
+                            Text(
+                                "内置",
+                                fontSize = 10.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row {
+                    Text("驱动: ", fontSize = 12.sp, color = Color.Gray)
+                    Text(network.Driver, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("范围: ", fontSize = 12.sp, color = Color.Gray)
+                    Text(network.Scope, fontSize = 12.sp)
+                }
+                Row {
+                    Text("子网: ", fontSize = 12.sp, color = Color.Gray)
+                    Text(network.subnetDisplay, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                }
+                if (network.gatewayDisplay != "N/A") {
+                    Row {
+                        Text("网关: ", fontSize = 12.sp, color = Color.Gray)
+                        Text(network.gatewayDisplay, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                    }
+                }
+                Row {
+                    Text("ID: ", fontSize = 11.sp, color = Color.Gray)
+                    Text(network.shortId, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+            }
+            if (network.Name !in listOf("bridge", "host", "none")) {
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Default.Delete, contentDescription = "删除", tint = Color.Red)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CreateNetworkDialog(onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
+    var networkName by remember { mutableStateOf("") }
+    var networkDriver by remember { mutableStateOf("bridge") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("创建网络", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = networkName,
+                    onValueChange = { networkName = it },
+                    label = { Text("网络名称") },
+                    placeholder = { Text("e.g., my_network") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = networkDriver,
+                    onValueChange = { networkDriver = it },
+                    label = { Text("驱动") },
+                    placeholder = { Text("e.g., bridge") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("取消")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = { onCreate(networkName, networkDriver) },
+                        enabled = networkName.isNotBlank()
+                    ) {
+                        Text("创建")
+                    }
+                }
+            }
         }
     }
 }

@@ -5,7 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.droidvisor.docker.model.Container
 import com.droidvisor.docker.model.ContainerStats
 import com.droidvisor.docker.model.DockerInfo
+import com.droidvisor.docker.model.DockerNetwork
+import com.droidvisor.docker.model.DockerVolume
 import com.droidvisor.docker.model.Image
+import com.droidvisor.docker.model.NetworkIPAM
+import com.droidvisor.docker.model.NetworkIPAMConfig
 import com.droidvisor.docker.model.PortBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,6 +78,12 @@ class DockerDashboardViewModel : ViewModel() {
     private val _imageCleanupSuggestions = MutableStateFlow<Map<String, Long>>(emptyMap())
     val imageCleanupSuggestions: StateFlow<Map<String, Long>> = _imageCleanupSuggestions.asStateFlow()
 
+    private val _volumes = MutableStateFlow<List<DockerVolume>>(emptyList())
+    val volumes: StateFlow<List<DockerVolume>> = _volumes.asStateFlow()
+
+    private val _networks = MutableStateFlow<List<DockerNetwork>>(emptyList())
+    val networks: StateFlow<List<DockerNetwork>> = _networks.asStateFlow()
+
     private var dockerProxyService: IDockerProxyService? = null
     private var useRealData = false
 
@@ -112,6 +122,8 @@ class DockerDashboardViewModel : ViewModel() {
 
     init {
         loadMockData()
+        loadMockVolumes()
+        loadMockNetworks()
     }
 
     private fun loadMockData() {
@@ -215,6 +227,8 @@ class DockerDashboardViewModel : ViewModel() {
     fun refreshAll() {
         refreshContainers()
         refreshImages()
+        refreshVolumes()
+        refreshNetworks()
     }
 
     fun refreshContainers() {
@@ -642,6 +656,134 @@ class DockerDashboardViewModel : ViewModel() {
         }
     }
 
+    // ── Volume Operations ──
+
+    fun refreshVolumes() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        _volumes.value = proxy.listVolumes()
+                    }
+                } else {
+                    delay(300)
+                    loadMockVolumes()
+                }
+            } catch (e: Exception) {
+                _volumes.value = emptyList()
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun createVolume(name: String, driver: String = "local") {
+        viewModelScope.launch {
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        proxy.createVolume(name, driver)
+                        _volumes.value = proxy.listVolumes()
+                    }
+                } else {
+                    delay(400)
+                    _volumes.value = _volumes.value + DockerVolume(
+                        Name = name,
+                        Driver = driver,
+                        Mountpoint = "/var/lib/docker/volumes/$name/_data",
+                        CreatedAt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").format(java.util.Date())
+                    )
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
+
+    fun removeVolume(name: String) {
+        viewModelScope.launch {
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        proxy.removeVolume(name)
+                        _volumes.value = proxy.listVolumes()
+                    }
+                } else {
+                    _volumes.value = _volumes.value.filter { it.Name != name }
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
+
+    // ── Network Operations ──
+
+    fun refreshNetworks() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        _networks.value = proxy.listNetworks()
+                    }
+                } else {
+                    delay(300)
+                    loadMockNetworks()
+                }
+            } catch (e: Exception) {
+                _networks.value = emptyList()
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun createNetwork(name: String, driver: String = "bridge") {
+        viewModelScope.launch {
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        proxy.createNetwork(name, driver)
+                        _networks.value = proxy.listNetworks()
+                    }
+                } else {
+                    delay(400)
+                    _networks.value = _networks.value + DockerNetwork(
+                        Id = "net${System.nanoTime().toString(16)}",
+                        Name = name,
+                        Driver = driver,
+                        Scope = "local"
+                    )
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
+
+    fun removeNetwork(id: String) {
+        viewModelScope.launch {
+            try {
+                if (useRealData) {
+                    val proxy = dockerProxyService
+                    if (proxy != null && proxy.isConnected.value) {
+                        proxy.removeNetwork(id)
+                        _networks.value = proxy.listNetworks()
+                    }
+                } else {
+                    _networks.value = _networks.value.filter { it.Id != id }
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
+
     private fun formatSize(bytes: Long): String {
         return when {
             bytes < 1024 -> "$bytes B"
@@ -649,5 +791,63 @@ class DockerDashboardViewModel : ViewModel() {
             bytes < 1024 * 1024 * 1024 -> "${"%.2f".format(bytes / (1024.0 * 1024))} MB"
             else -> "${"%.2f".format(bytes / (1024.0 * 1024 * 1024))} GB"
         }
+    }
+
+    private fun loadMockVolumes() {
+        _volumes.value = listOf(
+            DockerVolume(
+                Name = "app_data",
+                Driver = "local",
+                Mountpoint = "/var/lib/docker/volumes/app_data/_data",
+                CreatedAt = "2024-01-15T10:30:00Z"
+            ),
+            DockerVolume(
+                Name = "postgres_data",
+                Driver = "local",
+                Mountpoint = "/var/lib/docker/volumes/postgres_data/_data",
+                CreatedAt = "2024-02-01T08:15:00Z"
+            ),
+            DockerVolume(
+                Name = "redis_cache",
+                Driver = "local",
+                Mountpoint = "/var/lib/docker/volumes/redis_cache/_data",
+                CreatedAt = "2024-02-10T14:20:00Z"
+            )
+        )
+    }
+
+    private fun loadMockNetworks() {
+        _networks.value = listOf(
+            DockerNetwork(
+                Id = "0123456789abcdef",
+                Name = "bridge",
+                Driver = "bridge",
+                Scope = "local",
+                IPAM = NetworkIPAM(
+                    Config = listOf(NetworkIPAMConfig(Subnet = "172.17.0.0/16", Gateway = "172.17.0.1"))
+                )
+            ),
+            DockerNetwork(
+                Id = "fedcba9876543210",
+                Name = "host",
+                Driver = "host",
+                Scope = "local"
+            ),
+            DockerNetwork(
+                Id = "abcdef0123456789",
+                Name = "none",
+                Driver = "null",
+                Scope = "local"
+            ),
+            DockerNetwork(
+                Id = "12345fedcba98760",
+                Name = "app_network",
+                Driver = "bridge",
+                Scope = "local",
+                IPAM = NetworkIPAM(
+                    Config = listOf(NetworkIPAMConfig(Subnet = "172.18.0.0/16", Gateway = "172.18.0.1"))
+                )
+            )
+        )
     }
 }

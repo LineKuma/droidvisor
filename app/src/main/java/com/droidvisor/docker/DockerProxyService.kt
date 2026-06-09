@@ -6,6 +6,8 @@ import android.os.Binder
 import android.os.IBinder
 import com.droidvisor.util.Logger
 import com.droidvisor.docker.model.Container
+import com.droidvisor.docker.model.DockerNetwork
+import com.droidvisor.docker.model.DockerVolume
 import com.droidvisor.docker.model.Image
 import com.droidvisor.vm.vsock.VsockService
 import com.droidvisor.vm.vsock.isConnected
@@ -256,6 +258,66 @@ class DockerProxyService : Service(), IDockerProxyService {
         } catch (e: DockerError) {
             Logger.e(TAG, "Failed to get container logs $containerId", e)
             emptyList()
+        }
+    }
+
+    // ── Volume Operations ──
+
+    override suspend fun listVolumes(): List<DockerVolume> {
+        return try {
+            apiClient.listVolumes()
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to list volumes", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun createVolume(name: String, driver: String): DockerVolume? {
+        return try {
+            apiClient.createVolume(name, driver)
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to create volume $name", e)
+            null
+        }
+    }
+
+    override suspend fun removeVolume(name: String, force: Boolean): Boolean {
+        return try {
+            apiClient.removeVolume(name, force)
+            true
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to remove volume $name", e)
+            false
+        }
+    }
+
+    // ── Network Operations ──
+
+    override suspend fun listNetworks(): List<DockerNetwork> {
+        return try {
+            apiClient.listNetworks()
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to list networks", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun createNetwork(name: String, driver: String): DockerNetwork? {
+        return try {
+            apiClient.createNetwork(name, driver)
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to create network $name", e)
+            null
+        }
+    }
+
+    override suspend fun removeNetwork(id: String): Boolean {
+        return try {
+            apiClient.removeNetwork(id)
+            true
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to remove network $id", e)
+            false
         }
     }
 

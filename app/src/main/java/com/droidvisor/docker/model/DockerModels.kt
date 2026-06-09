@@ -54,17 +54,43 @@ data class DockerInfo(
 
 @Serializable
 data class DockerVolume(
-    val name: String,
-    val driver: String,
-    val mountpoint: String,
-    val createdAt: String
-)
+    val Name: String = "",
+    val Driver: String = "",
+    val Mountpoint: String = "",
+    val CreatedAt: String = "",
+    val Scope: String = "local"
+) {
+    val displayName: String get() = Name.ifEmpty { "unnamed" }
+    val displayDriver: String get() = Driver.ifEmpty { "local" }
+    val displayMountpoint: String get() = Mountpoint.ifEmpty { "N/A" }
+}
 
 @Serializable
 data class DockerNetwork(
-    val id: String,
-    val name: String,
-    val driver: String,
-    val scope: String,
-    val ipamSubnet: String?
+    val Id: String = "",
+    val Name: String = "",
+    val Driver: String = "",
+    val Scope: String = "",
+    @kotlinx.serialization.SerialName("IPAM")
+    val IPAM: NetworkIPAM? = null
+) {
+    val shortId: String get() = if (Id.length > 12) Id.take(12) else Id
+    val subnetDisplay: String
+        get() = IPAM?.Config?.firstOrNull()?.Subnet ?: "N/A"
+    val gatewayDisplay: String
+        get() = IPAM?.Config?.firstOrNull()?.Gateway ?: "N/A"
+}
+
+@Serializable
+data class NetworkIPAM(
+    val Driver: String = "default",
+    val Config: List<NetworkIPAMConfig> = emptyList()
+)
+
+@Serializable
+data class NetworkIPAMConfig(
+    val Subnet: String = "",
+    val Gateway: String = "",
+    @kotlinx.serialization.SerialName("IPRange")
+    val IPRange: String = ""
 )

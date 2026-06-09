@@ -1,6 +1,8 @@
 package com.droidvisor.docker
 
 import com.droidvisor.docker.model.Container
+import com.droidvisor.docker.model.DockerNetwork
+import com.droidvisor.docker.model.DockerVolume
 import com.droidvisor.docker.model.Image
 import com.droidvisor.docker.model.ImageCreateResponse
 import kotlinx.serialization.decodeFromString
@@ -138,6 +140,45 @@ class DockerApiClient(private val httpClient: DockerHttpClient) {
         val path = "/containers/$sanitizedId/logs?stdout=${if (stdout) "1" else "0"}&stderr=${if (stderr) "1" else "0"}&timestamps=1&tail=100"
         return httpClient.get(sanitizePath(path))
     }
+
+    // ── Volume APIs ──
+
+    suspend fun listVolumes(): List<DockerVolume> {
+        val response = httpClient.get("/volumes")
+        val parsed = json.decodeFromString<VolumeListResponse>(response)
+        return parsed.Volumes
+    }
+
+    suspend fun createVolume(name: String, driver: String = "local"): DockerVolume {
+        val body = json.encodeToString(VolumeCreateRequest(Name = name, Driver = driver))
+        val response = httpClient.post("/volumes/create", body)
+        return json.decodeFromString<DockerVolume>(response)
+    }
+
+    suspend fun removeVolume(name: String, force: Boolean = false) {
+        val sanitizedName = sanitizeContainerName(name)
+        val path = "/volumes/$sanitizedName?force=${if (force) "true" else "false"}"
+        httpClient.delete(sanitizePath(path))
+    }
+
+    // ── Network APIs ──
+
+    suspend fun listNetworks(): List<DockerNetwork> {
+        val response = httpClient.get("/networks")
+        return json.decodeFromString<List<DockerNetwork>>(response)
+    }
+
+    suspend fun createNetwork(name: String, driver: String = "bridge"): DockerNetwork {
+        val body = json.encodeToString(NetworkCreateRequest(Name = name, Driver = driver))
+        val response = httpClient.post("/networks/create", body)
+        return json.decodeFromString<DockerNetwork>(response)
+    }
+
+    suspend fun removeNetwork(id: String) {
+        val sanitizedId = sanitizeContainerId(id)
+        val path = "/networks/$sanitizedId"
+        httpClient.delete(sanitizePath(path))
+    }
 }
 
 @kotlinx.serialization.Serializable
@@ -181,4 +222,21 @@ data class VersionResponse(
     val Arch: String,
     val KernelVersion: String,
     val BuildTime: String
+)
+
+@kotlinx.serialization.Serializable
+data class VolumeListResponse(
+    val Volumes: List<com.droidvisor.docker.model.DockerVolume>
+)
+
+@kotlinx.serialization.Serializable
+data class VolumeCreateRequest(
+    val Name: String,
+    val Driver: String = "local"
+)
+
+@kotlinx.serialization.Serializable
+data class NetworkCreateRequest(
+    val Name: String,
+    val Driver: String = "bridge"
 )
