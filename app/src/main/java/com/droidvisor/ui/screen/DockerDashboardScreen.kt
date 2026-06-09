@@ -460,6 +460,7 @@ fun DockerContainersTab(viewModel: DockerDashboardViewModel) {
                     onStart = { viewModel.startContainer(container.Id) },
                     onStop = { viewModel.stopContainer(container.Id) },
                     onPause = { viewModel.pauseContainer(container.Id) },
+                    onUnpause = { viewModel.unpauseContainer(container.Id) },
                     onRemove = { viewModel.removeContainer(container.Id) },
                     onViewLogs = {
                         logsContainerId = container.Id
@@ -492,6 +493,7 @@ fun ContainerCard(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onPause: () -> Unit,
+    onUnpause: () -> Unit,
     onRemove: () -> Unit,
     onViewLogs: () -> Unit,
     viewModel: DockerDashboardViewModel
@@ -620,6 +622,9 @@ fun ContainerCard(
                         }
                     }
                     "paused" -> {
+                        IconButton(onClick = onUnpause, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "恢复", tint = Color.Green)
+                        }
                         IconButton(onClick = onStop, modifier = Modifier.size(36.dp)) {
                             Icon(Icons.Default.Stop, contentDescription = "停止", tint = Color.Red)
                         }
