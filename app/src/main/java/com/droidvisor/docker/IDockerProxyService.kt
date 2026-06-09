@@ -16,8 +16,11 @@ interface IDockerProxyService {
     suspend fun listContainers(): List<Container>
     suspend fun startContainer(containerId: String): Boolean
     suspend fun stopContainer(containerId: String): Boolean
+    suspend fun pauseContainer(containerId: String): Boolean
+    suspend fun unpauseContainer(containerId: String): Boolean
     suspend fun removeContainer(containerId: String): Boolean
     suspend fun listImages(): List<Image>
     suspend fun pullImage(imageName: String): Boolean
+    suspend fun removeImage(imageId: String, force: Boolean = false): Boolean
     suspend fun getContainerLogs(containerId: String): List<DockerProxyService.ContainerLogEntry>
 }

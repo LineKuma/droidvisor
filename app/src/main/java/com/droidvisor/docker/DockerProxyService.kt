@@ -182,6 +182,39 @@ class DockerProxyService : Service(), IDockerProxyService {
         }
     }
 
+    override suspend fun pauseContainer(containerId: String): Boolean {
+        return try {
+            apiClient.pauseContainer(containerId)
+            refreshContainers()
+            true
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to pause container $containerId", e)
+            false
+        }
+    }
+
+    override suspend fun unpauseContainer(containerId: String): Boolean {
+        return try {
+            apiClient.unpauseContainer(containerId)
+            refreshContainers()
+            true
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to unpause container $containerId", e)
+            false
+        }
+    }
+
+    override suspend fun removeImage(imageId: String, force: Boolean): Boolean {
+        return try {
+            apiClient.removeImage(imageId, force)
+            refreshImages()
+            true
+        } catch (e: DockerError) {
+            Logger.e(TAG, "Failed to remove image $imageId", e)
+            false
+        }
+    }
+
     override suspend fun listImages(): List<Image> {
         return try {
             val result = apiClient.listImages()

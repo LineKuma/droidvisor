@@ -299,8 +299,21 @@ class DockerDashboardViewModel : ViewModel() {
     }
 
     fun removeImage(imageName: String, tag: String) {
-        _images.value = _images.value.filter {
-            !(it.name == imageName && it.tag == tag)
+        viewModelScope.launch {
+            if (useRealData) {
+                val proxy = dockerProxyService
+                if (proxy != null && proxy.isConnected.value) {
+                    val image = _images.value.find { it.name == imageName && it.tag == tag }
+                    if (image != null) {
+                        proxy.removeImage(image.Id)
+                        _images.value = proxy.listImages()
+                    }
+                }
+            } else {
+                _images.value = _images.value.filter {
+                    !(it.name == imageName && it.tag == tag)
+                }
+            }
         }
     }
 
@@ -337,14 +350,34 @@ class DockerDashboardViewModel : ViewModel() {
     }
 
     fun pauseContainer(containerId: String) {
-        _containers.value = _containers.value.map {
-            if (it.Id == containerId) it.copy(State = "paused") else it
+        viewModelScope.launch {
+            if (useRealData) {
+                val proxy = dockerProxyService
+                if (proxy != null && proxy.isConnected.value) {
+                    proxy.pauseContainer(containerId)
+                    _containers.value = proxy.listContainers()
+                }
+            } else {
+                _containers.value = _containers.value.map {
+                    if (it.Id == containerId) it.copy(State = "paused") else it
+                }
+            }
         }
     }
 
     fun unpauseContainer(containerId: String) {
-        _containers.value = _containers.value.map {
-            if (it.Id == containerId) it.copy(State = "running") else it
+        viewModelScope.launch {
+            if (useRealData) {
+                val proxy = dockerProxyService
+                if (proxy != null && proxy.isConnected.value) {
+                    proxy.unpauseContainer(containerId)
+                    _containers.value = proxy.listContainers()
+                }
+            } else {
+                _containers.value = _containers.value.map {
+                    if (it.Id == containerId) it.copy(State = "running") else it
+                }
+            }
         }
     }
 

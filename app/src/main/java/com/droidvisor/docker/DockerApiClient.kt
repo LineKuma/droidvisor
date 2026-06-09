@@ -81,6 +81,18 @@ class DockerApiClient(private val httpClient: DockerHttpClient) {
         httpClient.post(sanitizePath(path))
     }
 
+    suspend fun pauseContainer(containerId: String) {
+        val sanitizedId = sanitizeContainerId(containerId)
+        val path = "/containers/$sanitizedId/pause"
+        httpClient.post(sanitizePath(path))
+    }
+
+    suspend fun unpauseContainer(containerId: String) {
+        val sanitizedId = sanitizeContainerId(containerId)
+        val path = "/containers/$sanitizedId/unpause"
+        httpClient.post(sanitizePath(path))
+    }
+
     suspend fun removeContainer(containerId: String, force: Boolean = false) {
         val sanitizedId = sanitizeContainerId(containerId)
         val path = "/containers/$sanitizedId?force=${if (force) "true" else "false"}"
