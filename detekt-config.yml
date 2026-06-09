@@ -659,3 +659,10 @@ style:
     active: true
     excludeImports:
       - 'java.util.*'
+      - 'androidx.compose.foundation.layout.*'
+      - 'androidx.compose.material.icons.filled.*'
+      - 'androidx.compose.material3.*'
+      - 'androidx.compose.runtime.*'
+      - 'androidx.compose.ui.test.*'
+      - 'org.junit.Assert.*'
+      - 'org.mockito.Mockito.*'
