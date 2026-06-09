@@ -173,10 +173,26 @@ class VmConfigValidatorTest {
     }
 
     @Test
+    fun validate_withNegativeDiskSize_shouldReturnError() {
+        val config = VmConfig(
+            memoryBytes = 2L * 1024 * 1024 * 1024,
+            cpuCores = 2,
+            diskSizeBytes = -1L
+        )
+
+        val result = validator.validate(config)
+
+        assertFalse(result.isValid)
+        assertNotNull(result.errorMessage)
+        assertTrue(result.errorMessage!!.contains("negative"))
+    }
+
+    @Test
     fun validate_withDiskSizeAtMinimumBoundary_shouldReturnSuccess() {
         val config = VmConfig(
             memoryBytes = 2L * 1024 * 1024 * 1024,
             cpuCores = 2,
+            diskSizeBytes = 512L * 1024 * 1024,
             diskPath = "/data/vm/min.img"
         )
 
@@ -190,6 +206,7 @@ class VmConfigValidatorTest {
         val config = VmConfig(
             memoryBytes = 2L * 1024 * 1024 * 1024,
             cpuCores = 2,
+            diskSizeBytes = 256L * 1024 * 1024 * 1024,
             diskPath = "/data/vm/max.img"
         )
 
@@ -287,6 +304,7 @@ class VmConfigValidatorTest {
         val config = VmConfig(
             memoryBytes = 2L * 1024 * 1024 * 1024,
             cpuCores = 2,
+            diskSizeBytes = 512L * 1024 * 1024,
             diskPath = "/data/vm/512mb.img"
         )
 
