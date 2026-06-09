@@ -307,16 +307,26 @@ private class RealVsockChannel(
 
     override fun send(data: ByteArray) {
         if (!open) throw VsockError.SendError("Channel is closed")
-        outputStream.write(data)
-        outputStream.flush()
+        try {
+            outputStream.write(data)
+            outputStream.flush()
+        } catch (e: java.io.IOException) {
+            open = false
+            throw VsockError.SendError("Send failed: ${e.message}")
+        }
     }
 
     override fun receive(): ByteArray? {
         if (!open) throw VsockError.ReceiveError("Channel is closed")
-        if (inputStream.available() <= 0) return null
-        val buffer = ByteArray(minOf(inputStream.available(), 65536))
-        val bytesRead = inputStream.read(buffer)
-        return if (bytesRead > 0) buffer.copyOf(bytesRead) else null
+        try {
+            if (inputStream.available() <= 0) return null
+            val buffer = ByteArray(minOf(inputStream.available(), 65536))
+            val bytesRead = inputStream.read(buffer)
+            return if (bytesRead > 0) buffer.copyOf(bytesRead) else null
+        } catch (e: java.io.IOException) {
+            open = false
+            throw VsockError.ReceiveError("Receive failed: ${e.message}")
+        }
     }
 
     override fun close() {

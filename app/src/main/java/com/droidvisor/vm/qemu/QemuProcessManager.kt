@@ -143,15 +143,14 @@ class QemuProcessManager(
         // 图形输出
         if (config.enableGraphic) {
             args.removeIf { it == "-nographic" }
-        } else if (!args.contains("-display")) {
-            args.add("-display")
-            args.add("none")
-        }
-
-        // 阻止 QEMU 自动退出（无图形时需要）
-        if (!config.enableGraphic) {
+        } else {
+            // 非图形模式：确保有 display 配置并守护进程化
+            if (!args.contains("-display")) {
+                args.add("-display")
+                args.add("none")
+            }
+            // 守护进程化，防止 QEMU 阻塞或依赖 tty
             args.add("-daemonize")
-            args.removeIf { it == "-nographic" || it == "-serial" || it == "-mon" }
         }
 
         // 额外参数
@@ -321,7 +320,17 @@ class QemuProcessManager(
             .start()
 
         val output = process.inputStream.bufferedReader().use { it.readText() }
-        val exitCode = process.waitFor()
+        val exitCode = try {
+            if (process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS)) {
+                process.exitValue()
+            } else {
+                process.destroyForcibly()
+                throw IOException("QEMU daemonize timed out after 30s")
+            }
+        } catch (e: InterruptedException) {
+            process.destroyForcibly()
+            throw IOException("QEMU daemonize interrupted")
+        }
 
         if (exitCode != 0) {
             throw IOException("QEMU daemonize failed (exit=$exitCode): $output")

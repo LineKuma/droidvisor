@@ -23,8 +23,8 @@ import java.util.concurrent.Executors
  * - Vsock 路径生成
  *
  * 注意 buildCommandLine 的后处理逻辑：
- * - enableGraphic=false 时会添加 -daemonize 并移除 -nographic/-serial/-mon
- * - enableGraphic=true 时仅移除 -nographic
+ * - enableGraphic=false 时会添加 -daemonize，保留 -display none 和 -serial 配置
+ * - enableGraphic=true 时仅移除 -nographic，保留其余参数
  */
 class QemuProcessManagerTest {
 
@@ -211,8 +211,8 @@ class QemuProcessManagerTest {
     }
 
     // ==================== 6. 控制台模式 ====================
-    // 关键：enableGraphic=false 时 -nographic/-serial/-mon 会被后处理移除！
-    // enableGraphic=true 时仅移除 -nographic，保留 -serial
+    // 关键：enableGraphic=false 时仅添加 -daemonize，保留控制台参数不再移除
+    // enableGraphic=true 时仅移除 -nographic，保留其余参数
 
     @Test
     fun `PTY 模式图形模式下保留 serial mon_stdio`() {
@@ -243,26 +243,25 @@ class QemuProcessManagerTest {
     }
 
     @Test
-    fun `Stdio 模式无 graphic 时不含 ngraphic 或 serial`() {
-        // 非图形模式 → -nographic 被添加后又移除，-serial 也被移除
+    fun `Stdio 模式无 graphic 时包含 nographic 不含 serial`() {
+        // 非图形模式 → 保留 -nographic（daemonize 不再移除），Stdio 模式无 -serial
         val config = createDefaultConfig().copy(
             consoleMode = QemuVmConfig.ConsoleMode.Stdio,
             enableGraphic = false
         )
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
-        assertFalse("Stdio+非图形不应有 -nographic", cmd.contains("-nographic"))
-        assertFalse("非图形模式 -serial 应被移除", cmd.contains("-serial"))
+        assertTrue("Stdio+非图形应有 -nographic（daemonize 保留控制台配置）", cmd.contains("-nographic"))
+        assertFalse("Stdio 模式不含 -serial", cmd.contains("-serial"))
     }
 
     @Test
-    fun `None 模式包含 display none 但 serial 被 non-graphic 后处理移除`() {
+    fun `None 模式包含 display none 且保留 serial none`() {
         val config = createDefaultConfig().copy(consoleMode = QemuVmConfig.ConsoleMode.None)
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()
-        // None 模式先添加 -display none -serial none
-        // 然后 enableGraphic=false 的后处理移除 -serial 但保留 -display
+        // None 模式添加 -display none -serial none
+        // enableGraphic=false 的后处理添加 -daemonize，但保留 -serial
         assertTrue("应包含 -display none", cmd.contains("-display") && cmd.contains("none"))
-        // -serial none 被后处理移除
-        assertFalse("非图形下 -serial 应被移除", cmd.contains("-serial"))
+        assertTrue("非图形下应保留 -serial", cmd.contains("-serial"))
     }
 
     // ==================== 7. daemonize / 图形模式 ====================
