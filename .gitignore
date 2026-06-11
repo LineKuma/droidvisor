@@ -30,5 +30,9 @@ Thumbs.db
 # Agent
 .agent/
 
+# Android keystore
+*.jks
+*.keystore
+
 # Build logs
 build.log
