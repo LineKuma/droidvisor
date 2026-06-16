@@ -362,6 +362,14 @@ class VmManagerService : Service() {
     /** 获取 QEMU 运行时实例（如果可用） */
     fun getQemuRuntime(): QemuVmRuntime? = qemuRuntime
 
+    /** 获取串口控制台服务（根据当前活跃后端：AVF 优先，QEMU 后备） */
+    fun getSerialConsoleService(): SerialConsoleService? {
+        // 优先返回 AVF 串口服务
+        avfService?.getSerialConsoleService()?.let { return it }
+        // 后备 QEMU 串口服务
+        return qemuRuntime?.getSerialConsoleService()
+    }
+
     private fun updateVmStatus(vmId: String, status: VmStatus) {
         _vmInstances.value = _vmInstances.value.map {
             if (it.id == vmId) it.copy(status = status) else it

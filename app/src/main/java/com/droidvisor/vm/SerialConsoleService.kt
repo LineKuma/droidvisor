@@ -21,20 +21,20 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * 串口控制台桥接服务
+ * 串口控制台桥接服务（后端无关）
  *
- * 作为 QEMU 串口 TCP 与外部客户端之间的桥接：
- * - 连接到 QEMU 的串口 TCP 端口（如 localhost:5555）
+ * 通过 [SerialConsoleProvider] 接口连接不同后端（AVF / QEMU）的串口：
+ * - 读取后端串口输出，通过 [consoleOutput] SharedFlow 广播
+ * - 接收输入，转发到后端串口
  * - 启动中继 TCP 服务器，外部客户端可连接
- * - 提供 SharedFlow 供内置终端使用
- * - 双向数据中继：输入 → QEMU，QEMU 输出 → 所有客户端
+ * - 双向数据中继：输入 → 虚拟机，虚拟机输出 → 所有客户端
  */
-class SerialConsoleService {
+class SerialConsoleService(
+    private val provider: SerialConsoleProvider
+) {
 
     companion object {
         private const val TAG = "SerialConsoleService"
-        /** 默认 QEMU 串口端口 */
-        const val DEFAULT_QEMU_SERIAL_PORT = 5555
         /** 默认中继服务器端口（外部客户端用） */
         const val DEFAULT_RELAY_PORT = 5556
         /** 行缓冲区最大容量 */
@@ -64,8 +64,7 @@ class SerialConsoleService {
     val consoleOutput: SharedFlow<String> = _consoleOutput.asSharedFlow()
 
     // --- 内部状态 ---
-    private var qemuSocket: Socket? = null
-    private var qemuWriter: OutputStreamWriter? = null
+    private var outputWriter: OutputStreamWriter? = null
     private var relayServer: ServerSocket? = null
     private val relayClients = ConcurrentHashMap<String, RelayClient>()
     private val running = AtomicBoolean(false)
@@ -75,27 +74,38 @@ class SerialConsoleService {
     private var onLineReceived: ((String) -> Unit)? = null
 
     /**
-     * 连接到 QEMU 串口 TCP 端口
+     * 连接到后端串口
      */
-    fun connectToQemu(host: String = "127.0.0.1", port: Int = DEFAULT_QEMU_SERIAL_PORT) {
+    fun connect() {
         if (running.get()) return
         running.set(true)
 
         scope.launch {
             try {
-                Logger.d(TAG, "Connecting to QEMU serial at $host:$port")
+                Logger.d(TAG, "Connecting to serial console via ${provider.javaClass.simpleName}")
 
-                qemuSocket = Socket(host, port)
-                qemuWriter = OutputStreamWriter(qemuSocket!!.getOutputStream(), Charsets.UTF_8)
+                if (!provider.connect()) {
+                    Logger.e(TAG, "Provider failed to connect")
+                    _isConnected.value = false
+                    return@launch
+                }
+
+                val inputStream = provider.getInputStream()
+                if (inputStream == null) {
+                    Logger.e(TAG, "Provider returned null InputStream")
+                    _isConnected.value = false
+                    return@launch
+                }
+
+                outputWriter = provider.getOutputStream()?.let {
+                    OutputStreamWriter(it, Charsets.UTF_8)
+                }
+
                 _isConnected.value = true
+                Logger.d(TAG, "Serial console connected successfully")
 
-                Logger.d(TAG, "Connected to QEMU serial console")
-
-                // 读取 QEMU 输出
-                val reader = BufferedReader(
-                    InputStreamReader(qemuSocket!!.getInputStream(), Charsets.UTF_8)
-                )
-
+                // 读取后端输出
+                val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))
                 val charBuffer = CharArray(4096)
                 while (running.get()) {
                     val bytesRead = reader.read(charBuffer)
@@ -105,7 +115,7 @@ class SerialConsoleService {
                     processOutput(text)
                 }
             } catch (e: Exception) {
-                Logger.e(TAG, "QEMU serial connection error", e)
+                Logger.e(TAG, "Serial console connection error", e)
             } finally {
                 _isConnected.value = false
                 disconnect()
@@ -114,51 +124,47 @@ class SerialConsoleService {
     }
 
     /**
-     * 处理 QEMU 输出，按行分割并广播
+     * 处理后端输出，按行分割并广播
      */
     private fun processOutput(text: String) {
         lineBuffer.append(text)
         val content = lineBuffer.toString()
 
-        // 按行分割
         val lines = content.split("\n")
         lineBuffer = StringBuilder()
 
         for (i in lines.indices) {
             val line = lines[i].trimEnd('\r')
             if (i < lines.size - 1 || text.endsWith("\n")) {
-                // 完整行
                 scope.launch {
                     _consoleOutput.emit(line)
                     onLineReceived?.invoke(line)
                 }
-                // 广播给所有中继客户端
                 relayClients.values.forEach { it.sendLine(line) }
             } else {
-                // 不完整行，保留在缓冲区
                 lineBuffer.append(line)
             }
         }
     }
 
     /**
-     * 发送输入到 QEMU 串口
+     * 发送输入到虚拟机串口
      */
     fun sendInput(text: String) {
-        if (!_isConnected.value || qemuWriter == null) {
-            Logger.w(TAG, "Cannot send input: not connected to QEMU")
+        if (!_isConnected.value || outputWriter == null) {
+            Logger.w(TAG, "Cannot send input: not connected")
             return
         }
         try {
-            qemuWriter!!.write(text)
-            qemuWriter!!.flush()
+            outputWriter!!.write(text)
+            outputWriter!!.flush()
         } catch (e: Exception) {
-            Logger.e(TAG, "Failed to send input to QEMU", e)
+            Logger.e(TAG, "Failed to send input", e)
         }
     }
 
     /**
-     * 发送一行输入到 QEMU
+     * 发送一行输入
      */
     fun sendLine(line: String) {
         sendInput("$line\n")
@@ -228,13 +234,12 @@ class SerialConsoleService {
         running.set(false)
         stopRelayServer()
         try {
-            qemuWriter?.close()
+            outputWriter?.close()
         } catch (_: Exception) {}
+        outputWriter = null
         try {
-            qemuSocket?.close()
+            provider.disconnect()
         } catch (_: Exception) {}
-        qemuWriter = null
-        qemuSocket = null
         _isConnected.value = false
     }
 
@@ -265,7 +270,6 @@ class SerialConsoleService {
 
                     while (running.get()) {
                         val line = reader.readLine() ?: break
-                        // 外部客户端输入 → QEMU
                         sendLine(line)
                     }
                 } catch (e: Exception) {

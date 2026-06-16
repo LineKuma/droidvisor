@@ -335,11 +335,11 @@ class QemuVmRuntime(
             scope = scope
         ).apply { start() }
 
-        // 启动串口控制台桥接服务
-        serialConsoleService = SerialConsoleService().also { service ->
-            // 连接 QEMU 串口
-            service.connectToQemu(port = serialConsolePort)
-            // 启动中继服务器供外部客户端连接
+        // 启动串口控制台桥接服务（通过 QEMU TCP 串口 Provider）
+        serialConsoleService = SerialConsoleService(
+            QemuSerialConsoleProvider(host = "127.0.0.1", port = serialConsolePort)
+        ).also { service ->
+            service.connect()
             service.startRelayServer(port = SerialConsoleService.DEFAULT_RELAY_PORT)
         }
 

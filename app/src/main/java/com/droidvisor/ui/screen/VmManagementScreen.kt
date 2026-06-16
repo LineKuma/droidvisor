@@ -178,7 +178,7 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
 
     // 串口控制台
     if (showSerialConsole && selectedVm != null) {
-        val serialService = vmManagerService?.getQemuRuntime()?.getSerialConsoleService()
+        val serialService = vmManagerService?.getSerialConsoleService()
         if (serialService != null) {
             SerialConsoleScreen(
                 vmName = selectedVm!!.name,
