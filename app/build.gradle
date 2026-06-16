@@ -39,10 +39,10 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.create("release") {
-                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: "${rootDir}/release.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "droidvisor123"
-                keyAlias System.getenv("ANDROID_KEY_ALIAS") ?: "droidvisor"
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD") ?: "droidvisor123"
+                storeFile file(System.getenv("RELEASE_KEYSTORE_PATH") ?: "${rootDir}/release.jks")
+                storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: "droidvisor123"
+                keyAlias System.getenv("RELEASE_KEY_ALIAS") ?: "droidvisor"
+                keyPassword System.getenv("RELEASE_KEY_PASSWORD") ?: "droidvisor123"
             }
         }
     }
