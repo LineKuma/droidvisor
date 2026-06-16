@@ -3,22 +3,21 @@ package com.droidvisor.debug
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,9 +31,7 @@ class DebugActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                DebugScreen(
-                    onBack = { finish() }
-                )
+                DebugScreen(onBack = { finish() })
             }
         }
     }
@@ -64,6 +61,7 @@ fun DebugScreen(onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
+            @OptIn(ExperimentalMaterial3Api::class)
             TopAppBar(
                 title = { Text("调试工具") },
                 navigationIcon = {
@@ -75,18 +73,6 @@ fun DebugScreen(onBack: () -> Unit) {
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
-        },
-        bottomBar = {
-            BottomDebugActions(
-                onRefresh = { refreshLogs() },
-                onClear = {
-                    try {
-                        Logger.clearLogs()
-                        refreshLogs()
-                    } catch (_: Exception) { }
-                },
-                onExport = { debugViewModel.exportLogs(context) }
-            )
         }
     ) { paddingValues ->
         Column(
@@ -95,242 +81,101 @@ fun DebugScreen(onBack: () -> Unit) {
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // 调试模式开关卡片
-            DebugModeCard(
-                debugMode = debugMode,
-                onToggle = { debugViewModel.setDebugMode(it) }
-            )
-
-            // 日志文件信息
-            LogFileInfoCard()
-
-            // 日志内容查看器
-            LogContentViewer(logContent = logContent)
-
-            // 底部留白
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
-
-@Composable
-private fun DebugModeCard(
-    debugMode: Boolean,
-    onToggle: (Boolean) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = if (debugMode) Icons.Default.BugReport else Icons.Default.BugReport,
-                contentDescription = null,
-                tint = if (debugMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "调试模式",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = if (debugMode) "已启用 - 自动捕获异常并记录日志" else "已禁用",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = debugMode,
-                onCheckedChange = onToggle
-            )
-        }
-    }
-}
-
-@Composable
-private fun LogFileInfoCard() {
-    val logPath = remember {
-        try {
-            Logger.getLogFilePath() ?: "未初始化"
-        } catch (_: Exception) {
-            "未初始化"
-        }
-    }
-    val logSize = remember {
-        try {
-            val content = Logger.getLogContent()
-            "${content.length} 字符"
-        } catch (_: Exception) {
-            "未知"
-        }
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Description,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "日志文件",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = logPath,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "大小: $logSize",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun LogContentViewer(logContent: String) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Article,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "日志内容",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (logContent.isEmpty()) {
-                Text(
-                    text = "暂无日志内容",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
+            // 调试模式开关
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp)
-                )
-            } else {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(4.dp)
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .horizontalScroll(rememberScrollState())
-                            .padding(8.dp)
-                    ) {
+                    Icon(
+                        imageVector = Icons.Filled.BugReport,
+                        contentDescription = null,
+                        tint = if (debugMode) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "调试模式",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            text = if (debugMode) "已启用" else "已禁用",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Switch(
+                        checked = debugMode,
+                        onCheckedChange = { debugViewModel.setDebugMode(it) }
+                    )
+                }
+            }
+
+            // 日志内容
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "日志内容",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    if (logContent.isEmpty()) {
+                        Text(
+                            text = "暂无日志内容",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
                         Text(
                             text = logContent,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 10.sp,
-                            lineHeight = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            lineHeight = 14.sp
                         )
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun BottomDebugActions(
-    onRefresh: () -> Unit,
-    onClear: () -> Unit,
-    onExport: () -> Unit
-) {
-    Surface(
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            DebugActionButton(
-                icon = Icons.Default.Refresh,
-                label = "刷新",
-                onClick = onRefresh
-            )
-            DebugActionButton(
-                icon = Icons.Default.Delete,
-                label = "清除",
-                onClick = onClear
-            )
-            DebugActionButton(
-                icon = Icons.Default.Share,
-                label = "导出",
-                onClick = onExport
-            )
-        }
-    }
-}
+            // 操作按钮
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(onClick = { refreshLogs() }) {
+                    Icon(Icons.Filled.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("刷新")
+                }
+                Button(onClick = {
+                    try {
+                        Logger.clearLogs()
+                        refreshLogs()
+                    } catch (_: Exception) { }
+                }) {
+                    Icon(Icons.Filled.Delete, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("清除")
+                }
+                Button(onClick = { debugViewModel.exportLogs(context) }) {
+                    Icon(Icons.Filled.Share, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("导出")
+                }
+            }
 
-@Composable
-private fun DebugActionButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        IconButton(onClick = onClick) {
-            Icon(icon, contentDescription = label)
+            Spacer(modifier = Modifier.height(16.dp))
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
