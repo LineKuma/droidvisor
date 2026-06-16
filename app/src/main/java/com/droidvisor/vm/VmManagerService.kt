@@ -61,6 +61,10 @@ class VmManagerService : Service() {
     val hasRealRuntime: Boolean
         get() = avfBound || (_isQemuAvailable.value && qemuRuntime != null)
 
+    /** 统一的运行时状态 */
+    private val _runtimeStatus = MutableStateFlow(RuntimeStatus.CHECKING)
+    val runtimeStatus: StateFlow<RuntimeStatus> = _runtimeStatus.asStateFlow()
+
     private lateinit var vmStateDataStore: VmStateDataStore
 
     private val vmConfigValidator = VmConfigValidator()
@@ -70,6 +74,7 @@ class VmManagerService : Service() {
             val binder = service as VirtualMachineManagerService.LocalBinder
             avfService = binder.getService()
             avfBound = true
+            updateRuntimeStatus()
             Logger.d(TAG, "VirtualMachineManagerService connected")
             observeAvfStatus()
         }
@@ -77,6 +82,7 @@ class VmManagerService : Service() {
         override fun onServiceDisconnected(name: ComponentName?) {
             avfService = null
             avfBound = false
+            updateRuntimeStatus()
             Logger.d(TAG, "VirtualMachineManagerService disconnected")
         }
     }
@@ -117,6 +123,7 @@ class VmManagerService : Service() {
         val capabilities = checker.checkCapabilities()
         _avfCapabilities.value = capabilities
         _isAvfAvailable.value = capabilities.canRunRealVm
+        updateRuntimeStatus()
         Logger.d(TAG, "AVF capabilities: available=${capabilities.isAvfSupported}, canRunRealVm=${capabilities.canRunRealVm}, reasons=${capabilities.avfUnavailableReasons}")
     }
 
@@ -131,6 +138,15 @@ class VmManagerService : Service() {
             Logger.d(TAG, "QEMU runtime initialized as fallback")
         } else {
             Logger.d(TAG, "QEMU runtime not available on this device")
+        }
+        updateRuntimeStatus()
+    }
+
+    private fun updateRuntimeStatus() {
+        _runtimeStatus.value = when {
+            avfBound -> RuntimeStatus.AVF
+            _isQemuAvailable.value && qemuRuntime != null -> RuntimeStatus.QEMU
+            else -> RuntimeStatus.SIMULATION
         }
     }
 
@@ -441,3 +457,15 @@ data class ActiveVmContext(
     var cpuUsage: Float = 0f,
     var memoryUsage: Long = 0L
 )
+
+/** 统一的运行时状态，按优先级排列：AVF > QEMU > 模拟 */
+enum class RuntimeStatus(val displayName: String, val description: String) {
+    /** 正在检测中 */
+    CHECKING("检测中", "正在检测设备虚拟化能力..."),
+    /** Android Virtualization Framework - 主要运行时 */
+    AVF("AVF 硬件虚拟化", "使用 Android Virtualization Framework 提供硬件级虚拟化"),
+    /** QEMU 用户模式模拟器 - 后备运行时 */
+    QEMU("QEMU 兼容模式", "AVF 不可用，使用 QEMU 用户模式模拟器作为后备"),
+    /** 纯模拟模式 - 无真实虚拟化 */
+    SIMULATION("模拟模式", "设备不支持虚拟化，虚拟机操作均为模拟演示")
+}

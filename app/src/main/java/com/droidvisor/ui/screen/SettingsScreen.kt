@@ -32,10 +32,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.droidvisor.debug.DebugActivity
 import com.droidvisor.ui.viewmodel.SettingsViewModel
+import com.droidvisor.vm.AvfCapabilityChecker
+import com.droidvisor.vm.VmManagerService
 
 @Composable
 fun SettingsScreen(
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    vmManagerService: VmManagerService? = null
 ) {
     val memorySize = settingsViewModel.memorySize.collectAsState().value
     val cpuCores = settingsViewModel.cpuCores.collectAsState().value
@@ -69,7 +72,10 @@ fun SettingsScreen(
                 }
             )
 
-            SystemInfoSection()
+            SystemInfoSection(
+                avfCapabilities = vmManagerService?.avfCapabilities?.collectAsState()?.value,
+                runtimeStatus = vmManagerService?.runtimeStatus?.collectAsState()?.value
+            )
         }
     }
 }
@@ -161,7 +167,10 @@ fun DockerSettingsSection(
 }
 
 @Composable
-fun SystemInfoSection() {
+fun SystemInfoSection(
+    avfCapabilities: AvfCapabilityChecker.AvfCapabilities? = null,
+    runtimeStatus: com.droidvisor.vm.RuntimeStatus? = null
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,15 +181,50 @@ fun SystemInfoSection() {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "System Information",
+                text = "系统信息",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
 
-            Text(text = "AVF Support: Supported", modifier = Modifier.padding(top = 12.dp))
-            Text(text = "Protected VM: Enabled", modifier = Modifier.padding(top = 4.dp))
-            Text(text = "Device: Android 13+", modifier = Modifier.padding(top = 4.dp))
-            Text(text = "droidvisor Version: 1.0.0", modifier = Modifier.padding(top = 4.dp))
+            if (avfCapabilities != null) {
+                Text(
+                    text = "AVF 支持: ${if (avfCapabilities.isAvfSupported) "可用" else "不可用"}",
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+                Text(
+                    text = "受保护虚拟机 (pKVM): ${if (avfCapabilities.isProtectedVmSupported) "支持" else "不支持"}",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                Text(
+                    text = "普通虚拟机 (KVM): ${if (avfCapabilities.isNonProtectedVmSupported) "支持" else "不支持"}",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                Text(
+                    text = "Vsock 通信: ${if (avfCapabilities.isVsockSupported) "支持" else "不支持"}",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                Text(
+                    text = "QEMU 后备: ${if (avfCapabilities.isQemuSupported) "可用" else "不可用"}",
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            if (runtimeStatus != null) {
+                Text(
+                    text = "当前运行时: ${runtimeStatus.displayName}",
+                    modifier = Modifier.padding(top = 8.dp),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Text(
+                text = "Android 版本要求: 14+",
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                text = "droidvisor 版本: 1.0.0",
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }

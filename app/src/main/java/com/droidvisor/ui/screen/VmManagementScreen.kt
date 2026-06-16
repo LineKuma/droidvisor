@@ -83,6 +83,7 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
     val vmInstances by vmManagerService?.vmInstances?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
     val isAvfAvailable by vmManagerService?.isAvfAvailable?.collectAsState() ?: remember { mutableStateOf(false) }
     val avfCapabilities by vmManagerService?.avfCapabilities?.collectAsState() ?: remember { mutableStateOf(null) }
+    val runtimeStatus by vmManagerService?.runtimeStatus?.collectAsState() ?: remember { mutableStateOf(com.droidvisor.vm.RuntimeStatus.CHECKING) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var selectedVm by remember { mutableStateOf<VmInstance?>(null) }
     var showBackupScreen by remember { mutableStateOf(false) }
@@ -115,8 +116,8 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (!isAvfAvailable) {
-                    AvfSimulationModeBanner(avfCapabilities)
+                if (runtimeStatus != com.droidvisor.vm.RuntimeStatus.AVF && runtimeStatus != com.droidvisor.vm.RuntimeStatus.CHECKING) {
+                    RuntimeStatusBanner(runtimeStatus, avfCapabilities)
                 }
 
                 if (vmInstances.isEmpty()) {
@@ -655,13 +656,22 @@ fun VmBackupAndNetworkDialogs(
 }
 
 @Composable
-private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabilities?) {
+private fun RuntimeStatusBanner(
+    runtimeStatus: com.droidvisor.vm.RuntimeStatus,
+    capabilities: AvfCapabilityChecker.AvfCapabilities?
+) {
+    val isRealRuntime = runtimeStatus == com.droidvisor.vm.RuntimeStatus.QEMU
+    val bannerColor = when (runtimeStatus) {
+        com.droidvisor.vm.RuntimeStatus.QEMU -> Color(0xFF2196F3)  // 蓝色 - QEMU 后备模式
+        else -> Color(0xFFFF9800)  // 橙色 - 模拟模式
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFF9800).copy(alpha = 0.12f)
+            containerColor = bannerColor.copy(alpha = 0.12f)
         ),
         shape = RoundedCornerShape(8.dp)
     ) {
@@ -670,26 +680,33 @@ private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabi
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Warning,
+                    imageVector = if (isRealRuntime) Icons.Default.Computer else Icons.Default.Warning,
                     contentDescription = null,
-                    tint = Color(0xFFFF9800),
+                    tint = bannerColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "模拟模式运行中",
+                    text = "${runtimeStatus.displayName}运行中",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFF9800)
+                    color = bannerColor
                 )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = if (capabilities != null && capabilities.avfUnavailableReasons.isNotEmpty()) {
-                    val reason = capabilities.avfUnavailableReasons.firstOrNull()
-                    when (reason) {
+                text = runtimeStatus.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+
+            if (runtimeStatus == com.droidvisor.vm.RuntimeStatus.SIMULATION && capabilities != null && capabilities.avfUnavailableReasons.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                val reason = capabilities.avfUnavailableReasons.firstOrNull()
+                Text(
+                    text = "原因: ${when (reason) {
                         AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "系统版本过低，需要 Android 14+"
                         AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "设备不支持 Android 虚拟化框架 (AVF)"
                         AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "AVF 框架初始化失败"
@@ -699,19 +716,11 @@ private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabi
                         AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "设备不支持 Vsock 通信"
                         AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "未知原因"
                         null -> "AVF 不可用"
-                    }
-                } else {
-                    "此设备不支持 Android 虚拟化框架"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-
-            Text(
-                text = "虚拟机操作均为模拟演示，不会创建真实虚拟机",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray.copy(alpha = 0.7f)
-            )
+                    }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray.copy(alpha = 0.7f)
+                )
+            }
         }
     }
 }

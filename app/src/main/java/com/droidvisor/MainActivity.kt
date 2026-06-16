@@ -296,7 +296,10 @@ fun DroidvisorApp(
                         )
                     }
                     composable("settings") {
-                        SettingsScreen(settingsViewModel = settingsViewModel)
+                        SettingsScreen(
+                            settingsViewModel = settingsViewModel,
+                            vmManagerService = vmManagerService
+                        )
                     }
                 }
             }
