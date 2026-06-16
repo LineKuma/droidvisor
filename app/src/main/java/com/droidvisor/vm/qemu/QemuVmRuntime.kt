@@ -235,7 +235,7 @@ class QemuVmRuntime(
     /**
      * 获取串口控制台桥接服务
      */
-    fun getSerialConsoleService(): SerialConsoleService? = serialConsoleService
+    override fun getSerialConsoleService(): SerialConsoleService? = serialConsoleService
 
     /**
      * 获取磁盘管理器
