@@ -36,6 +36,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.droidvisor.datastore.dataStore
+import com.droidvisor.debug.DebugViewModel
 import com.droidvisor.docker.DockerDashboardViewModel
 import com.droidvisor.docker.DockerProxyService
 import com.droidvisor.ui.screen.DockerDashboardScreen
@@ -243,6 +244,9 @@ fun DroidvisorApp(
         val settingsViewModel: SettingsViewModel = viewModel {
             SettingsViewModel(context.dataStore)
         }
+        val debugViewModel: DebugViewModel = viewModel {
+            DebugViewModel(context.dataStore)
+        }
 
         val navItems = listOf(
             NavItem("vm", "虚拟机", Icons.Default.Computer),
@@ -296,7 +300,10 @@ fun DroidvisorApp(
                         )
                     }
                     composable("settings") {
-                        SettingsScreen(viewModel = settingsViewModel)
+                        SettingsScreen(
+                            settingsViewModel = settingsViewModel,
+                            debugViewModel = debugViewModel
+                        )
                     }
                 }
             }

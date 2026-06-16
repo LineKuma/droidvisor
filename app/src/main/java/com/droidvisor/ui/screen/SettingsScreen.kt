@@ -25,15 +25,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.droidvisor.debug.DebugViewModel
 import com.droidvisor.ui.viewmodel.SettingsViewModel
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel) {
-    val memorySize = viewModel.memorySize.collectAsState().value
-    val cpuCores = viewModel.cpuCores.collectAsState().value
-    val dockerPort = viewModel.dockerPort.collectAsState().value
-    val imageRegistry = viewModel.imageRegistry.collectAsState().value
-    val debugMode = viewModel.debugMode.collectAsState().value
+fun SettingsScreen(
+    settingsViewModel: SettingsViewModel,
+    debugViewModel: DebugViewModel
+) {
+    val memorySize = settingsViewModel.memorySize.collectAsState().value
+    val cpuCores = settingsViewModel.cpuCores.collectAsState().value
+    val dockerPort = settingsViewModel.dockerPort.collectAsState().value
+    val imageRegistry = settingsViewModel.imageRegistry.collectAsState().value
+    val debugMode = debugViewModel.debugMode.collectAsState().value
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -44,21 +48,21 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
             VmSettingsSection(
                 memorySize = memorySize,
                 cpuCores = cpuCores,
-                onMemoryChange = { viewModel.setMemorySize(it) },
-                onCpuChange = { viewModel.setCpuCores(it) }
+                onMemoryChange = { settingsViewModel.setMemorySize(it) },
+                onCpuChange = { settingsViewModel.setCpuCores(it) }
             )
 
             DockerSettingsSection(
                 dockerPort = dockerPort,
                 imageRegistry = imageRegistry,
-                onPortChange = { viewModel.setDockerPort(it) },
-                onRegistryChange = { viewModel.setImageRegistry(it) }
+                onPortChange = { settingsViewModel.setDockerPort(it) },
+                onRegistryChange = { settingsViewModel.setImageRegistry(it) }
             )
 
             DebugSettingsSection(
                 debugMode = debugMode,
-                onDebugModeChange = { viewModel.setDebugMode(it) },
-                onExportLogs = { viewModel.exportLogs(LocalContext.current) }
+                onDebugModeChange = { debugViewModel.setDebugMode(it) },
+                onExportLogs = { debugViewModel.exportLogs(LocalContext.current) }
             )
 
             SystemInfoSection()

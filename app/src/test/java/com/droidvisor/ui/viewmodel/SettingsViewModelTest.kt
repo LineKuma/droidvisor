@@ -3,7 +3,6 @@ package com.droidvisor.ui.viewmodel
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -11,15 +10,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
@@ -199,32 +195,11 @@ class SettingsViewModelTest {
         assertEquals("https://custom.registry.com", viewModel.imageRegistry.value)
     }
 
-    @Test
-    fun initialState_hasDebugModeEnabled() {
-        val debugMode = viewModel.debugMode.value
-        assertTrue(debugMode)
-    }
-
-    @Test
-    fun setDebugMode_updatesDebugMode() {
-        viewModel.setDebugMode(false)
-
-        val debugMode = viewModel.debugMode.value
-        assertFalse(debugMode)
-    }
-
-    @Test
-    fun debugMode_isStateFlow() {
-        val flow = viewModel.debugMode
-        assertNotNull(flow)
-    }
-
     private class TestDataStore : DataStore<Preferences> {
         private val _memorySize = MutableStateFlow(512L)
         private val _cpuCores = MutableStateFlow(2)
         private val _dockerPort = MutableStateFlow(2375)
         private val _imageRegistry = MutableStateFlow("")
-        private val _debugMode = MutableStateFlow(true)
 
         private val _data = MutableStateFlow(emptyPreferences())
 
@@ -234,7 +209,6 @@ class SettingsViewModelTest {
             `when`(mockPrefs[intPreferencesKey("vm_cpu_cores")]).thenReturn(2)
             `when`(mockPrefs[intPreferencesKey("docker_port")]).thenReturn(2375)
             `when`(mockPrefs[stringPreferencesKey("image_registry")]).thenReturn("")
-            `when`(mockPrefs[booleanPreferencesKey("debug_mode_enabled")]).thenReturn(true)
             return mockPrefs
         }
 
@@ -246,7 +220,6 @@ class SettingsViewModelTest {
             `when`(mockPrefs[intPreferencesKey("vm_cpu_cores")]).thenReturn(_cpuCores.value)
             `when`(mockPrefs[intPreferencesKey("docker_port")]).thenReturn(_dockerPort.value)
             `when`(mockPrefs[stringPreferencesKey("image_registry")]).thenReturn(_imageRegistry.value)
-            `when`(mockPrefs[booleanPreferencesKey("debug_mode_enabled")]).thenReturn(_debugMode.value)
             val result = transform(mockPrefs)
             _data.value = emptyPreferences()
             return result
