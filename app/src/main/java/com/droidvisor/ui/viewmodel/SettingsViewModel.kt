@@ -1,10 +1,14 @@
 package com.droidvisor.ui.viewmodel
 
+import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.droidvisor.debug.DebugConfigManager
 import com.droidvisor.vm.VmConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +30,9 @@ class SettingsViewModel(private val dataStore: androidx.datastore.core.DataStore
     private val _imageRegistry = MutableStateFlow("")
     val imageRegistry: StateFlow<String> = _imageRegistry.asStateFlow()
 
+    private val _debugMode = MutableStateFlow(true)
+    val debugMode: StateFlow<Boolean> = _debugMode.asStateFlow()
+
     init {
         loadSettings()
     }
@@ -37,6 +44,7 @@ class SettingsViewModel(private val dataStore: androidx.datastore.core.DataStore
             _cpuCores.value = prefs[CPU_KEY] ?: 2
             _dockerPort.value = prefs[DOCKER_PORT_KEY] ?: 2375
             _imageRegistry.value = prefs[IMAGE_REGISTRY_KEY] ?: ""
+            _debugMode.value = prefs[DEBUG_MODE_KEY] ?: true
         }
     }
 
@@ -76,6 +84,24 @@ class SettingsViewModel(private val dataStore: androidx.datastore.core.DataStore
         }
     }
 
+    fun setDebugMode(enabled: Boolean) {
+        viewModelScope.launch {
+            _debugMode.value = enabled
+            dataStore.edit { prefs ->
+                prefs[DEBUG_MODE_KEY] = enabled
+            }
+            if (enabled) {
+                DebugConfigManager.installGlobalExceptionHandler()
+            } else {
+                DebugConfigManager.uninstallGlobalExceptionHandler()
+            }
+        }
+    }
+
+    fun exportLogs(context: Context) {
+        DebugConfigManager.exportLogs(context)
+    }
+
     fun getVmConfig(): VmConfig {
         return VmConfig(
             memoryBytes = _memorySize.value * 1024 * 1024,
@@ -87,6 +113,7 @@ class SettingsViewModel(private val dataStore: androidx.datastore.core.DataStore
         private val MEMORY_KEY = longPreferencesKey("vm_memory_mb")
         private val CPU_KEY = intPreferencesKey("vm_cpu_cores")
         private val DOCKER_PORT_KEY = intPreferencesKey("docker_port")
-        private val IMAGE_REGISTRY_KEY = androidx.datastore.preferences.core.stringPreferencesKey("image_registry")
+        private val IMAGE_REGISTRY_KEY = stringPreferencesKey("image_registry")
+        private val DEBUG_MODE_KEY = booleanPreferencesKey("debug_mode_enabled")
     }
 }
