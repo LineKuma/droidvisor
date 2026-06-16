@@ -186,6 +186,11 @@ class QemuProcessManager(
                 args.add("-serial")
                 args.add("file:${mode.path}")
             }
+            is QemuVmConfig.ConsoleMode.TcpSocket -> {
+                args.add("-nographic")
+                args.add("-serial")
+                args.add("tcp:${mode.host}:${mode.port},server=on,wait=off")
+            }
             is QemuVmConfig.ConsoleMode.Stdio -> {
                 args.add("-nographic")
             }

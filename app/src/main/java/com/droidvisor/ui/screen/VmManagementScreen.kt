@@ -71,6 +71,7 @@ import androidx.compose.ui.window.Dialog
 import com.droidvisor.ui.components.StatusBadge
 import com.droidvisor.vm.AvfCapabilityChecker
 import com.droidvisor.vm.BackupManagerService
+import com.droidvisor.vm.SerialConsoleService
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
@@ -86,6 +87,7 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
     var selectedVm by remember { mutableStateOf<VmInstance?>(null) }
     var showBackupScreen by remember { mutableStateOf(false) }
     var showNetworkScreen by remember { mutableStateOf(false) }
+    var showSerialConsole by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -142,6 +144,10 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
                                 onNetwork = {
                                     selectedVm = vm
                                     showNetworkScreen = true
+                                },
+                                onSerialConsole = {
+                                    selectedVm = vm
+                                    showSerialConsole = true
                                 }
                             )
                         }
@@ -169,6 +175,18 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
         onDismissBackup = { showBackupScreen = false },
         onDismissNetwork = { showNetworkScreen = false }
     )
+
+    // 串口控制台
+    if (showSerialConsole && selectedVm != null) {
+        val serialService = vmManagerService?.getQemuRuntime()?.getSerialConsoleService()
+        if (serialService != null) {
+            SerialConsoleScreen(
+                vmName = selectedVm!!.name,
+                serialService = serialService,
+                onBack = { showSerialConsole = false }
+            )
+        }
+    }
 }
 
 @Composable
@@ -204,7 +222,8 @@ fun VmCard(
     onRestart: () -> Unit,
     onDelete: () -> Unit,
     onBackup: () -> Unit,
-    onNetwork: () -> Unit
+    onNetwork: () -> Unit,
+    onSerialConsole: () -> Unit
 ) {
     val statusColor = when (vm.status) {
         VmStatus.RUNNING -> Color.Green
@@ -280,6 +299,14 @@ fun VmCard(
                                 leadingIcon = { Icon(Icons.Default.NetworkCheck, null) }
                             )
                             DropdownMenuItem(
+                                text = { Text("串口控制台") },
+                                onClick = {
+                                    onSerialConsole()
+                                    showMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Terminal, null) }
+                            )
+                            DropdownMenuItem(
                                 text = { Text("重启") },
                                 onClick = {
                                     onRestart()
@@ -342,13 +369,23 @@ fun VmCard(
                         }
                     }
                     VmStatus.RUNNING -> {
-                        Button(
-                            onClick = onStop,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                        ) {
-                            Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("停止")
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = onSerialConsole,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4D96FF))
+                            ) {
+                                Icon(Icons.Filled.Terminal, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("终端")
+                            }
+                            Button(
+                                onClick = onStop,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                            ) {
+                                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("停止")
+                            }
                         }
                     }
                     else -> {

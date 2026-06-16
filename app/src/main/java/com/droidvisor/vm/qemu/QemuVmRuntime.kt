@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.ParcelFileDescriptor
 import com.droidvisor.util.Logger
 import com.droidvisor.vm.ConsoleOutputService
+import com.droidvisor.vm.SerialConsoleService
 import com.droidvisor.vm.VmConfig
 import com.droidvisor.vm.VmError
 import com.droidvisor.vm.VmStatus
@@ -65,6 +66,9 @@ class QemuVmRuntime(
 
     /** 控制台输出服务引用 */
     private var consoleService: ConsoleOutputService? = null
+
+    /** 串口控制台桥接服务 */
+    private var serialConsoleService: SerialConsoleService? = null
 
     /** 工作目录 */
     private val workDir: File by lazy {
@@ -229,6 +233,11 @@ class QemuVmRuntime(
     }
 
     /**
+     * 获取串口控制台桥接服务
+     */
+    fun getSerialConsoleService(): SerialConsoleService? = serialConsoleService
+
+    /**
      * 获取磁盘管理器
      */
     fun getDiskManager(): QemuDiskManager = diskManager
@@ -308,14 +317,13 @@ class QemuVmRuntime(
     }
 
     private fun launchQemuProcess() {
+        val serialConsolePort = 5555
         val effectiveConfig = qemuConfig.copy(
             workingDirectory = workDir,
-            consoleMode = when {
-                consoleService != null -> QemuVmConfig.ConsoleMode.FileOutput(
-                    path = "${File(workDir, "console").absolutePath}/vm_console.log"
-                )
-                else -> QemuVmConfig.ConsoleMode.None
-            }
+            consoleMode = QemuVmConfig.ConsoleMode.TcpSocket(
+                port = serialConsolePort,
+                host = "127.0.0.1"
+            )
         )
 
         processManager = QemuProcessManager(
@@ -326,6 +334,14 @@ class QemuVmRuntime(
             },
             scope = scope
         ).apply { start() }
+
+        // 启动串口控制台桥接服务
+        serialConsoleService = SerialConsoleService().also { service ->
+            // 连接 QEMU 串口
+            service.connectToQemu(port = serialConsolePort)
+            // 启动中继服务器供外部客户端连接
+            service.startRelayServer(port = SerialConsoleService.DEFAULT_RELAY_PORT)
+        }
 
         // 监控进程状态变化
         monitorProcessState()
@@ -351,6 +367,10 @@ class QemuVmRuntime(
     }
 
     private fun cleanupResources() {
+        // 关闭串口控制台服务
+        serialConsoleService?.destroy()
+        serialConsoleService = null
+
         // 关闭 Vsock 连接
         activeVsockChannels.values.forEach { try { it.close() } catch (e: Exception) { Logger.d(TAG, "Error closing vsock channel", e) } }
         activeVsockChannels.clear()
