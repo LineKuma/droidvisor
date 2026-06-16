@@ -158,6 +158,10 @@ jobs:
       - name: Setup Android Project
         uses: ./.github/actions/setup-android
 
+      - name: Install NDK
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;26.1.10909125" > /dev/null 2>&1 || true
+
       - name: Decode Keystore
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
