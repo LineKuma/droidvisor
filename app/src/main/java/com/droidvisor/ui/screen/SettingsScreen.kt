@@ -1,5 +1,6 @@
 package com.droidvisor.ui.screen
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -7,16 +8,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -25,19 +29,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.droidvisor.debug.DebugViewModel
+import com.droidvisor.debug.DebugActivity
 import com.droidvisor.ui.viewmodel.SettingsViewModel
 
 @Composable
 fun SettingsScreen(
-    settingsViewModel: SettingsViewModel,
-    debugViewModel: DebugViewModel
+    settingsViewModel: SettingsViewModel
 ) {
     val memorySize = settingsViewModel.memorySize.collectAsState().value
     val cpuCores = settingsViewModel.cpuCores.collectAsState().value
     val dockerPort = settingsViewModel.dockerPort.collectAsState().value
     val imageRegistry = settingsViewModel.imageRegistry.collectAsState().value
-    val debugMode = debugViewModel.debugMode.collectAsState().value
+    val context = LocalContext.current
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -59,10 +62,10 @@ fun SettingsScreen(
                 onRegistryChange = { settingsViewModel.setImageRegistry(it) }
             )
 
-            DebugSettingsSection(
-                debugMode = debugMode,
-                onDebugModeChange = { debugViewModel.setDebugMode(it) },
-                onExportLogs = { debugViewModel.exportLogs(LocalContext.current) }
+            DebugEntryCard(
+                onOpenDebug = {
+                    context.startActivity(Intent(context, DebugActivity::class.java))
+                }
             )
 
             SystemInfoSection()
@@ -182,11 +185,7 @@ fun SystemInfoSection() {
 }
 
 @Composable
-fun DebugSettingsSection(
-    debugMode: Boolean,
-    onDebugModeChange: (Boolean) -> Unit,
-    onExportLogs: () -> Unit
-) {
+fun DebugEntryCard(onOpenDebug: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -195,50 +194,34 @@ fun DebugSettingsSection(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "调试配置",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.BugReport,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
             )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "调试模式",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "开启后自动捕获所有异常并记录调试日志",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = debugMode,
-                    onCheckedChange = onDebugModeChange
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "调试工具",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "查看日志、管理调试模式、导出日志文件",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onExportLogs,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("导出日志")
+            OutlinedButton(onClick = onOpenDebug) {
+                Text("打开")
             }
-            Text(
-                text = "通过系统分享接口导出日志文件",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
         }
     }
 }

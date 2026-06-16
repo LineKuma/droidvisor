@@ -33,6 +33,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".debug.DebugActivity"
+            android:exported="false"
+            android:label="调试工具"
+            android:theme="@style/Theme.Droidvisor" />
+
         <service
             android:name=".vm.VmManagerService"
             android:exported="false"
