@@ -29,7 +29,6 @@ android {
 
     buildTypes {
         debug {
-            isDefault = true
             debuggable true
             testCoverageEnabled true
             minifyEnabled false
