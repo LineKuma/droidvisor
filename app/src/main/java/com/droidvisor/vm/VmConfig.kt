@@ -1,7 +1,5 @@
 package com.droidvisor.vm
 
-import kotlinx.serialization.Serializable
-
 /**
  * 虚拟磁盘格式
  *
@@ -10,7 +8,6 @@ import kotlinx.serialization.Serializable
  *
  * RAW：原始磁盘镜像，两个引擎均支持，无压缩/快照，适合性能敏感场景。
  */
-@Serializable
 enum class DiskFormat(val extension: String, val displayName: String) {
     QCOW2(".qcow2", "QCOW2 (推荐)"),
     RAW(".raw", "RAW")

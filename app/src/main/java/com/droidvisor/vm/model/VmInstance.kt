@@ -13,6 +13,7 @@ data class VmInstance(
     val customMemoryBytes: Long? = null,
     val customCpuCores: Int? = null,
     val customDiskSizeBytes: Long? = null,
+    @kotlinx.serialization.Transient
     val customDiskFormat: DiskFormat? = null,
     val status: VmStatus = VmStatus.STOPPED,
     val createdAt: Long = System.currentTimeMillis(),
