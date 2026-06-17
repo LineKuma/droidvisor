@@ -8,9 +8,4 @@
     <string name="vm_service_notification_channel_desc">虚拟机运行状态通知</string>
     <string name="vm_service_notification_title">Droidvisor 虚拟机</string>
     <string name="vm_service_notification_text">虚拟机服务运行中</string>
-    <string name="debug_mode">调试模式</string>
-    <string name="debug_mode_desc">开启后自动捕获所有异常并记录调试日志</string>
-    <string name="debug_configuration">调试配置</string>
-    <string name="export_logs">导出日志</string>
-    <string name="export_logs_desc">通过系统分享接口导出日志文件</string>
 </resources>

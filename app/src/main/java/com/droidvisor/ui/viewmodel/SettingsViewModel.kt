@@ -3,7 +3,6 @@ package com.droidvisor.ui.viewmodel
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.droidvisor.vm.VmConfig
@@ -88,6 +87,6 @@ class SettingsViewModel(private val dataStore: androidx.datastore.core.DataStore
         private val MEMORY_KEY = longPreferencesKey("vm_memory_mb")
         private val CPU_KEY = intPreferencesKey("vm_cpu_cores")
         private val DOCKER_PORT_KEY = intPreferencesKey("docker_port")
-        private val IMAGE_REGISTRY_KEY = stringPreferencesKey("image_registry")
+        private val IMAGE_REGISTRY_KEY = androidx.datastore.preferences.core.stringPreferencesKey("image_registry")
     }
 }
