@@ -1,5 +1,6 @@
 package com.droidvisor.vm.model
 
+import com.droidvisor.vm.DiskFormat
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -22,7 +23,10 @@ data class VmTemplate(
     val includesDesktop: Boolean = false,
     val recommended: Boolean = false,
     val payloadBinaryName: String = "libmicrodroid_payload.so",
-    val protectedVm: Boolean = true
+    val protectedVm: Boolean = true,
+    /** 磁盘格式，默认 QCOW2 以支持 AVF/QEMU 复用 */
+    @kotlinx.serialization.Transient
+    val diskFormat: DiskFormat = DiskFormat.QCOW2
 ) {
     companion object {
         val STANDARD_DEBIAN = VmTemplate(
