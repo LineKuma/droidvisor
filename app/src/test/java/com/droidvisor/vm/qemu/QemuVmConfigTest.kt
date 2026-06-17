@@ -1,6 +1,5 @@
 package com.droidvisor.vm.qemu
 
-import com.droidvisor.vm.DiskFormat
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.Before
@@ -106,7 +105,7 @@ class QemuVmConfigTest {
     fun `qemu disk defaults are sensible`() {
         val disk = QemuDisk(path = "/tmp/test.qcow2")
         assertEquals(4, disk.sizeGb)
-        assertEquals(DiskFormat.QCOW2, disk.format)
+        assertEquals("qcow2", disk.format)
         assertFalse(disk.readOnly)
         assertEquals("virtio", disk.interfaceName)
     }

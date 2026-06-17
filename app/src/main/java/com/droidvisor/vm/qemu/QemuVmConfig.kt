@@ -1,6 +1,5 @@
 package com.droidvisor.vm.qemu
 
-import com.droidvisor.vm.DiskFormat
 import com.droidvisor.vm.VmConfig
 import java.io.File
 
@@ -35,9 +34,8 @@ data class QemuVmConfig(
     /** 根文件系统磁盘路径 */
     val diskPath: String? = null,
 
-    /** 磁盘格式，派生自 baseConfig */
-    val diskFormat: DiskFormat
-        get() = baseConfig.diskFormat,
+    /** 磁盘格式 (qcow2/raw) */
+    val diskFormat: String = "qcow2",
 
     /** 附加磁盘列表 */
     val extraDisks: List<QemuDisk> = emptyList(),
@@ -117,7 +115,7 @@ data class QemuVmConfig(
                     VsockPortMapping(hostPort = 2375, guestPort = 2375)
                 ),
                 extraDisks = listOf(
-                    QemuDisk(path = "", sizeGb = 16, format = DiskFormat.QCOW2)
+                    QemuDisk(path = "", sizeGb = 16, format = "qcow2")
                 ),
                 networkBackend = NetworkBackend.User(
                     hostfwd = listOf(
@@ -137,7 +135,7 @@ data class QemuVmConfig(
 data class QemuDisk(
     val path: String,
     val sizeGb: Int = 4,
-    val format: DiskFormat = DiskFormat.QCOW2,
+    val format: String = "qcow2",
     val readOnly: Boolean = false,
     val interfaceName: String = "virtio"
 )

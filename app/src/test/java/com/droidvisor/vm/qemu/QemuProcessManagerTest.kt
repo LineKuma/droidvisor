@@ -1,6 +1,5 @@
 package com.droidvisor.vm.qemu
 
-import com.droidvisor.vm.DiskFormat
 import com.droidvisor.vm.VmConfig
 import com.droidvisor.vm.VmError
 import kotlinx.coroutines.CoroutineScope
@@ -395,8 +394,8 @@ class QemuProcessManagerTest {
         val config = createDefaultConfig().copy(
             diskPath = null,  // 确保无主磁盘干扰
             extraDisks = listOf(
-                QemuDisk(d1.absolutePath, format = DiskFormat.QCOW2),
-                QemuDisk(d2.absolutePath, format = DiskFormat.RAW)
+                QemuDisk(d1.absolutePath, format = "qcow2"),
+                QemuDisk(d2.absolutePath, format = "raw")
             )
         )
         val cmd = QemuProcessManager(config, null, testScope).buildCommandLine()

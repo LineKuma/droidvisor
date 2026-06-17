@@ -71,7 +71,6 @@ import androidx.compose.ui.window.Dialog
 import com.droidvisor.ui.components.StatusBadge
 import com.droidvisor.vm.AvfCapabilityChecker
 import com.droidvisor.vm.BackupManagerService
-import com.droidvisor.vm.DiskFormat
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
@@ -155,8 +154,8 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
     if (showCreateDialog) {
         CreateVmDialog(
             onDismiss = { showCreateDialog = false },
-            onCreate = { name, template, protectedVm, diskFormat ->
-                vmManagerService?.createVm(name, template.copy(protectedVm = protectedVm), diskFormat)
+            onCreate = { name, template, protectedVm ->
+                vmManagerService?.createVm(name, template.copy(protectedVm = protectedVm))
                 showCreateDialog = false
             }
         )
@@ -382,11 +381,10 @@ fun VmInfoChip(icon: ImageVector, text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate, Boolean, DiskFormat) -> Unit) {
+fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate, Boolean) -> Unit) {
     var vmName by remember { mutableStateOf("") }
     var selectedTemplate by remember { mutableStateOf(VmTemplate.getDefaultTemplates().first()) }
     var isProtectedVm by remember { mutableStateOf(true) }
-    var selectedDiskFormat by remember { mutableStateOf(selectedTemplate.diskFormat) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(modifier = Modifier.padding(16.dp)) {
@@ -465,10 +463,7 @@ fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate, Boolean
                         TemplateCard(
                             template = template,
                             isSelected = template == selectedTemplate,
-                            onSelect = {
-                                selectedTemplate = template
-                                selectedDiskFormat = template.diskFormat
-                            }
+                            onSelect = { selectedTemplate = template }
                         )
                     }
                 }
@@ -477,40 +472,7 @@ fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate, Boolean
 
                 TemplateSpecsCard(template = selectedTemplate)
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("磁盘格式", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    DiskFormat.entries.forEach { format ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedDiskFormat = format },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = selectedDiskFormat == format,
-                                onClick = { selectedDiskFormat = format }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(format.displayName, fontWeight = FontWeight.Medium)
-                                Text(
-                                    when (format) {
-                                        DiskFormat.QCOW2 -> "QEMU Copy-On-Write v2，支持稀疏分配、快照，AVF/QEMU 均可复用"
-                                        DiskFormat.RAW -> "原始磁盘镜像，无压缩/快照，适合性能敏感场景"
-                                    },
-                                    fontSize = 12.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -521,7 +483,7 @@ fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate, Boolean
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { onCreate(vmName.ifBlank { "新建虚拟机" }, selectedTemplate, isProtectedVm, selectedDiskFormat) },
+                        onClick = { onCreate(vmName.ifBlank { "新建虚拟机" }, selectedTemplate, isProtectedVm) },
                         enabled = true
                     ) {
                         Text("创建")
