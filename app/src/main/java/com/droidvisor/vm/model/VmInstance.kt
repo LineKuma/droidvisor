@@ -1,5 +1,6 @@
 package com.droidvisor.vm.model
 
+import com.droidvisor.vm.DiskFormat
 import com.droidvisor.vm.VmStatus
 import kotlinx.serialization.Serializable
 import java.util.UUID
@@ -12,6 +13,7 @@ data class VmInstance(
     val customMemoryBytes: Long? = null,
     val customCpuCores: Int? = null,
     val customDiskSizeBytes: Long? = null,
+    val customDiskFormat: DiskFormat? = null,
     val status: VmStatus = VmStatus.STOPPED,
     val createdAt: Long = System.currentTimeMillis(),
     val startedAt: Long? = null,
@@ -25,6 +27,9 @@ data class VmInstance(
 
     val effectiveDiskSizeBytes: Long
         get() = customDiskSizeBytes ?: template.diskSizeBytes
+
+    val effectiveDiskFormat: DiskFormat
+        get() = customDiskFormat ?: template.diskFormat
 
     val isRunning: Boolean
         get() = status == VmStatus.RUNNING

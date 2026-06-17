@@ -223,7 +223,7 @@ class QemuProcessManager(
                 args.add("-drive")
                 args.add(
                     "file=${disk.path}," +
-                    "format=${disk.format}," +
+                    "format=${disk.format.name.lowercase()}," +
                     "if=${disk.interfaceName}," +
                     "${if (disk.readOnly) "readonly=on" else "cache=writeback"}," +
                     "id=extra$index"

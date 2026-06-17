@@ -1,5 +1,6 @@
 package com.droidvisor.vm.qemu
 
+import com.droidvisor.vm.DiskFormat
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.After
@@ -57,18 +58,18 @@ class QemuDiskManagerTest {
     @Test(expected = IOException::class)
     fun `createDisk 使用 qcow2 格式时因 qemu-img 不可用而抛出 IOException`() {
         // qemu-img 在纯 JVM 测试环境中不存在，createDisk 应抛出 IOException
-        diskManager.createDisk(name = "test_qcow2", sizeGb = 1, format = "qcow2")
+        diskManager.createDisk(name = "test_qcow2", sizeGb = 1, format = DiskFormat.QCOW2)
     }
 
     @Test
     fun `createDisk qcow2 格式返回文件名包含 qcow2 后缀`() {
         // 先手动创建目标文件，模拟"磁盘已存在"场景以跳过 qemu-img 调用
-        val expectedFile = File(tempDir, "test_qcow2${QemuDiskManager.QCOW2_EXTENSION}")
+        val expectedFile = File(tempDir, "test_qcow2${DiskFormat.QCOW2.extension}")
         expectedFile.createNewFile()
 
-        val result = diskManager.createDisk(name = "test_qcow2", sizeGb = 1, format = "qcow2")
+        val result = diskManager.createDisk(name = "test_qcow2", sizeGb = 1, format = DiskFormat.QCOW2)
 
-        assertTrue("返回的文件路径应以 .qcow2 结尾", result.name.endsWith(QemuDiskManager.QCOW2_EXTENSION))
+        assertTrue("返回的文件路径应以 .qcow2 结尾", result.name.endsWith(DiskFormat.QCOW2.extension))
         assertEquals("返回的文件应为预创建的同一文件", expectedFile, result)
     }
 
@@ -76,17 +77,17 @@ class QemuDiskManagerTest {
 
     @Test(expected = IOException::class)
     fun `createDisk 使用 raw 格式时因 qemu-img 不可用而抛出 IOException`() {
-        diskManager.createDisk(name = "test_raw", sizeGb = 1, format = "raw")
+        diskManager.createDisk(name = "test_raw", sizeGb = 1, format = DiskFormat.RAW)
     }
 
     @Test
     fun `createDisk raw 格式返回文件名包含 raw 后缀`() {
-        val expectedFile = File(tempDir, "test_raw${QemuDiskManager.RAW_EXTENSION}")
+        val expectedFile = File(tempDir, "test_raw${DiskFormat.RAW.extension}")
         expectedFile.createNewFile()
 
-        val result = diskManager.createDisk(name = "test_raw", sizeGb = 1, format = "raw")
+        val result = diskManager.createDisk(name = "test_raw", sizeGb = 1, format = DiskFormat.RAW)
 
-        assertTrue("返回的文件路径应以 .raw 结尾", result.name.endsWith(QemuDiskManager.RAW_EXTENSION))
+        assertTrue("返回的文件路径应以 .raw 结尾", result.name.endsWith(DiskFormat.RAW.extension))
         assertEquals(expectedFile, result)
     }
 
@@ -94,10 +95,10 @@ class QemuDiskManagerTest {
 
     @Test
     fun `createDisk 当 qcow2 磁盘已存在时直接返回已有文件`() {
-        val existingFile = File(tempDir, "existing_disk${QemuDiskManager.QCOW2_EXTENSION}")
+        val existingFile = File(tempDir, "existing_disk${DiskFormat.QCOW2.extension}")
         existingFile.createNewFile()
 
-        val result = diskManager.createDisk(name = "existing_disk", sizeGb = 10, format = "qcow2")
+        val result = diskManager.createDisk(name = "existing_disk", sizeGb = 10, format = DiskFormat.QCOW2)
 
         assertEquals("应返回已有的磁盘文件", existingFile, result)
         assertTrue("已有文件仍应存在", existingFile.exists())
@@ -105,10 +106,10 @@ class QemuDiskManagerTest {
 
     @Test
     fun `createDisk 当 raw 磁盘已存在时直接返回已有文件`() {
-        val existingFile = File(tempDir, "existing_raw${QemuDiskManager.RAW_EXTENSION}")
+        val existingFile = File(tempDir, "existing_raw${DiskFormat.RAW.extension}")
         existingFile.createNewFile()
 
-        val result = diskManager.createDisk(name = "existing_raw", sizeGb = 5, format = "raw")
+        val result = diskManager.createDisk(name = "existing_raw", sizeGb = 5, format = DiskFormat.RAW)
 
         assertEquals(existingFile, result)
     }
@@ -117,12 +118,12 @@ class QemuDiskManagerTest {
 
     @Test(expected = IOException::class)
     fun `createDisk 不存在的 qcow2 磁盘因 qemu-img 缺失抛出 IOException`() {
-        diskManager.createDisk(name = "brand_new_disk", sizeGb = 2, format = "qcow2")
+        diskManager.createDisk(name = "brand_new_disk", sizeGb = 2, format = DiskFormat.QCOW2)
     }
 
     @Test(expected = IOException::class)
     fun `createDisk 不存在的 raw 磁盘因 qemu-img 缺失抛出 IOException`() {
-        diskManager.createDisk(name = "brand_new_raw", sizeGb = 3, format = "raw")
+        diskManager.createDisk(name = "brand_new_raw", sizeGb = 3, format = DiskFormat.RAW)
     }
 
     // ==================== 6. getDiskInfo 对不存在的文件返回 null ====================
@@ -310,24 +311,26 @@ class QemuDiskManagerTest {
     // ==================== 13. companion object 常量值验证 ====================
 
     @Test
-    fun `companion object QCOW2_EXTENSION 常量值为 qcow2`() {
-        assertEquals(".qcow2", QemuDiskManager.QCOW2_EXTENSION)
-    }
-
-    @Test
-    fun `companion object RAW_EXTENSION 常量为 raw`() {
-        assertEquals(".raw", QemuDiskManager.RAW_EXTENSION)
-    }
-
-    @Test
     fun `companion object DEFAULT_CLUSTER_SIZE 常量为 65536`() {
         assertEquals(65536, QemuDiskManager.DEFAULT_CLUSTER_SIZE)
     }
 
     @Test
-    fun `companion object 所有常量值符合预期`() {
-        assertEquals(".qcow2", QemuDiskManager.QCOW2_EXTENSION)
-        assertEquals(".raw", QemuDiskManager.RAW_EXTENSION)
+    fun `DiskFormat QCOW2 extension 为 qcow2`() {
+        assertEquals(".qcow2", DiskFormat.QCOW2.extension)
+    }
+
+    @Test
+    fun `DiskFormat RAW extension 为 raw`() {
+        assertEquals(".raw", DiskFormat.RAW.extension)
+    }
+
+    @Test
+    fun `DiskFormat 所有常量值符合预期`() {
+        assertEquals(".qcow2", DiskFormat.QCOW2.extension)
+        assertEquals("QCOW2 (推荐)", DiskFormat.QCOW2.displayName)
+        assertEquals(".raw", DiskFormat.RAW.extension)
+        assertEquals("RAW", DiskFormat.RAW.displayName)
         assertEquals(65536, QemuDiskManager.DEFAULT_CLUSTER_SIZE)
     }
 }

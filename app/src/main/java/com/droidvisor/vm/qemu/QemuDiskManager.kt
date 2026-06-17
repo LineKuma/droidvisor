@@ -1,13 +1,14 @@
 package com.droidvisor.vm.qemu
 
 import com.droidvisor.util.Logger
+import com.droidvisor.vm.DiskFormat
 import java.io.File
 import java.io.IOException
 
 /**
  * QEMU 磁盘镜像管理器
  *
- * 负责 qcow2 磁盘镜像的创建、检查和管理。
+ * 负责磁盘镜像的创建、检查和管理。
  * 所有镜像存储在应用的私有目录下，确保安全性和隔离性。
  */
 class QemuDiskManager(private val baseDir: File) {
@@ -16,9 +17,6 @@ class QemuDiskManager(private val baseDir: File) {
 
     /** 镜像文件扩展名 */
     companion object {
-        const val QCOW2_EXTENSION = ".qcow2"
-        const val RAW_EXTENSION = ".raw"
-
         /** 默认 qcow2 虚拟大小（实际按需分配） */
         const val DEFAULT_CLUSTER_SIZE = 65536
     }
@@ -30,11 +28,11 @@ class QemuDiskManager(private val baseDir: File) {
     }
 
     /**
-     * 创建 qcow2 磁盘镜像
+     * 创建磁盘镜像
      *
      * @param name 镜像名称（不含扩展名）
      * @param sizeGb 镜像大小（GB）
-     * @param format 磁盘格式 (qcow2/raw)
+     * @param format 磁盘格式
      * @param backingFile 可选的 backing file 路径（用于快照/增量镜像）
      * @return 创建的镜像文件
      * @throws IOException 创建失败
@@ -42,31 +40,31 @@ class QemuDiskManager(private val baseDir: File) {
     fun createDisk(
         name: String,
         sizeGb: Int,
-        format: String = "qcow2",
+        format: DiskFormat = DiskFormat.QCOW2,
         backingFile: String? = null
     ): File {
-        val extension = if (format == "qcow2") QCOW2_EXTENSION else RAW_EXTENSION
-        val diskFile = File(baseDir, "$name$extension")
+        val diskFile = File(baseDir, "$name${format.extension}")
 
         if (diskFile.exists()) {
             Logger.d(TAG, "Disk image already exists: ${diskFile.absolutePath}")
             return diskFile
         }
 
+        val formatStr = format.name.lowercase()
         val args = buildList {
             add("qemu-img")
             add("create")
             add("-f")
-            add(format)
+            add(formatStr)
 
             if (backingFile != null) {
                 add("-b")
                 add(backingFile)
                 add("-F")
-                add(format)
+                add(formatStr)
             } else {
                 // qcow2 优化参数
-                if (format == "qcow2") {
+                if (format == DiskFormat.QCOW2) {
                     add("-o")
                     add("cluster_size=$DEFAULT_CLUSTER_SIZE,lazy_refcounts=on")
                 }
@@ -158,8 +156,9 @@ class QemuDiskManager(private val baseDir: File) {
      * 获取所有已创建的磁盘镜像
      */
     fun listDisks(): List<File> {
+        val supportedExtensions = DiskFormat.entries.map { it.extension.removePrefix(".") }.toSet()
         return baseDir.listFiles { file ->
-            file.extension == "qcow2" || file.extension == "raw"
+            file.extension in supportedExtensions
         }?.toList() ?: emptyList()
     }
 
