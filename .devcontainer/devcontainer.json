@@ -1,0 +1,22 @@
+{
+  "name": "DroidVisor Dev",
+  "image": "mcr.microsoft.com/devcontainers/universal",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "fwcd.kotlin",
+        "vscjava.vscode-gradle",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "remoteUser": "root",
+  "postCreateCommand": "echo 'Dev container ready.'",
+  "postStartCommand": "echo 'root:Devcon' | chpasswd"
+}

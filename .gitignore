@@ -4,6 +4,7 @@
 *.dex
 *.class
 build/
+app/.cxx/
 .gradle/
 local.properties
 *.iml
@@ -12,6 +13,7 @@ local.properties
 
 # Gradle
 !gradle/wrapper/gradle-wrapper.jar
+gradle/gradle-daemon-jvm.properties
 
 # IDE
 .vscode/
@@ -33,6 +35,9 @@ Thumbs.db
 # Android keystore
 *.jks
 *.keystore
+
+# Trae
+.trae/
 
 # Build logs
 build.log
