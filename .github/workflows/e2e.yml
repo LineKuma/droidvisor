@@ -93,7 +93,24 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics
           disable-animations: true
-          script: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon && adb uninstall com.droidvisor 2>/dev/null || true && adb uninstall com.droidvisor.test 2>/dev/null || true && adb install -r app/build/outputs/apk/debug/app-debug.apk && adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true && adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true && adb shell "mkdir -p /data/local/tmp/qemu-e2e" && adb push /tmp/qemu-test-disks/e2e-test-disk.qcow2 /data/local/tmp/qemu-e2e/ && timeout 30m adb shell am instrument -w -e package com.droidvisor.e2e -e debug false com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
+          script: |
+            # 配置中文 locale
+            adb shell "setprop persist.sys.locale zh-CN; setprop persist.sys.language zh; setprop persist.sys.country CN"
+            adb shell "settings put system system_locales zh-CN"
+            adb shell am broadcast -a android.intent.action.LOCALE_CHANGED
+            sleep 5
+            
+            # 运行测试
+            ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon && \
+            adb uninstall com.droidvisor 2>/dev/null || true && \
+            adb uninstall com.droidvisor.test 2>/dev/null || true && \
+            adb install -r app/build/outputs/apk/debug/app-debug.apk && \
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && \
+            adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true && \
+            adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true && \
+            adb shell "mkdir -p /data/local/tmp/qemu-e2e" && \
+            adb push /tmp/qemu-test-disks/e2e-test-disk.qcow2 /data/local/tmp/qemu-e2e/ && \
+            timeout 30m adb shell am instrument -w -e package com.droidvisor.e2e -e debug false com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
 
       - name: Upload E2E Test Results
         uses: actions/upload-artifact@v4

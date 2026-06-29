@@ -32,7 +32,18 @@ ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-too
 
 # 接受Android SDK许可并安装平台工具
 RUN yes | sdkmanager --licenses || true && \
-    sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+    sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+# 安装 NDK (分步安装以避免下载超时)
+RUN for i in 1 2 3; do \
+        if sdkmanager "ndk;26.1.10909125"; then \
+            echo "NDK installed successfully"; \
+            break; \
+        fi; \
+        echo "NDK install attempt $i failed, retrying..."; \
+        rm -rf ${ANDROID_HOME}/ndk/26.1.10909125 2>/dev/null || true; \
+        sleep 5; \
+    done
 
 # 配置Gradle Wrapper
 COPY gradle gradle/
