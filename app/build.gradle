@@ -30,8 +30,9 @@ android {
     buildTypes {
         debug {
             debuggable true
-            testCoverageEnabled true
             minifyEnabled false
+            enableUnitTestCoverage true
+            enableAndroidTestCoverage true
         }
         release {
             minifyEnabled true
@@ -162,5 +163,23 @@ tasks.register('jacocoTestReport', JacocoReport) {
         xml.required = true
         html.required = true
         csv.required = false
+    }
+}
+
+tasks.register('installandrun') {
+    dependsOn 'installDebug'
+    group = 'install'
+    description = 'Install debug APK, grant VM permission, and launch the app'
+
+    doLast {
+        def adb = "${android.sdkDirectory}/platform-tools/adb"
+        exec {
+            commandLine adb, 'shell', 'pm', 'grant', 'com.droidvisor',
+                    'android.permission.MANAGE_VIRTUAL_MACHINE'
+        }
+        exec {
+            commandLine adb, 'shell', 'am', 'start', '-n',
+                    'com.droidvisor/.MainActivity'
+        }
     }
 }
