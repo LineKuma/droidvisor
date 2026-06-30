@@ -33,7 +33,8 @@ import java.io.File
  */
 class QemuVmRuntime(
     private val context: Context,
-    private val qemuConfig: QemuVmConfig = QemuVmConfig()
+    private val qemuConfig: QemuVmConfig = QemuVmConfig(),
+    private val enableKvm: Boolean = false
 ) : VmRuntime {
 
     override val runtimeType: VmRuntime.RuntimeType = VmRuntime.RuntimeType.QEMU
@@ -102,8 +103,8 @@ class QemuVmRuntime(
         }
         this.currentConfig = config
 
-        // 更新 QEMU 配置
-        val updatedQemuConfig = qemuConfig.copy(baseConfig = config)
+        // 更新 QEMU 配置，合并 KVM 加速标志
+        val updatedQemuConfig = qemuConfig.copy(baseConfig = config, enableKvm = enableKvm)
         rebuildProcessManager(updatedQemuConfig)
 
         Logger.d(TAG, "Configuration updated: ${config.memoryBytes} bytes, ${config.cpuCores} CPUs")
@@ -423,12 +424,14 @@ class QemuVmRuntime(
     companion object {
         /**
          * 创建适用于当前设备的默认 QEMU 配置
+         *
+         * @param enableKvm 是否启用 KVM 硬件加速（需要 /dev/kvm 可访问）
          */
-        fun createDefaultConfig(context: Context): QemuVmConfig {
+        fun createDefaultConfig(context: Context, enableKvm: Boolean = false): QemuVmConfig {
             val qemuDir = File(context.filesDir, "qemu_vm")
             return QemuVmConfig(
                 workingDirectory = qemuDir,
-                enableKvm = false,  // Android 上通常没有 KVM 权限
+                enableKvm = enableKvm,
                 enableGraphic = false,
                 networkBackend = QemuVmConfig.NetworkBackend.User(
                     hostfwd = listOf("tcp::2222-:22", "tcp::2375-:2375")

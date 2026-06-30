@@ -1,31 +1,62 @@
-# Droidvisor Docker Compose Configuration for Testing
+# Droidvisor Docker Compose Configuration
 services:
-  # Android SDK 测试环境服务
-  android-test:
+  # ── Build-only service (no emulator) ──────────────────────────────
+  android-build:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: droidvisor-android-test
+    container_name: droidvisor-android-build
+    command: ["--no-emulator"]
     volumes:
       - .:/workspace
+      - gradle-cache:/root/.gradle
     working_dir: /workspace
     environment:
       - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
       - ANDROID_HOME=/opt/android-sdk
       - ANDROID_SDK_ROOT=/opt/android-sdk
-      - GRADLE_USER_HOME=/workspace/.gradle
+      - GRADLE_USER_HOME=/root/.gradle
     networks:
-      - droidvisor-test-network
+      - droidvisor-network
+
+  # ── Full service with emulator for E2E tests ──────────────────────
+  android-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: droidvisor-android-test
+    command: ["--start-emulator"]
+    volumes:
+      - .:/workspace
+      - gradle-cache:/root/.gradle
+      - avd-data:/root/.android/avd
+    working_dir: /workspace
+    environment:
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+      - ANDROID_HOME=/opt/android-sdk
+      - ANDROID_SDK_ROOT=/opt/android-sdk
+      - ANDROID_AVD_HOME=/root/.android/avd
+      - GRADLE_USER_HOME=/root/.gradle
+    # Uncomment to enable KVM hardware acceleration
+    # (requires host with KVM support and proper permissions)
+    devices:
+      - /dev/kvm:/dev/kvm
+    ports:
+      - "5554:5554"
+      - "5555:5555"
+    networks:
+      - droidvisor-network
     healthcheck:
-      test: ["CMD", "bash", "-c", "ps aux | grep -v grep | grep gradle"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      test: ["CMD", "adb", "shell", "getprop", "sys.boot_completed"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+
+volumes:
+  gradle-cache:
+  avd-data:
 
 networks:
-  droidvisor-test-network:
+  droidvisor-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16

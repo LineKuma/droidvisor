@@ -1,0 +1,44 @@
+# Build artifacts
+app/build/
+build/
+.gradle/
+*.class
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# Docs
+*.md
+LICENSE
+
+# CI
+.github/
+
+# Dev container
+.devcontainer/
+
+# Sensitive files
+local.properties
+*.jks
+*.keystore
+.env*
+.trae/

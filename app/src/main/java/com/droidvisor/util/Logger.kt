@@ -4,15 +4,15 @@ import android.util.Log
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 object Logger {
 
     private const val TAG = "droidvisor"
     private var logFile: File? = null
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
     enum class LogLevel {
         DEBUG, INFO, WARN, ERROR
@@ -91,7 +91,7 @@ object Logger {
 
     private fun log(level: LogLevel, tag: String, message: String) {
         val sanitizedMessage = sanitizeLog(message)
-        val timestamp = dateFormat.format(Date())
+        val timestamp = LocalDateTime.now().format(dateFormat)
         val logMessage = "[$timestamp] [$tag] [${level.name}] $sanitizedMessage"
 
         when (level) {

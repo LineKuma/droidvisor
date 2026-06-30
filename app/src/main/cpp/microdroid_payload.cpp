@@ -20,6 +20,7 @@
 #include <sstream>
 #include <sys/wait.h>
 #include <signal.h>
+#include <cerrno>
 
 #define LOG_TAG "DroidVisorPayload"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -37,6 +38,7 @@ static NotifyPayloadReadyFunc getNotifyPayloadReady() {
     if (!func) {
         LOGI("AVmPayload_notifyPayloadReady symbol not found");
         dlclose(handle);
+        return nullptr;
     }
     return func;
 }
@@ -101,12 +103,13 @@ static int startVsockServer(int port) {
 
     while (true) {
         int clientFd = accept(serverFd, nullptr, nullptr);
-        if (clientFd < 0) continue;
+        if (clientFd < 0) {
+            LOGE("accept() failed on port %d: %s", port, strerror(errno));
+            usleep(100000);
+            continue;
+        }
         std::thread(handleClient, clientFd).detach();
     }
-
-    close(serverFd);
-    return 0;
 }
 
 static void handleClient(int clientFd) {
@@ -121,7 +124,33 @@ static void handleClient(int clientFd) {
     close(clientFd);
 }
 
+static const std::vector<std::string> ALLOWED_COMMANDS = {
+    "ls", "cat", "echo", "whoami", "uname", "df", "free", "ps", "uptime",
+    "date", "hostname", "id", "pwd", "env", "mount", "ifconfig", "ip"
+};
+
+static bool isCommandAllowed(const std::string& cmd) {
+    static const std::string SHELL_META = ";|&$`\\\"'<>(){}!#~";
+    if (cmd.find_first_of(SHELL_META) != std::string::npos) {
+        return false;
+    }
+    std::string baseCmd = cmd.substr(0, cmd.find(' '));
+    if (baseCmd.empty()) return false;
+    size_t lastSlash = baseCmd.rfind('/');
+    if (lastSlash != std::string::npos) {
+        baseCmd = baseCmd.substr(lastSlash + 1);
+    }
+    for (const auto& allowed : ALLOWED_COMMANDS) {
+        if (baseCmd == allowed) return true;
+    }
+    return false;
+}
+
 static std::string executeCommand(const std::string& cmd) {
+    if (!isCommandAllowed(cmd)) {
+        LOGE("Rejected disallowed command: %s", cmd.c_str());
+        return "Error: command not allowed\n";
+    }
     std::string result;
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) return "Error: failed to execute command\n";

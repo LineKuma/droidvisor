@@ -9,7 +9,8 @@ com.droidvisor/
 ├── MainActivity.kt                    # 主入口，单 Activity 架构
 │
 ├── datastore/
-│   └── DataStoreFactory.kt            # DataStore 配置
+│   ├── DataStoreFactory.kt            # DataStore 配置
+│   └── VmStateDataStore.kt            # VM 状态持久化
 │
 ├── docker/
 │   ├── DockerApiClient.kt             # Docker HTTP API 客户端
@@ -17,27 +18,35 @@ com.droidvisor/
 │   ├── DockerError.kt                 # Docker 错误类型
 │   ├── DockerHttpClient.kt            # HTTP 客户端
 │   ├── DockerProxyService.kt          # Docker 代理服务
+│   ├── IDockerProxyService.kt         # Docker 代理服务接口
 │   └── model/
 │       ├── Container.kt               # 容器模型
 │       ├── DockerModels.kt            # Docker 通用模型
-│       └── Image.kt                    # 镜像模型
+│       └── Image.kt                   # 镜像模型
 │
 ├── ui/
 │   ├── components/
 │   │   ├── AnimatedStatusIndicator.kt # 动画状态指示器
-│   │   └── Skeleton.kt                # 骨架屏组件
+│   │   ├── SimulationModeBanner.kt    # 模拟模式横幅
+│   │   ├── Skeleton.kt               # 骨架屏组件
+│   │   └── StatusBadge.kt            # 状态徽章
 │   │
 │   ├── screen/
 │   │   ├── BackupManagementScreen.kt  # 备份管理界面
 │   │   ├── DockerDashboardScreen.kt   # Docker Dashboard
-│   │   ├── NetworkConfigScreen.kt      # 网络配置界面
-│   │   ├── PermissionScreen.kt         # AVF 权限检测
-│   │   ├── SettingsScreen.kt           # 设置页面
-│   │   ├── TerminalScreen.kt           # 终端界面
-│   │   └── VmManagementScreen.kt       # VM 管理界面
+│   │   ├── NetworkConfigScreen.kt     # 网络配置界面
+│   │   ├── PermissionScreen.kt        # AVF 权限检测
+│   │   ├── SettingsScreen.kt          # 设置页面
+│   │   ├── TerminalScreen.kt          # 终端界面
+│   │   └── VmManagementScreen.kt      # VM 管理界面
 │   │
 │   └── viewmodel/
-│       └── SettingsViewModel.kt        # 设置 ViewModel
+│       ├── BackupViewModel.kt         # 备份 ViewModel
+│       ├── NetworkConfigViewModel.kt  # 网络配置 ViewModel
+│       ├── PermissionViewModel.kt     # 权限检测 ViewModel
+│       ├── SettingsViewModel.kt       # 设置 ViewModel
+│       ├── TerminalViewModel.kt       # 终端 ViewModel
+│       └── VmManagementViewModel.kt   # VM 管理 ViewModel
 │
 ├── util/
 │   └── Logger.kt                      # 分级日志系统
@@ -45,23 +54,32 @@ com.droidvisor/
 └── vm/
     ├── AvfCapabilityChecker.kt        # AVF 能力检测
     ├── BackupManagerService.kt        # 备份管理服务
-    ├── ConsoleOutputService.kt         # 控制台输出服务
-    ├── VirtualMachineManagerService.kt # VM 生命周期管理
+    ├── ConsoleOutputService.kt        # 控制台输出服务
+    ├── VirtualMachineManagerService.kt # AVF VM 生命周期管理
     ├── VmConfig.kt                    # VM 配置
+    ├── VmConfigValidator.kt           # VM 配置验证
     ├── VmError.kt                     # VM 错误类型
     ├── VmManagerService.kt            # VM 管理服务
     ├── VmStatus.kt                    # VM 状态
     │
     ├── model/
     │   ├── Backup.kt                  # 备份模型
-    │   ├── NetworkConfig.kt            # 网络配置模型
-    │   ├── VmInstance.kt               # VM 实例模型
-    │   └── VmTemplate.kt               # VM 模板模型
+    │   ├── NetworkConfig.kt           # 网络配置模型
+    │   ├── VmInstance.kt              # VM 实例模型
+    │   └── VmTemplate.kt              # VM 模板模型
+    │
+    ├── qemu/
+    │   ├── QemuDiskManager.kt         # QEMU 磁盘管理
+    │   ├── QemuProcessManager.kt      # QEMU 进程管理
+    │   ├── QemuVmConfig.kt            # QEMU VM 配置
+    │   ├── QemuVmRuntime.kt           # QEMU VM 运行时
+    │   ├── QemuVsockChannel.kt        # QEMU Vsock 通道
+    │   └── VmRuntime.kt              # VM 运行时接口
     │
     └── vsock/
         ├── VsockChannel.kt            # Vsock 通道接口
         ├── VsockConnectionState.kt    # 连接状态
-        ├── VsockError.kt              # Vsock 错误类型
+        ├── VsockError.kt             # Vsock 错误类型
         └── VsockService.kt            # Vsock 服务
 ```
 
@@ -115,9 +133,9 @@ com.droidvisor/
 
 ## 版本信息
 
-- **Min SDK**: 33 (Android 13)
-- **Target SDK**: 34 (Android 14)
+- **Min SDK**: 34 (Android 14)
+- **Target SDK**: 35 (Android 15)
 - **Compose BOM**: 2024.03.00
 - **Kotlin**: 1.9.23
-- **AGP**: 8.4.0
-- **Gradle**: 8.5
+- **AGP**: 8.13.2
+- **Gradle**: 8.13

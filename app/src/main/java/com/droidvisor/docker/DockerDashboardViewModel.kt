@@ -72,6 +72,9 @@ class DockerDashboardViewModel : ViewModel() {
     private val _logFilter = MutableStateFlow("")
     val logFilter: StateFlow<String> = _logFilter.asStateFlow()
 
+    private val _lastError = MutableStateFlow<String?>(null)
+    val lastError: StateFlow<String?> = _lastError.asStateFlow()
+
     private val _expandedContainerId = MutableStateFlow<String?>(null)
     val expandedContainerId: StateFlow<String?> = _expandedContainerId.asStateFlow()
 
@@ -306,10 +309,14 @@ class DockerDashboardViewModel : ViewModel() {
                     )
                 }
             } catch (e: Exception) {
-                // ignore
+                _lastError.value = "Failed to pull image: ${e.message}"
             }
             _isLoading.value = false
         }
+    }
+
+    fun clearLastError() {
+        _lastError.value = null
     }
 
     fun removeImage(imageName: String, tag: String) {
@@ -697,7 +704,7 @@ class DockerDashboardViewModel : ViewModel() {
                     )
                 }
             } catch (e: Exception) {
-                // ignore
+                _lastError.value = "Failed to create volume: ${e.message}"
             }
         }
     }
@@ -715,7 +722,7 @@ class DockerDashboardViewModel : ViewModel() {
                     _volumes.value = _volumes.value.filter { it.Name != name }
                 }
             } catch (e: Exception) {
-                // ignore
+                _lastError.value = "Failed to remove volume: ${e.message}"
             }
         }
     }
@@ -761,7 +768,7 @@ class DockerDashboardViewModel : ViewModel() {
                     )
                 }
             } catch (e: Exception) {
-                // ignore
+                _lastError.value = "Failed to create network: ${e.message}"
             }
         }
     }
@@ -779,7 +786,7 @@ class DockerDashboardViewModel : ViewModel() {
                     _networks.value = _networks.value.filter { it.Id != id }
                 }
             } catch (e: Exception) {
-                // ignore
+                _lastError.value = "Failed to remove network: ${e.message}"
             }
         }
     }

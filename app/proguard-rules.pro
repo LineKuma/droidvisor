@@ -50,6 +50,13 @@
 # Keep Kotlin serializable
 -keepattributes *Annotation*
 -keep @kotlinx.serialization.Serializable class * {*;}
+-keep class kotlinx.serialization.internal.** { *; }
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
 # Keep Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}

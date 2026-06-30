@@ -61,8 +61,8 @@ check_prerequisites() {
         exit 1
     fi
 
-    if ! command -v docker-compose &> /dev/null; then
-        log_error "Docker Compose 未安装或不在 PATH 中"
+    if ! docker compose version &> /dev/null; then
+        log_error "Docker Compose V2 未安装或不在 PATH 中"
         exit 1
     fi
 
@@ -79,13 +79,10 @@ cleanup_test_environment() {
 
     cd "${PROJECT_ROOT}"
 
-    docker-compose -f "${COMPOSE_FILE}" down -v --remove-orphans 2>/dev/null || true
+    docker compose -f "${COMPOSE_FILE}" down -v --remove-orphans 2>/dev/null || true
 
     docker stop droidvisor-android-test 2>/dev/null || true
     docker rm droidvisor-android-test 2>/dev/null || true
-
-    docker stop droidvisor-dind 2>/dev/null || true
-    docker rm droidvisor-dind 2>/dev/null || true
 
     docker image prune -f 2>/dev/null || true
 
@@ -101,7 +98,8 @@ build_docker_image() {
         --build-arg BUILDKIT_INLINE_CACHE=1 \
         . 2>&1 | tee -a "${BUILD_LOG}"
 
-    if [ $? -eq 0 ]; then
+    local exit_code=${PIPESTATUS[0]}
+    if [ $exit_code -eq 0 ]; then
         log_info "Docker 镜像构建成功"
     else
         log_error "Docker 镜像构建失败"
@@ -114,7 +112,7 @@ start_test_containers() {
 
     cd "${PROJECT_ROOT}"
 
-    docker-compose -f "${COMPOSE_FILE}" up -d
+    docker compose -f "${COMPOSE_FILE}" up -d
 
     log_info "等待容器启动..."
 
@@ -123,9 +121,8 @@ start_test_containers() {
 
     while [ $wait_count -lt $max_wait ]; do
         local android_test_status=$(docker inspect -f '{{.State.Running}}' droidvisor-android-test 2>/dev/null || echo "false")
-        local dind_status=$(docker inspect -f '{{.State.Running}}' droidvisor-dind 2>/dev/null || echo "false")
 
-        if [ "$android_test_status" = "true" ] && [ "$dind_status" = "true" ]; then
+        if [ "$android_test_status" = "true" ]; then
             log_info "所有容器已启动"
             return 0
         fi
@@ -135,27 +132,7 @@ start_test_containers() {
     done
 
     log_error "容器启动超时"
-    docker-compose -f "${COMPOSE_FILE}" logs
-    exit 1
-}
-
-wait_for_dind_ready() {
-    log_info "等待 Docker-in-Docker 服务就绪..."
-
-    local max_wait=60
-    local wait_count=0
-
-    while [ $wait_count -lt $max_wait ]; do
-        if docker exec droidvisor-dind docker info &> /dev/null; then
-            log_info "Docker-in-Docker 服务已就绪"
-            return 0
-        fi
-
-        sleep 2
-        wait_count=$((wait_count + 2))
-    done
-
-    log_error "Docker-in-Docker 服务启动超时"
+    docker compose -f "${COMPOSE_FILE}" logs
     exit 1
 }
 
@@ -181,8 +158,6 @@ run_unit_tests() {
 
 run_integration_tests() {
     log_info "运行集成测试..."
-
-    wait_for_dind_ready
 
     cd "${PROJECT_ROOT}"
 
@@ -229,7 +204,7 @@ stop_test_containers() {
 
     cd "${PROJECT_ROOT}"
 
-    docker-compose -f "${COMPOSE_FILE}" down 2>/dev/null || true
+    docker compose -f "${COMPOSE_FILE}" down 2>/dev/null || true
 
     log_info "测试容器已停止"
 }

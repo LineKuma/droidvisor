@@ -41,3 +41,11 @@ Thumbs.db
 
 # Build logs
 build.log
+*.log
+
+# Android Studio
+captures/
+.externalNativeBuild/
+
+# Kotlin
+.kotlin/

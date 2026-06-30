@@ -136,8 +136,8 @@ fun PermissionScreen(
 
             PermissionCard(
                 icon = Icons.Default.Shield,
-                title = "受保护虚拟机 (pKVM)",
-                description = "pKVM 支持，提供硬件级安全隔离",
+                title = "AVF 受保护虚拟机",
+                description = "AVF pKVM 支持，提供硬件级安全隔离",
                 isGranted = permissionState.protectedVmSupported,
                 isCritical = false
             )
@@ -146,11 +146,25 @@ fun PermissionScreen(
 
             PermissionCard(
                 icon = Icons.Default.Computer,
-                title = "普通虚拟机 (KVM)",
-                description = "KVM 支持，适合开发和测试环境",
+                title = "AVF 普通虚拟机",
+                description = "AVF 非保护模式，适合开发和测试环境",
                 isGranted = permissionState.nonProtectedVmSupported,
                 isCritical = false
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // KVM 硬件加速状态（QEMU fallback 时使用）
+            if (permissionState.plainKvmAccessible) {
+                PermissionCard(
+                    icon = Icons.Default.Speed,
+                    title = "KVM 硬件加速",
+                    description = "/dev/kvm 可访问，QEMU 可使用硬件加速",
+                    isGranted = true,
+                    isInfoOnly = true,
+                    statusLabel = "可用"
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -83,6 +83,10 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
+      - name: Cleanup Keystore
+        if: always()
+        run: rm -f release.jks
+
       - name: Rename Release APK
         run: |
           TAG_VERSION=$VERSION_NAME

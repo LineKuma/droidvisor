@@ -2,9 +2,9 @@ name: Gradle Wrapper Validation
 
 on:
   push:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, develop, agent-develop]
   pull_request:
-    branches: [main, master, develop, agent-develop]
+    branches: [main, develop, agent-develop]
   workflow_dispatch:
 
 concurrency:

@@ -40,6 +40,8 @@ class PermissionViewModelTest {
         assertFalse(state.protectedVmSupported)
         assertFalse(state.nonProtectedVmSupported)
         assertFalse(state.vsockSupported)
+        assertFalse(state.qemuSupported)
+        assertFalse(state.plainKvmAccessible)
         assertTrue(state.avfUnavailableReasons.isEmpty())
     }
 
@@ -193,7 +195,7 @@ class PermissionViewModelTest {
     fun permissionState_avfWarnings_containsNonProtectedVmWarningWhenNotSupported() {
         val state = viewModel.permissionState.value
         assertFalse(state.nonProtectedVmSupported)
-        assertTrue(state.avfWarnings.any { it.contains("普通虚拟机") || it.contains("KVM") })
+        assertTrue(state.avfWarnings.any { it.contains("非保护虚拟机") })
     }
 
     @Test

@@ -8,12 +8,19 @@ import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -28,9 +35,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -38,6 +48,7 @@ import androidx.navigation.compose.rememberNavController
 import com.droidvisor.datastore.dataStore
 import com.droidvisor.docker.DockerDashboardViewModel
 import com.droidvisor.docker.DockerProxyService
+import com.droidvisor.ui.screen.CreateVmScreen
 import com.droidvisor.ui.screen.DockerDashboardScreen
 import com.droidvisor.ui.screen.PermissionScreen
 import com.droidvisor.ui.viewmodel.PermissionViewModel
@@ -45,6 +56,7 @@ import com.droidvisor.ui.screen.SettingsScreen
 import com.droidvisor.ui.screen.TerminalScreen
 import com.droidvisor.ui.screen.VmManagementScreen
 import com.droidvisor.ui.viewmodel.SettingsViewModel
+import com.droidvisor.ui.viewmodel.VmManagementViewModel
 import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.ConsoleOutputService
 import com.droidvisor.vm.VmManagerService
@@ -61,22 +73,20 @@ class MainActivity : ComponentActivity() {
     private val _backupManagerService = MutableStateFlow<BackupManagerService?>(null)
     private val _dockerProxyService = MutableStateFlow<DockerProxyService?>(null)
 
-    private var vmManagerBound = false
-    private var consoleServiceBound = false
-    private var vsockServiceBound = false
-    private var backupManagerBound = false
-    private var dockerProxyBound = false
+    private var boundCount = 0
+    private var expectedBoundCount = 5
+
+    private val _allServicesReady = MutableStateFlow(false)
 
     private val vmManagerConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as VmManagerService.LocalBinder
             _vmManagerService.value = binder.getService()
-            vmManagerBound = true
+            checkReady()
         }
-
         override fun onServiceDisconnected(arg0: ComponentName) {
-            vmManagerBound = false
             _vmManagerService.value = null
+            _allServicesReady.value = false
         }
     }
 
@@ -84,12 +94,11 @@ class MainActivity : ComponentActivity() {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as ConsoleOutputService.LocalBinder
             _consoleService.value = binder.getService()
-            consoleServiceBound = true
+            checkReady()
         }
-
         override fun onServiceDisconnected(arg0: ComponentName) {
-            consoleServiceBound = false
             _consoleService.value = null
+            _allServicesReady.value = false
         }
     }
 
@@ -97,14 +106,12 @@ class MainActivity : ComponentActivity() {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as VsockService.LocalBinder
             _vsockService.value = binder.getService()
-            vsockServiceBound = true
-
             _dockerProxyService.value?.attachVsockService(binder.getService())
+            checkReady()
         }
-
         override fun onServiceDisconnected(arg0: ComponentName) {
-            vsockServiceBound = false
             _vsockService.value = null
+            _allServicesReady.value = false
         }
     }
 
@@ -112,12 +119,11 @@ class MainActivity : ComponentActivity() {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as BackupManagerService.LocalBinder
             _backupManagerService.value = binder.getService()
-            backupManagerBound = true
+            checkReady()
         }
-
         override fun onServiceDisconnected(arg0: ComponentName) {
-            backupManagerBound = false
             _backupManagerService.value = null
+            _allServicesReady.value = false
         }
     }
 
@@ -125,16 +131,19 @@ class MainActivity : ComponentActivity() {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as DockerProxyService.LocalBinder
             _dockerProxyService.value = binder.getService()
-            dockerProxyBound = true
-
-            _vsockService.value?.let { vsock ->
-                binder.getService().attachVsockService(vsock)
-            }
+            _vsockService.value?.let { vsock -> binder.getService().attachVsockService(vsock) }
+            checkReady()
         }
-
         override fun onServiceDisconnected(arg0: ComponentName) {
-            dockerProxyBound = false
             _dockerProxyService.value = null
+            _allServicesReady.value = false
+        }
+    }
+
+    private fun checkReady() {
+        boundCount++
+        if (boundCount >= expectedBoundCount) {
+            _allServicesReady.value = true
         }
     }
 
@@ -144,19 +153,15 @@ class MainActivity : ComponentActivity() {
         Intent(this, VmManagerService::class.java).also { intent ->
             bindService(intent, vmManagerConnection, Context.BIND_AUTO_CREATE)
         }
-
         Intent(this, ConsoleOutputService::class.java).also { intent ->
             bindService(intent, consoleServiceConnection, Context.BIND_AUTO_CREATE)
         }
-
         Intent(this, VsockService::class.java).also { intent ->
             bindService(intent, vsockServiceConnection, Context.BIND_AUTO_CREATE)
         }
-
         Intent(this, BackupManagerService::class.java).also { intent ->
             bindService(intent, backupManagerConnection, Context.BIND_AUTO_CREATE)
         }
-
         Intent(this, DockerProxyService::class.java).also { intent ->
             bindService(intent, dockerProxyConnection, Context.BIND_AUTO_CREATE)
         }
@@ -167,32 +172,22 @@ class MainActivity : ComponentActivity() {
                 consoleOutputServiceFlow = _consoleService.asStateFlow(),
                 backupManagerServiceFlow = _backupManagerService.asStateFlow(),
                 vsockServiceFlow = _vsockService.asStateFlow(),
-                dockerProxyServiceFlow = _dockerProxyService.asStateFlow()
+                dockerProxyServiceFlow = _dockerProxyService.asStateFlow(),
+                allServicesReadyFlow = _allServicesReady.asStateFlow()
             )
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (vmManagerBound) {
-            unbindService(vmManagerConnection)
-            vmManagerBound = false
-        }
-        if (consoleServiceBound) {
-            unbindService(consoleServiceConnection)
-            consoleServiceBound = false
-        }
-        if (vsockServiceBound) {
-            unbindService(vsockServiceConnection)
-            vsockServiceBound = false
-        }
-        if (backupManagerBound) {
-            unbindService(backupManagerConnection)
-            backupManagerBound = false
-        }
-        if (dockerProxyBound) {
-            unbindService(dockerProxyConnection)
-            dockerProxyBound = false
+        listOf(
+            vmManagerConnection to "vmManager",
+            consoleServiceConnection to "console",
+            vsockServiceConnection to "vsock",
+            backupManagerConnection to "backup",
+            dockerProxyConnection to "dockerProxy"
+        ).forEach { (conn, _) ->
+            try { unbindService(conn) } catch (_: Exception) {}
         }
     }
 }
@@ -209,20 +204,21 @@ fun DroidvisorApp(
     consoleOutputServiceFlow: StateFlow<ConsoleOutputService?>,
     backupManagerServiceFlow: StateFlow<BackupManagerService?>,
     vsockServiceFlow: StateFlow<VsockService?>,
-    dockerProxyServiceFlow: StateFlow<DockerProxyService?>
+    dockerProxyServiceFlow: StateFlow<DockerProxyService?>,
+    allServicesReadyFlow: StateFlow<Boolean>
 ) {
     val vmManagerService by vmManagerServiceFlow.collectAsState()
     val consoleOutputService by consoleOutputServiceFlow.collectAsState()
     val backupManagerService by backupManagerServiceFlow.collectAsState()
     val vsockService by vsockServiceFlow.collectAsState()
     val dockerProxyService by dockerProxyServiceFlow.collectAsState()
+    val allServicesReady by allServicesReadyFlow.collectAsState()
 
     val navController = rememberNavController()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var hasPassedPermissionCheck by remember { mutableStateOf(false) }
 
     val permissionViewModel: PermissionViewModel = viewModel()
-
     val permissionState by permissionViewModel.permissionState.collectAsState()
 
     if (!hasPassedPermissionCheck) {
@@ -230,9 +226,24 @@ fun DroidvisorApp(
             viewModel = permissionViewModel,
             onAllPermissionsGranted = { hasPassedPermissionCheck = true }
         )
+    } else if (!allServicesReady) {
+        // Loading state while services bind
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("正在启动服务...", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
     } else {
         val dockerViewModel: DockerDashboardViewModel = viewModel()
+        val vmManagementViewModel: VmManagementViewModel = viewModel()
 
+        LaunchedEffect(vmManagerService) {
+            if (vmManagerService != null) {
+                vmManagementViewModel.bindService(vmManagerService!!)
+            }
+        }
         LaunchedEffect(dockerProxyService) {
             if (dockerProxyService != null) {
                 dockerViewModel.attachDockerProxyService(dockerProxyService!!)
@@ -283,7 +294,24 @@ fun DroidvisorApp(
                     composable("vm") {
                         VmManagementScreen(
                             vmManagerService = vmManagerService,
-                            backupManagerService = backupManagerService
+                            backupManagerService = backupManagerService,
+                            viewModel = vmManagementViewModel,
+                            onNavigateToCreate = {
+                                navController.navigate("vm/create")
+                            }
+                        )
+                    }
+                    composable("vm/create") {
+                        CreateVmScreen(
+                            onNavigateBack = { navController.popBackStack() },
+                            onCreateVm = { name, template, protectedVm, customMem, customCpu, customDisk ->
+                                vmManagementViewModel.createVm(
+                                    name, template, protectedVm,
+                                    customMem, customCpu, customDisk
+                                )
+                                navController.popBackStack()
+                            },
+                            avfCapabilities = vmManagerService?.avfCapabilities?.value
                         )
                     }
                     composable("docker") {

@@ -87,6 +87,7 @@ private data class VmInstanceData(
     val name: String,
     val templateName: String,
     val templatePayloadBinaryName: String,
+    val templateType: VmTemplateType = VmTemplateType.CUSTOM,
     val customMemoryBytes: Long?,
     val customCpuCores: Int?,
     val customDiskSizeBytes: Long?,
@@ -97,7 +98,7 @@ private data class VmInstanceData(
 ) {
     fun toVmInstance(): VmInstance {
         val template = VmTemplate(
-            type = VmTemplateType.CUSTOM,
+            type = templateType,
             name = templateName,
             payloadBinaryName = templatePayloadBinaryName,
             memoryBytes = 0L,
@@ -126,6 +127,7 @@ private data class VmInstanceData(
                 name = vm.name,
                 templateName = vm.template.name,
                 templatePayloadBinaryName = vm.template.payloadBinaryName,
+                templateType = vm.template.type,
                 customMemoryBytes = vm.customMemoryBytes,
                 customCpuCores = vm.customCpuCores,
                 customDiskSizeBytes = vm.customDiskSizeBytes,

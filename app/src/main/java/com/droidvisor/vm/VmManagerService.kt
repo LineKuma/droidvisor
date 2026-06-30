@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class VmManagerService : Service() {
 
@@ -112,23 +113,30 @@ class VmManagerService : Service() {
         }
     }
 
-    private fun checkAvfCapabilities() {
+    /** 重新检测 AVF 能力（供 UI 刷新按钮调用） */
+    fun checkAvfCapabilities() {
         val checker = AvfCapabilityChecker(this)
         val capabilities = checker.checkCapabilities()
         _avfCapabilities.value = capabilities
         _isAvfAvailable.value = capabilities.canRunRealVm
-        Logger.d(TAG, "AVF capabilities: available=${capabilities.isAvfSupported}, canRunRealVm=${capabilities.canRunRealVm}, reasons=${capabilities.avfUnavailableReasons}")
+        Logger.d(TAG, "AVF capabilities re-checked: available=${capabilities.isAvfSupported}, canRunRealVm=${capabilities.canRunRealVm}, reasons=${capabilities.avfUnavailableReasons}")
     }
 
     private fun initQemuRuntime() {
-        val qemu = QemuVmRuntime(this)
+        val caps = _avfCapabilities.value
+        val enableKvm = caps?.isPlainKvmAccessible ?: false
+        val qemu = QemuVmRuntime(this, enableKvm = enableKvm)
         val available = qemu.isAvailable()
         _isQemuAvailable.value = available
 
         if (available) {
             qemu.initialize()
             this.qemuRuntime = qemu
-            Logger.d(TAG, "QEMU runtime initialized as fallback")
+            if (enableKvm) {
+                Logger.d(TAG, "QEMU runtime initialized with KVM hardware acceleration")
+            } else {
+                Logger.d(TAG, "QEMU runtime initialized as fallback (TCG emulation)")
+            }
         } else {
             Logger.d(TAG, "QEMU runtime not available on this device")
         }
@@ -159,8 +167,20 @@ class VmManagerService : Service() {
         }
     }
 
-    fun createVm(name: String, template: VmTemplate): VmInstance {
-        val vm = VmInstance(name = name, template = template)
+    fun createVm(
+        name: String,
+        template: VmTemplate,
+        customMemoryBytes: Long? = null,
+        customCpuCores: Int? = null,
+        customDiskSizeBytes: Long? = null
+    ): VmInstance {
+        val vm = VmInstance(
+            name = name,
+            template = template,
+            customMemoryBytes = customMemoryBytes,
+            customCpuCores = customCpuCores,
+            customDiskSizeBytes = customDiskSizeBytes
+        )
         _vmInstances.value = _vmInstances.value + vm
         saveState()
         Logger.d(TAG, "Created VM: ${vm.name} (${vm.id})")
@@ -308,15 +328,10 @@ class VmManagerService : Service() {
     fun restartVm(vmId: String) {
         coroutineScope.launch {
             stopVm(vmId)
-            // Wait for VM to actually stop (stopVm is async)
-            val maxWaitMs = 10000L
-            val checkIntervalMs = 100L
-            var waited = 0L
-            while (waited < maxWaitMs) {
-                val vm = _vmInstances.value.find { it.id == vmId }
-                if (vm == null || !vm.isRunning) break
-                kotlinx.coroutines.delay(checkIntervalMs)
-                waited += checkIntervalMs
+            withTimeoutOrNull(10000L) {
+                _vmInstances.first { list ->
+                    list.find { it.id == vmId }?.isRunning != true
+                }
             }
             startVm(vmId)
         }
@@ -328,15 +343,10 @@ class VmManagerService : Service() {
             if (vm != null) {
                 if (vm.isRunning) {
                     stopVm(vmId)
-                    // Wait for VM to actually stop (stopVm is async)
-                    val maxWaitMs = 5000L
-                    val checkIntervalMs = 100L
-                    var waited = 0L
-                    while (waited < maxWaitMs) {
-                        val currentVm = _vmInstances.value.find { it.id == vmId }
-                        if (currentVm == null || !currentVm.isRunning) break
-                        kotlinx.coroutines.delay(checkIntervalMs)
-                        waited += checkIntervalMs
+                    withTimeoutOrNull(5000L) {
+                        _vmInstances.first { list ->
+                            list.find { it.id == vmId }?.isRunning != true
+                        }
                     }
                 }
                 activeVms.remove(vmId)

@@ -349,16 +349,6 @@ class DockerProxyService : Service(), IDockerProxyService {
         val isError: Boolean = false
     )
 
-    private suspend fun checkDockerVersion() {
-        try {
-            val version = apiClient.getDockerVersion()
-            _dockerVersion.value = version.Version
-            Logger.d(TAG, "Docker version: ${version.Version}")
-        } catch (e: DockerError) {
-            Logger.e(TAG, "Failed to get Docker version", e)
-        }
-    }
-
     private suspend fun refreshContainers() {
         listContainers()
     }

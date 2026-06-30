@@ -168,6 +168,39 @@ class AvfCapabilityCheckerTest {
     }
 
     @Test
+    fun `hasAnyRuntime true when QEMU with KVM available`() {
+        val caps = AvfCapabilityChecker.AvfCapabilities(
+            isAvfSupported = false,
+            isProtectedVmSupported = false,
+            isNonProtectedVmSupported = false,
+            isVsockSupported = false,
+            minimumSdkMet = true,
+            isQemuSupported = true,
+            isPlainKvmAccessible = true
+        )
+        assertTrue("hasAnyRuntime should be true with KVM-accelerated QEMU", caps.hasAnyRuntime)
+        assertTrue("canUseKvmAcceleratedQemu should be true", caps.canUseKvmAcceleratedQemu)
+        assertFalse("isSimulationOnly should be false", caps.isSimulationOnly)
+        assertTrue("summaryText should mention KVM", caps.summaryText.contains("KVM"))
+        assertTrue("recommendedRuntime should mention KVM", caps.recommendedRuntime.contains("KVM"))
+    }
+
+    @Test
+    fun `canUseKvmAcceleratedQemu false without KVM access`() {
+        val caps = AvfCapabilityChecker.AvfCapabilities(
+            isAvfSupported = false,
+            isProtectedVmSupported = false,
+            isNonProtectedVmSupported = false,
+            isVsockSupported = false,
+            minimumSdkMet = true,
+            isQemuSupported = true,
+            isPlainKvmAccessible = false
+        )
+        assertFalse("canUseKvmAcceleratedQemu should be false without KVM", caps.canUseKvmAcceleratedQemu)
+        assertTrue("hasAnyRuntime should still be true via plain QEMU", caps.hasAnyRuntime)
+    }
+
+    @Test
     fun `isSimulationOnly true when nothing available`() {
         val caps = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = false,
@@ -374,6 +407,7 @@ class AvfCapabilityCheckerTest {
             isVsockSupported = true,
             minimumSdkMet = true,
             isQemuSupported = false,
+            isPlainKvmAccessible = false,
             avfUnavailableReasons = emptyList()
         )
         val caps2 = AvfCapabilityChecker.AvfCapabilities(
@@ -383,6 +417,7 @@ class AvfCapabilityCheckerTest {
             isVsockSupported = true,
             minimumSdkMet = true,
             isQemuSupported = false,
+            isPlainKvmAccessible = false,
             avfUnavailableReasons = emptyList()
         )
         assertEquals("Caps with same values should be equal", caps1, caps2)

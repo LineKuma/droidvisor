@@ -139,28 +139,30 @@ class TerminalViewModel : ViewModel() {
 
     fun startReceivingOutput() {
         viewModelScope.launch {
-            val inputStream = vsockService?.getInputStream()
-            if (inputStream == null) {
-                Logger.w(TAG, "No input stream available for receiving output")
-                return@launch
-            }
-
-            val buffer = ByteArray(4096)
-            try {
-                while (vsockService?.isConnected() == true) {
-                    val bytesRead = inputStream.read(buffer)
-                    if (bytesRead > 0) {
-                        val output = String(buffer, 0, bytesRead)
-                        appendOutput(output)
-                        Logger.d(TAG, "Received ${bytesRead} bytes from VM: ${output.take(100)}")
-                    } else if (bytesRead == -1) {
-                        appendOutputLine("[VM连接已关闭]")
-                        break
-                    }
+            withContext(Dispatchers.IO) {
+                val inputStream = vsockService?.getInputStream()
+                if (inputStream == null) {
+                    Logger.w(TAG, "No input stream available for receiving output")
+                    return@withContext
                 }
-            } catch (e: Exception) {
-                Logger.e(TAG, "Error receiving output from VM", e)
-                appendOutputLine("[接收输出错误: ${e.message}]")
+
+                val buffer = ByteArray(4096)
+                try {
+                    while (vsockService?.isConnected() == true) {
+                        val bytesRead = inputStream.read(buffer)
+                        if (bytesRead > 0) {
+                            val output = String(buffer, 0, bytesRead)
+                            appendOutput(output)
+                            Logger.d(TAG, "Received ${bytesRead} bytes from VM: ${output.take(100)}")
+                        } else if (bytesRead == -1) {
+                            appendOutputLine("[VM连接已关闭]")
+                            break
+                        }
+                    }
+                } catch (e: Exception) {
+                    Logger.e(TAG, "Error receiving output from VM", e)
+                    appendOutputLine("[接收输出错误: ${e.message}]")
+                }
             }
         }
     }

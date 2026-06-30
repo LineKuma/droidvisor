@@ -8,6 +8,8 @@ import android.os.IBinder
 import com.droidvisor.util.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,7 +47,7 @@ data class BackupProgress(
 
 class BackupManagerService : Service() {
     private val binder = LocalBinder()
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _backups = MutableStateFlow<List<Backup>>(emptyList())
     val backups: StateFlow<List<Backup>> = _backups.asStateFlow()
@@ -434,6 +436,7 @@ class BackupManagerService : Service() {
     }
 
     override fun onDestroy() {
+        coroutineScope.cancel()
         super.onDestroy()
     }
 

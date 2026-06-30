@@ -63,6 +63,26 @@ class AvfCapabilityCheckerQemuTest {
     }
 
     @Test
+    fun `KVM accelerated QEMU is preferred over plain QEMU`() {
+        val caps = AvfCapabilityChecker.AvfCapabilities(
+            isAvfSupported = false,
+            isProtectedVmSupported = false,
+            isNonProtectedVmSupported = false,
+            isVsockSupported = false,
+            minimumSdkMet = true,
+            isQemuSupported = true,
+            isPlainKvmAccessible = true
+        )
+
+        assertFalse(caps.canRunRealVm)
+        assertTrue(caps.hasAnyRuntime)
+        assertTrue(caps.canUseKvmAcceleratedQemu)
+        assertFalse(caps.isSimulationOnly)
+        assertEquals("QEMU + KVM 硬件加速可用", caps.summaryText)
+        assertEquals("QEMU + KVM (硬件加速)", caps.recommendedRuntime)
+    }
+
+    @Test
     fun `AVF preferred over QEMU when both available`() {
         val caps = AvfCapabilityChecker.AvfCapabilities(
             isAvfSupported = true,

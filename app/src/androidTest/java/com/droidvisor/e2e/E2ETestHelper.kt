@@ -29,31 +29,50 @@ object E2ETestHelper {
 
     /**
      * 关闭权限屏幕（应用首次启动时的权限引导页）
-     * 尝试点击"继续使用"或"开始使用"按钮
+     * 尝试点击"继续使用"、"开始使用"或英文 "Continue" 按钮；
+     * 都没有时退化为按一次返回键跳过。
      */
     fun dismissPermissionScreen(
         composeTestRule: AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
     ) {
+        val candidates = listOf("继续使用", "开始使用", "Continue")
+
         composeTestRule.waitUntil(DEFAULT_TIMEOUT_MS) {
-            try {
-                composeTestRule.onAllNodesWithText("继续使用")
-                    .fetchSemanticsNodes().isNotEmpty()
-            } catch (_: Exception) {
-                false
+            candidates.any { label ->
+                try {
+                    composeTestRule.onAllNodesWithText(label)
+                        .fetchSemanticsNodes().isNotEmpty()
+                } catch (_: Exception) {
+                    false
+                }
             } || try {
-                composeTestRule.onAllNodesWithText("开始使用")
+                // 兜底：如果权限屏已经消失、主页 Tab 已出现，也认为关闭成功。
+                composeTestRule.onAllNodesWithText("虚拟机")
                     .fetchSemanticsNodes().isNotEmpty()
             } catch (_: Exception) {
                 false
             }
         }
 
-        try {
-            composeTestRule.onNodeWithText("继续使用").performClick()
-        } catch (_: Exception) {
+        var clicked = false
+        for (label in candidates) {
             try {
-                composeTestRule.onNodeWithText("开始使用").performClick()
+                composeTestRule.onNodeWithText(label).performClick()
+                clicked = true
+                break
             } catch (_: Exception) {
+                // 该按钮不存在或不可点击，尝试下一个
+            }
+        }
+
+        if (!clicked) {
+            // 最后兜底：按一次系统返回键
+            try {
+                composeTestRule.activity.runOnUiThread {
+                    composeTestRule.activity.onBackPressedDispatcher.onBackPressed()
+                }
+            } catch (_: Exception) {
+                // 忽略
             }
         }
 

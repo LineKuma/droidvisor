@@ -11,7 +11,8 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.concurrent.locks.ReentrantLock
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class DockerHttpClient(private val vsockService: VsockService) {
 
@@ -21,7 +22,7 @@ class DockerHttpClient(private val vsockService: VsockService) {
     private var useVsock: Boolean = false
 
     /** 保护 Vsock 流的并发访问锁 — 避免多协程同时读写导致数据错乱 */
-    private val vsockLock = ReentrantLock()
+    private val vsockLock = Mutex()
 
     val isVsockEnabled: Boolean
         get() = useVsock
@@ -65,8 +66,7 @@ class DockerHttpClient(private val vsockService: VsockService) {
 
     private suspend fun executeVsockRequest(method: String, path: String, body: String): String {
         return withContext(Dispatchers.IO) {
-            vsockLock.lock()
-            try {
+            vsockLock.withLock {
                 val outputStream = vsockService.getOutputStream()
                     ?: throw DockerError.ConnectionError("Vsock output stream not available")
                 val rawStream = vsockService.getInputStream()
@@ -90,13 +90,6 @@ class DockerHttpClient(private val vsockService: VsockService) {
                         else -> DockerError.ApiError(sanitizedError, response.statusCode)
                     }
                 }
-            } catch (e: DockerError) {
-                throw e
-            } catch (e: Exception) {
-                Logger.e(TAG, "Vsock request failed: ${e.message}", e)
-                throw DockerError.ConnectionError("Vsock connection failed: ${e.message}")
-            } finally {
-                vsockLock.unlock()
             }
         }
     }

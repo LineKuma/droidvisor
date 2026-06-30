@@ -23,7 +23,7 @@ android {
         }
 
         ndk {
-            abiFilters 'arm64-v8a'
+            abiFilters 'arm64-v8a', 'x86_64'
         }
     }
 
@@ -39,10 +39,11 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.create("release") {
-                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH") ?: "${rootDir}/release.jks")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: "droidvisor123"
-                keyAlias System.getenv("ANDROID_KEY_ALIAS") ?: "droidvisor"
-                keyPassword System.getenv("ANDROID_KEY_PASSWORD") ?: "droidvisor123"
+                def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "${rootDir}/release.jks"
+                storeFile file(keystorePath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
             }
         }
     }
@@ -73,7 +74,7 @@ android {
     }
     lint {
         sarifOutput = file("$buildDir/reports/lint-results-debug.sarif")
-        abortOnError = false
+        abortOnError = true
     }
     testOptions {
         unitTests {
@@ -121,7 +122,7 @@ detekt {
     allRules = false
     config = files("$rootDir/detekt-config.yml")
     baseline = file("$rootDir/detekt-baseline.xml")
-    ignoreFailures = true
+    ignoreFailures = false
 }
 
 tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach {
@@ -169,17 +170,259 @@ tasks.register('jacocoTestReport', JacocoReport) {
 tasks.register('installandrun') {
     dependsOn 'installDebug'
     group = 'install'
-    description = 'Install debug APK, grant VM permission, and launch the app'
+    description = 'Install debug APK, grant VM permission, enable AVF, and launch the app'
 
     doLast {
         def adb = "${android.sdkDirectory}/platform-tools/adb"
+        def pkg = android.defaultConfig.applicationId
+
+        // Discover connected devices; fall back to a single default if none listed.
+        def devicesOut = new ByteArrayOutputStream()
         exec {
-            commandLine adb, 'shell', 'pm', 'grant', 'com.droidvisor',
-                    'android.permission.MANAGE_VIRTUAL_MACHINE'
+            commandLine adb, 'devices'
+            standardOutput = devicesOut
+            ignoreExitValue = true
         }
+        def serials = devicesOut.toString().readLines()
+                .drop(1)
+                .collect { it.split(/\s+/) }
+                .findAll { it.size() >= 2 && it[1] == 'device' }
+                .collect { it[0] }
+
+        if (serials.isEmpty()) {
+            serials = ['']
+        }
+
+        serials.each { serial ->
+            def target = serial ? ['-s', serial] : []
+            def pkgTarget = target
+
+            logger.lifecycle(">> Preparing device ${serial ?: '(default)'}")
+
+            // ── Grant MANAGE_VIRTUAL_MACHINE permission
+            // This is a signature|privileged-level permission.  On most devices
+            // (including AVDs) adb shell pm grant will fail unless the shell is
+            // running as root.  We try root first, then fall back to unprivileged.
+            logger.lifecycle(">> Attempting to grant MANAGE_VIRTUAL_MACHINE permission...")
+
+            def grantStdout = new ByteArrayOutputStream()
+            def grantStderr  = new ByteArrayOutputStream()
+
+            // Try root shell first
+            def rootResult = exec {
+                commandLine = ([adb] + pkgTarget + ['root']) as List<String>
+                ignoreExitValue = true
+                standardOutput = new ByteArrayOutputStream()
+                errorOutput    = new ByteArrayOutputStream()
+            }
+            if (rootResult.exitValue == 0) {
+                logger.lifecycle("   adb root succeeded, retrying grant as root...")
+                // Small delay for root shell to settle
+                sleep(500)
+            }
+
+            def grantResult = exec {
+                commandLine = ([adb] + pkgTarget + [
+                    'shell', 'pm', 'grant', pkg, 'android.permission.MANAGE_VIRTUAL_MACHINE'
+                ]) as List<String>
+                ignoreExitValue = true
+                standardOutput = grantStdout
+                errorOutput    = grantStderr
+            }
+
+            if (grantResult.exitValue == 0) {
+                logger.lifecycle("   MANAGE_VIRTUAL_MACHINE granted successfully")
+            } else {
+                def grantOut = grantStdout.toString().trim()
+                def grantErr = grantStderr.toString().trim()
+                logger.warn("   pm grant FAILED (exit=${grantResult.exitValue})")
+                if (grantOut) logger.warn("   stdout: ${grantOut}")
+                if (grantErr) logger.warn("   stderr: ${grantErr}")
+                logger.warn("")
+                logger.warn("   ╔══════════════════════════════════════════════════════════════╗")
+                logger.warn("   ║  MANAGE_VIRTUAL_MACHINE is a signature|privileged permission ║")
+                logger.warn("   ║  and could NOT be granted via unprivileged adb shell.        ║")
+                logger.warn("   ║                                                              ║")
+                logger.warn("   ║  Options:                                                    ║")
+                logger.warn("   ║  1) Rooted device:  adb root && adb shell pm grant           ║")
+                logger.warn("   ║  2) Custom AOSP:    install as priv-app in /system/priv-app/ ║")
+                logger.warn("   ║  3) AVD w/ root:    use a userdebug/eng AVD image            ║")
+                logger.warn("   ║  4) Ignore:         app will run in simulation mode          ║")
+                logger.warn("   ╚══════════════════════════════════════════════════════════════╝")
+            }
+
+            // Verify the grant took effect
+            def verifyOut = new ByteArrayOutputStream()
+            exec {
+                commandLine = ([adb] + pkgTarget + [
+                    'shell', 'dumpsys', 'package', pkg
+                ]) as List<String>
+                ignoreExitValue = true
+                standardOutput = verifyOut
+                errorOutput    = new ByteArrayOutputStream()
+            }
+            def permLine = verifyOut.toString().readLines().find { it.contains('MANAGE_VIRTUAL_MACHINE') }
+            if (permLine) {
+                logger.lifecycle("   Permission status: ${permLine.trim()}")
+            }
+
+            // Flip the AVF enable flag; requires root on most builds, so ignore failures.
+            exec {
+                commandLine = ([adb] + pkgTarget + [
+                    'shell', 'setprop', 'persist.virtualizationframework.enabled', 'true'
+                ]) as List<String>
+                ignoreExitValue = true
+            }
+
+            // Clear any stale process before launch.
+            exec {
+                commandLine = ([adb] + pkgTarget + ['shell', 'am', 'force-stop', pkg]) as List<String>
+                ignoreExitValue = true
+            }
+
+            // Launch the main activity.
+            logger.lifecycle(">> Launching ${pkg}/.MainActivity")
+            exec {
+                commandLine = ([adb] + pkgTarget + [
+                    'shell', 'am', 'start', '-n', "${pkg}/.MainActivity"
+                ]) as List<String>
+                ignoreExitValue = true
+            }
+        }
+    }
+}
+
+tasks.register('createAvd') {
+    group = 'avd'
+    description = 'Create an x86_64 API 34 AVD named droidvisor_test (installs system image if missing)'
+
+    doLast {
+        def sdk = android.sdkDirectory.absolutePath
+        def sdkmanager = "${sdk}/cmdline-tools/cmdline-tools/bin/sdkmanager"
+        def avdmanager   = "${sdk}/cmdline-tools/cmdline-tools/bin/avdmanager"
+        def avdName      = 'droidvisor_test'
+
+        // Pick whichever image is already present; otherwise install the default one.
+        def defaultImg  = 'system-images;android-34;default;x86_64'
+        def googleImg   = 'system-images;android-34;google_apis;x86_64'
+        def defaultDir  = new File(sdk, 'system-images/android-34/default/x86_64')
+        def googleDir   = new File(sdk, 'system-images/android-34/google_apis/x86_64')
+
+        def (systemImage, abi) = {
+            if (googleDir.exists() && googleDir.listFiles()?.size() > 0) return [googleImg, 'google_apis/x86_64']
+            if (defaultDir.exists() && defaultDir.listFiles()?.size() > 0) return [defaultImg, 'x86_64']
+
+            // Neither installed yet — try default first (smaller, more mirrors).
+            exec {
+                commandLine sdkmanager, '--install', defaultImg,
+                        'platforms;android-34', 'build-tools;34.0.0'
+                ignoreExitValue = true
+                standardInput = new ByteArrayInputStream('y\ny\ny\ny\ny\ny\ny\ny\n'.getBytes())
+            }
+            if (defaultDir.exists() && defaultDir.listFiles()?.size() > 0) {
+                return [defaultImg, 'x86_64']
+            }
+            // Last resort
+            exec {
+                commandLine sdkmanager, '--install', googleImg
+                ignoreExitValue = true
+                standardInput = new ByteArrayInputStream('y\ny\ny\ny\ny\ny\ny\ny\n'.getBytes())
+            }
+            return [googleImg, 'google_apis/x86_64']
+        }()
+
+        // Skip if the AVD already exists.
+        def listOut = new ByteArrayOutputStream()
         exec {
-            commandLine adb, 'shell', 'am', 'start', '-n',
-                    'com.droidvisor/.MainActivity'
+            commandLine avdmanager, 'list', 'avd'
+            standardOutput = listOut
+            ignoreExitValue = true
+        }
+        if (listOut.toString().contains(avdName)) {
+            logger.lifecycle(">> AVD '${avdName}' already exists")
+            return
+        }
+
+        exec {
+            commandLine avdmanager, 'create', 'avd',
+                    '--force',
+                    '--name', avdName,
+                    '--package', systemImage,
+                    '--device', 'pixel_6',
+                    '--abi', abi
+            standardInput = new ByteArrayInputStream('\n'.getBytes())
+            ignoreExitValue = true
+        }
+        logger.lifecycle(">> AVD '${avdName}' created")
+    }
+}
+
+tasks.register('runE2E') {
+    dependsOn 'installDebug'
+    group = 'verification'
+    description = 'Install debug APK, grant AVF permission, and run the HomepageRouteE2ETest on a connected device/AVD'
+
+    doLast {
+        def adb = "${android.sdkDirectory}/platform-tools/adb"
+        def pkg = android.defaultConfig.applicationId
+
+        // Grant AVF permission on every connected device (best-effort).
+        def devicesOut = new ByteArrayOutputStream()
+        exec {
+            commandLine adb, 'devices'
+            standardOutput = devicesOut
+            ignoreExitValue = true
+        }
+        def serials = devicesOut.toString().readLines()
+                .drop(1)
+                .collect { it.split(/\s+/) }
+                .findAll { it.size() >= 2 && it[1] == 'device' }
+                .collect { it[0] }
+
+        serials.each { serial ->
+            def target = serial ? ['-s', serial] : []
+            def pkgTarget = target
+
+            logger.lifecycle(">> Granting MANAGE_VIRTUAL_MACHINE on ${serial ?: '(default)'}")
+
+            // Try root shell first
+            exec {
+                commandLine = ([adb] + pkgTarget + ['root']) as List<String>
+                ignoreExitValue = true
+                standardOutput = new ByteArrayOutputStream()
+                errorOutput    = new ByteArrayOutputStream()
+            }
+
+            def grantStdout = new ByteArrayOutputStream()
+            def grantStderr  = new ByteArrayOutputStream()
+            def grantResult = exec {
+                commandLine = ([adb] + pkgTarget + [
+                    'shell', 'pm', 'grant', pkg, 'android.permission.MANAGE_VIRTUAL_MACHINE'
+                ]) as List<String>
+                ignoreExitValue = true
+                standardOutput = grantStdout
+                errorOutput    = grantStderr
+            }
+
+            if (grantResult.exitValue != 0) {
+                def grantOut = grantStdout.toString().trim()
+                def grantErr = grantStderr.toString().trim()
+                logger.warn("   pm grant FAILED (exit=${grantResult.exitValue})")
+                if (grantOut) logger.warn("   stdout: ${grantOut}")
+                if (grantErr) logger.warn("   stderr: ${grantErr}")
+                logger.warn("   App will run in simulation mode without this permission.")
+            } else {
+                logger.lifecycle("   MANAGE_VIRTUAL_MACHINE granted")
+            }
+        }
+
+        // Run only the new homepage-route E2E class through connectedAndroidTest's runner.
+        exec {
+            commandLine adb, 'shell', 'am', 'instrument', '-w', '-r',
+                    '-e', 'class', 'com.droidvisor.e2e.HomepageRouteE2ETest',
+                    '-e', 'debug', 'false',
+                    "${pkg}.test/androidx.test.runner.AndroidJUnitRunner"
+            ignoreExitValue = false
         }
     }
 }

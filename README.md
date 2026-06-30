@@ -62,9 +62,9 @@
 
 ## 环境要求
 
-- Android SDK 34
+- Android SDK 35
 - Java JDK 17+
-- Gradle 8.5
+- Gradle 8.13
 
 ## 构建
 
@@ -97,7 +97,7 @@ cd droidvisor
 | `android.downloadSources` | `false` | 实验级功能：下载依赖源码（启用方式：`-PdownloadSources=true`） |
 | `android.downloadJavadoc` | `false` | 实验级功能：下载依赖 Javadoc（启用方式：`-PdownloadJavadoc=true`） |
 | `org.gradle.jvmargs` | `-Xmx2048m -Dfile.encoding=UTF-8` | JVM 参数（内存 2GB，UTF-8 编码） |
-| `org.gradle.parallel` | `true` | 启用并行构建 |
+| `org.gradle.parallel` | `false` | 并行构建（项目当前禁用） |
 | `org.gradle.caching` | `true` | 启用构建缓存 |
 | `android.useAndroidX` | `true` | 使用 AndroidX |
 | `android.nonTransitiveRClass` | `true` | 非传递性 R 类 |
@@ -156,10 +156,10 @@ com.droidvisor/
 
 ```bash
 # 启动测试环境（包含 Android SDK 测试环境和 Docker-in-Docker 服务）
-docker-compose up --build
+docker compose up --build
 
 # 在后台运行
-docker-compose up --build -d
+docker compose up --build -d
 ```
 
 ### 运行测试
@@ -186,7 +186,7 @@ docker-compose up --build -d
 
 ```bash
 # 进入测试容器
-docker-compose exec android-test bash
+docker compose exec android-test bash
 
 # 运行单元测试
 ./gradlew testDebugUnitTest
@@ -211,10 +211,10 @@ docker-compose exec android-test bash
 
 ```bash
 # 停止并移除容器
-docker-compose down
+docker compose down
 
 # 移除测试数据（包括报告）
-docker-compose down -v
+docker compose down -v
 
 # 清理未使用的 Docker 资源
 docker system prune -f

@@ -16,7 +16,5 @@
       ]
     }
   },
-  "remoteUser": "root",
-  "postCreateCommand": "echo 'Dev container ready.'",
-  "postStartCommand": "echo 'root:Devcon' | chpasswd"
+  "remoteUser": "root"
 }

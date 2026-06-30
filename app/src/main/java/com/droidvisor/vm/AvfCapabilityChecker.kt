@@ -19,6 +19,7 @@ class AvfCapabilityChecker(private val context: Context) {
         AVF_CLASS_NOT_FOUND,
         AVF_INSTANCE_FAILED,
         AVF_PERMISSION_DENIED,
+        AVF_SERVICE_NOT_ACTIVE,
         PROTECTED_VM_NOT_SUPPORTED,
         NON_PROTECTED_VM_NOT_SUPPORTED,
         VSOCK_NOT_SUPPORTED,
@@ -30,8 +31,9 @@ class AvfCapabilityChecker(private val context: Context) {
                 AVF_CLASS_NOT_FOUND -> "设备不支持 Android 虚拟化框架 (AVF)"
                 AVF_INSTANCE_FAILED -> "AVF 框架初始化失败"
                 AVF_PERMISSION_DENIED -> "应用未获得虚拟化管理权限"
-                PROTECTED_VM_NOT_SUPPORTED -> "设备不支持受保护虚拟机 (pKVM)"
-                NON_PROTECTED_VM_NOT_SUPPORTED -> "设备不支持非保护虚拟机"
+                AVF_SERVICE_NOT_ACTIVE -> "AVF 虚拟化服务未运行"
+                PROTECTED_VM_NOT_SUPPORTED -> "设备不支持受保护虚拟机 (AVF pKVM)"
+                NON_PROTECTED_VM_NOT_SUPPORTED -> "设备不支持 AVF 非保护虚拟机"
                 VSOCK_NOT_SUPPORTED -> "设备不支持 Vsock 通信"
                 UNKNOWN -> "未知原因"
             }
@@ -42,8 +44,9 @@ class AvfCapabilityChecker(private val context: Context) {
                 AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，无法通过软件方式开启"
                 AVF_INSTANCE_FAILED -> "请尝试重启设备或检查系统更新"
                 AVF_PERMISSION_DENIED -> "请通过 ADB 授予虚拟化管理权限，详见下方教程"
-                PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 pKVM，虚拟机安全性无法保障，部分功能可能受限"
-                NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持非保护虚拟机，将尝试使用保护虚拟机"
+                AVF_SERVICE_NOT_ACTIVE -> "AVF APEX 已安装但虚拟化服务未运行，请使用支持 AVF 的系统镜像或真机"
+                PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 AVF pKVM，AVF 虚拟机安全性无法保障，部分功能可能受限"
+                NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持 AVF 非保护虚拟机，将尝试使用保护虚拟机"
                 VSOCK_NOT_SUPPORTED -> "Vsock 不可用，Docker 和终端功能将无法正常工作"
                 UNKNOWN -> "请尝试重启设备或更新系统"
             }
@@ -64,12 +67,17 @@ class AvfCapabilityChecker(private val context: Context) {
         val isVsockSupported: Boolean,
         val minimumSdkMet: Boolean,
         val isQemuSupported: Boolean = false,
+        val isPlainKvmAccessible: Boolean = false,
         val avfUnavailableReasons: List<AvfUnavailableReason> = emptyList()
     ) {
         val canRunRealVm: Boolean
             get() = isAvfSupported && (isProtectedVmSupported || isNonProtectedVmSupported) && minimumSdkMet
 
-        /** 是否有任何可用的运行时（AVF 或 QEMU） */
+        /** QEMU 是否可使用 KVM 硬件加速 */
+        val canUseKvmAcceleratedQemu: Boolean
+            get() = isQemuSupported && isPlainKvmAccessible
+
+        /** 是否有任何可用的运行时（AVF、KVM加速QEMU 或 普通QEMU） */
         val hasAnyRuntime: Boolean
             get() = canRunRealVm || isQemuSupported
 
@@ -82,6 +90,7 @@ class AvfCapabilityChecker(private val context: Context) {
         val summaryText: String
             get() = when {
                 canRunRealVm -> "AVF 可用"
+                canUseKvmAcceleratedQemu -> "QEMU + KVM 硬件加速可用"
                 isQemuSupported -> "QEMU 兼容模式可用"
                 else -> "无可用的虚拟化运行时: ${unavailableReasonTexts.joinToString("、")}"
             }
@@ -90,6 +99,7 @@ class AvfCapabilityChecker(private val context: Context) {
         val recommendedRuntime: String
             get() = when {
                 canRunRealVm -> "AVF (Android Virtualization Framework)"
+                canUseKvmAcceleratedQemu -> "QEMU + KVM (硬件加速)"
                 isQemuSupported -> "QEMU (兼容模式)"
                 else -> "模拟模式（无真实虚拟化）"
             }
@@ -108,6 +118,7 @@ class AvfCapabilityChecker(private val context: Context) {
         val isNonProtectedVmSupported = checkNonProtectedVmSupport(reasons)
         val isVsockSupported = checkVsockSupport(reasons)
         val isQemuSupported = checkQemuSupport()
+        val isPlainKvmAccessible = checkPlainKvmAccess()
 
         return AvfCapabilities(
             isAvfSupported = isAvfSupported,
@@ -116,6 +127,7 @@ class AvfCapabilityChecker(private val context: Context) {
             isVsockSupported = isVsockSupported,
             minimumSdkMet = minimumSdkMet,
             isQemuSupported = isQemuSupported,
+            isPlainKvmAccessible = isPlainKvmAccessible,
             avfUnavailableReasons = reasons
         )
     }
@@ -135,9 +147,38 @@ class AvfCapabilityChecker(private val context: Context) {
                     false
                 }
             } else {
-                Logger.w(TAG, "AVF feature not found on device")
-                reasons.add(AvfUnavailableReason.AVF_CLASS_NOT_FOUND)
-                false
+                // Feature flag not declared — fall back to APEX detection.
+                // Some AVD images (e.g. aosp_atd) ship com.android.virt.apex
+                // without declaring the feature in permissions XML.
+                Logger.d(TAG, "AVF feature not declared, checking APEX directly...")
+                when (detectVirtApex()) {
+                    VIRT_APEX_FOUND -> {
+                        Logger.d(TAG, "com.android.virt APEX found, AVF is available")
+                        val hasPermission = checkAvfPermission(reasons)
+                        if (hasPermission) {
+                            Logger.d(TAG, "AVF is supported (via APEX) and permission granted")
+                            true
+                        } else {
+                            Logger.w(TAG, "AVF APEX present but permission denied")
+                            false
+                        }
+                    }
+                    VIRT_APEX_NO_SERVICE -> {
+                        Logger.w(TAG, "com.android.virt APEX found but virtualization service not active")
+                        reasons.add(AvfUnavailableReason.AVF_SERVICE_NOT_ACTIVE)
+                        false
+                    }
+                    VIRT_APEX_NOT_FOUND -> {
+                        Logger.w(TAG, "AVF feature not found on device")
+                        reasons.add(AvfUnavailableReason.AVF_CLASS_NOT_FOUND)
+                        false
+                    }
+                    else -> {
+                        Logger.w(TAG, "AVF feature not found on device")
+                        reasons.add(AvfUnavailableReason.AVF_CLASS_NOT_FOUND)
+                        false
+                    }
+                }
             }
         } catch (e: SecurityException) {
             Logger.e(TAG, "AVF permission denied", e)
@@ -147,6 +188,49 @@ class AvfCapabilityChecker(private val context: Context) {
             Logger.e(TAG, "AVF not supported", e)
             reasons.add(AvfUnavailableReason.AVF_INSTANCE_FAILED)
             false
+        }
+    }
+
+    /**
+     * Detect the com.android.virt APEX directly, bypassing the feature flag.
+     *
+     * Some AVD images (aosp_atd, google_atd) ship the virtualization APEX
+     * but do not declare android.software.virtualization_framework in their
+     * permissions XML.  We probe for the APEX directory or the framework JAR
+     * as a fallback.
+     */
+    private fun detectVirtApex(): Int {
+        return try {
+            // Check for the APEX directory (Android 13+)
+            val apexDir = java.io.File("/apex/com.android.virt/")
+            if (!apexDir.isDirectory) {
+                return VIRT_APEX_NOT_FOUND
+            }
+            Logger.d(TAG, "Found /apex/com.android.virt/ directory")
+
+            // Verify the service is actually active by trying to load the VMM class
+            try {
+                val vmmClass = Class.forName(VMM_CLASS_NAME)
+                // Class loads — try to get the service to confirm it"s active
+                val method = Context::class.java.getMethod("getSystemService", Class::class.java)
+                val vmManager = method.invoke(context, vmmClass)
+                if (vmManager != null) {
+                    Logger.d(TAG, "VirtualMachineManager service is active")
+                    VIRT_APEX_FOUND
+                } else {
+                    Logger.w(TAG, "VirtualMachineManager class found but service returned null")
+                    VIRT_APEX_NO_SERVICE
+                }
+            } catch (e: ClassNotFoundException) {
+                Logger.w(TAG, "VirtualMachineManager class not found despite APEX presence")
+                VIRT_APEX_NO_SERVICE
+            } catch (e: Exception) {
+                Logger.w(TAG, "VirtualMachineManager not accessible", e)
+                VIRT_APEX_NO_SERVICE
+            }
+        } catch (e: Exception) {
+            Logger.d(TAG, "APEX detection failed", e)
+            VIRT_APEX_NOT_FOUND
         }
     }
 
@@ -327,8 +411,43 @@ class AvfCapabilityChecker(private val context: Context) {
         }
     }
 
+    /**
+     * 检测普通 KVM (/dev/kvm) 是否可访问
+     *
+     * 某些 Android 设备（尤其是 GKI 内核或自定义 ROM）会将 /dev/kvm
+     * 设置为非 root 用户可访问（通过 ACL 或 kvm 用户组）。
+     * 如果可访问，QEMU 可以使用 -enable-kvm 获得硬件加速，
+     * 即使 AVF/pKVM 不可用。
+     *
+     * 此检测尝试打开 /dev/kvm 进行读写，不依赖 root 权限。
+     */
+    private fun checkPlainKvmAccess(): Boolean {
+        return try {
+            val kvmFile = java.io.File("/dev/kvm")
+            if (!kvmFile.exists()) {
+                Logger.d(TAG, "/dev/kvm does not exist")
+                return false
+            }
+            // 尝试以读写模式打开来验证实际可访问性
+            java.io.RandomAccessFile(kvmFile, "rw").use {
+                Logger.d(TAG, "/dev/kvm is accessible (plain KVM available)")
+                true
+            }
+        } catch (e: SecurityException) {
+            Logger.d(TAG, "/dev/kvm exists but not accessible", e)
+            false
+        } catch (e: Exception) {
+            Logger.d(TAG, "/dev/kvm check failed", e)
+            false
+        }
+    }
+
     companion object {
         private const val FEATURE_VIRTUALIZATION_FRAMEWORK = "android.software.virtualization_framework"
         private const val VMM_CLASS_NAME = "android.system.virtualmachine.VirtualMachineManager"
+
+        private const val VIRT_APEX_FOUND = 0
+        private const val VIRT_APEX_NO_SERVICE = 1
+        private const val VIRT_APEX_NOT_FOUND = 2
     }
 }

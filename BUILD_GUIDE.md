@@ -2,9 +2,9 @@
 
 ## 环境要求
 
-- **Android SDK**: 34 (API 34)
+- **Android SDK**: 35 (API 35, minSdk 34)
 - **Java JDK**: 17+
-- **Gradle**: 8.5 (由 gradle-wrapper 自动下载)
+- **Gradle**: 8.13 (由 gradle-wrapper 自动下载)
 - **Android Studio**: Hedgehog (2023.1.1) 或更新版本
 
 ## 构建步骤
@@ -45,7 +45,7 @@ chmod +x gradlew
 - [x] androidx.core:core-ktx:1.12.0
 - [x] androidx.lifecycle:lifecycle-runtime-ktx:2.7.0
 - [x] androidx.activity:activity-compose:1.8.2
-- [x] androidx.datastore:datastore-preferences:1.0.0
+- [x] androidx.datastore:datastore-preferences:1.1.1
 - [x] androidx.navigation:navigation-compose:2.7.7
 - [x] androidx.compose.ui:ui (via BOM 2024.03.00)
 - [x] androidx.compose.material3:material3 (via BOM 2024.03.00)

@@ -1,8 +1,5 @@
 package com.droidvisor.ui.screen
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +30,8 @@ import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Warning
@@ -48,7 +47,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -67,22 +65,25 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.droidvisor.ui.components.StatusBadge
+import com.droidvisor.ui.viewmodel.VmManagementViewModel
 import com.droidvisor.vm.AvfCapabilityChecker
 import com.droidvisor.vm.BackupManagerService
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
-import com.droidvisor.vm.model.VmTemplate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService: BackupManagerService?) {
+fun VmManagementScreen(
+    vmManagerService: VmManagerService?,
+    backupManagerService: BackupManagerService?,
+    viewModel: VmManagementViewModel? = null,
+    onNavigateToCreate: () -> Unit = {}
+) {
     val vmInstances by vmManagerService?.vmInstances?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
     val isAvfAvailable by vmManagerService?.isAvfAvailable?.collectAsState() ?: remember { mutableStateOf(false) }
     val avfCapabilities by vmManagerService?.avfCapabilities?.collectAsState() ?: remember { mutableStateOf(null) }
-    var showCreateDialog by remember { mutableStateOf(false) }
     var selectedVm by remember { mutableStateOf<VmInstance?>(null) }
     var showBackupScreen by remember { mutableStateOf(false) }
     var showNetworkScreen by remember { mutableStateOf(false) }
@@ -92,7 +93,11 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
             TopAppBar(
                 title = { Text("虚拟机管理") },
                 actions = {
-                    IconButton(onClick = { vmManagerService?.vmInstances?.let {} }) {
+                    IconButton(onClick = {
+                        vmManagerService?.let { svc ->
+                            svc.checkAvfCapabilities()
+                        }
+                    }) {
                         Icon(Icons.Default.Refresh, contentDescription = "刷新")
                     }
                 }
@@ -100,7 +105,7 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showCreateDialog = true },
+                onClick = { onNavigateToCreate() },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "创建虚拟机")
@@ -118,7 +123,7 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
                 }
 
                 if (vmInstances.isEmpty()) {
-                    EmptyVmView(onCreateClick = { showCreateDialog = true })
+                    EmptyVmView(onCreateClick = onNavigateToCreate)
                 } else {
                     LazyColumn(
                         modifier = Modifier
@@ -149,16 +154,6 @@ fun VmManagementScreen(vmManagerService: VmManagerService?, backupManagerService
                 }
             }
         }
-    }
-
-    if (showCreateDialog) {
-        CreateVmDialog(
-            onDismiss = { showCreateDialog = false },
-            onCreate = { name, template, protectedVm ->
-                vmManagerService?.createVm(name, template.copy(protectedVm = protectedVm))
-                showCreateDialog = false
-            }
-        )
     }
 
     VmBackupAndNetworkDialogs(
@@ -379,210 +374,6 @@ fun VmInfoChip(icon: ImageVector, text: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CreateVmDialog(onDismiss: () -> Unit, onCreate: (String, VmTemplate, Boolean) -> Unit) {
-    var vmName by remember { mutableStateOf("") }
-    var selectedTemplate by remember { mutableStateOf(VmTemplate.getDefaultTemplates().first()) }
-    var isProtectedVm by remember { mutableStateOf(true) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Card(modifier = Modifier.padding(16.dp)) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text("创建虚拟机", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                androidx.compose.material3.OutlinedTextField(
-                    value = vmName,
-                    onValueChange = { vmName = it },
-                    label = { Text("虚拟机名称") },
-                    placeholder = { Text("e.g., 我的开发机") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("安全模式", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isProtectedVm = true },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = isProtectedVm,
-                            onClick = { isProtectedVm = true }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text("受保护虚拟机 (pKVM)", fontWeight = FontWeight.Medium)
-                            Text(
-                                "硬件级安全隔离，推荐用于生产环境",
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isProtectedVm = false },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = !isProtectedVm,
-                            onClick = { isProtectedVm = false }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text("普通虚拟机 (KVM)", fontWeight = FontWeight.Medium)
-                            Text(
-                                "无硬件级隔离，适合开发和测试",
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("选择模板", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyColumn(
-                    modifier = Modifier.height(200.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(VmTemplate.getDefaultTemplates()) { template ->
-                        TemplateCard(
-                            template = template,
-                            isSelected = template == selectedTemplate,
-                            onSelect = { selectedTemplate = template }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                TemplateSpecsCard(template = selectedTemplate)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    androidx.compose.material3.TextButton(onClick = onDismiss) {
-                        Text("取消")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = { onCreate(vmName.ifBlank { "新建虚拟机" }, selectedTemplate, isProtectedVm) },
-                        enabled = true
-                    ) {
-                        Text("创建")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TemplateCard(template: VmTemplate, isSelected: Boolean, onSelect: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect() },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (template.includesDocker) Color.Blue.copy(alpha = 0.2f)
-                        else Color.Green.copy(alpha = 0.2f)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (template.includesDocker) Icons.Default.Cloud else Icons.Default.Terminal,
-                    contentDescription = null,
-                    tint = if (template.includesDocker) Color.Blue else Color.Green
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(template.name, fontWeight = FontWeight.Medium)
-                    if (template.recommended) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "推荐",
-                            fontSize = 10.sp,
-                            color = Color.White,
-                            modifier = Modifier
-                                .background(Color.Green, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-                Text(template.description, fontSize = 12.sp, color = Color.Gray)
-            }
-        }
-    }
-}
-
-@Composable
-fun TemplateSpecsCard(template: VmTemplate) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text("配置规格", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                Text("内存: ", fontSize = 12.sp, color = Color.Gray)
-                Text("${template.memoryBytes / (1024 * 1024)} MB", fontSize = 12.sp)
-                Spacer(modifier = Modifier.width(16.dp))
-                Text("CPU: ", fontSize = 12.sp, color = Color.Gray)
-                Text("${template.cpuCores} 核", fontSize = 12.sp)
-                Spacer(modifier = Modifier.width(16.dp))
-                Text("磁盘: ", fontSize = 12.sp, color = Color.Gray)
-                Text("${template.diskSizeBytes / (1024 * 1024 * 1024)} GB", fontSize = 12.sp)
-            }
-            if (template.includesDocker) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Row {
-                    Icon(
-                        Icons.Default.Cloud,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.Blue
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("预装 Docker Engine", fontSize = 12.sp, color = Color.Blue)
-                }
-            }
-        }
-    }
-}
-
 fun VmStatus.displayName(): String = when (this) {
     VmStatus.STOPPED -> "已停止"
     VmStatus.STARTING -> "启动中"
@@ -619,12 +410,20 @@ fun VmBackupAndNetworkDialogs(
 
 @Composable
 private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabilities?) {
+    val isKvmAccelerated = capabilities?.canUseKvmAcceleratedQemu ?: false
+    val isQemuFallback = capabilities?.isQemuSupported == true && !isKvmAccelerated
+    val bannerColor = when {
+        isKvmAccelerated -> Color(0xFF4CAF50)  // green — good performance
+        isQemuFallback -> Color(0xFFFF9800)    // orange — works but slow
+        else -> Color(0xFFFF9800)              // orange — simulation
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFF9800).copy(alpha = 0.12f)
+            containerColor = bannerColor.copy(alpha = 0.12f)
         ),
         shape = RoundedCornerShape(8.dp)
     ) {
@@ -635,36 +434,44 @@ private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabi
                 Icon(
                     imageVector = Icons.Default.Warning,
                     contentDescription = null,
-                    tint = Color(0xFFFF9800),
+                    tint = bannerColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "模拟模式运行中",
+                    text = when {
+                        isKvmAccelerated -> "QEMU + KVM 硬件加速模式"
+                        isQemuFallback -> "QEMU 兼容模式"
+                        else -> "模拟模式运行中"
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFF9800)
+                    color = bannerColor
                 )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = if (capabilities != null && capabilities.avfUnavailableReasons.isNotEmpty()) {
-                    val reason = capabilities.avfUnavailableReasons.firstOrNull()
-                    when (reason) {
-                        AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "系统版本过低，需要 Android 14+"
-                        AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "设备不支持 Android 虚拟化框架 (AVF)"
-                        AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "AVF 框架初始化失败"
-                        AvfCapabilityChecker.AvfUnavailableReason.AVF_PERMISSION_DENIED -> "应用未获得虚拟化管理权限"
-                        AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "设备不支持受保护虚拟机 (pKVM)"
-                        AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "设备不支持普通虚拟机 (KVM)"
-                        AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "设备不支持 Vsock 通信"
-                        AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "未知原因"
-                        null -> "AVF 不可用"
+                text = when {
+                    isKvmAccelerated -> "AVF 不可用，但 /dev/kvm 可访问，QEMU 使用硬件加速运行"
+                    isQemuFallback -> "AVF 不可用，QEMU 以软件模拟模式运行（性能较低）"
+                    capabilities != null && capabilities.avfUnavailableReasons.isNotEmpty() -> {
+                        val reason = capabilities.avfUnavailableReasons.firstOrNull()
+                        when (reason) {
+                            AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW -> "系统版本过低，需要 Android 14+"
+                            AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "设备不支持 Android 虚拟化框架 (AVF)"
+                            AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "AVF 框架初始化失败"
+                            AvfCapabilityChecker.AvfUnavailableReason.AVF_PERMISSION_DENIED -> "应用未获得虚拟化管理权限"
+                            AvfCapabilityChecker.AvfUnavailableReason.AVF_SERVICE_NOT_ACTIVE -> "AVF 虚拟化服务未运行"
+                            AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "设备不支持 AVF 受保护虚拟机 (pKVM)"
+                            AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "设备不支持 AVF 非保护虚拟机"
+                            AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "设备不支持 Vsock 通信"
+                            AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "未知原因"
+                            null -> "AVF 不可用"
+                        }
                     }
-                } else {
-                    "此设备不支持 Android 虚拟化框架"
+                    else -> "此设备不支持 Android 虚拟化框架"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
@@ -675,6 +482,114 @@ private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabi
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray.copy(alpha = 0.7f)
             )
+        }
+    }
+}
+
+@Composable
+fun RuntimeInfoBanner(
+    canUseAvf: Boolean,
+    canUseKvmQemu: Boolean,
+    canUsePlainQemu: Boolean
+) {
+    val icon: ImageVector
+    val title: String
+    val desc: String
+    val color: Color
+
+    when {
+        canUseAvf -> {
+            icon = Icons.Default.Shield
+            title = "运行时: AVF (Android Virtualization Framework)"
+            desc = "硬件虚拟化，完整功能支持"
+            color = Color(0xFF4CAF50)
+        }
+        canUseKvmQemu -> {
+            icon = Icons.Default.Speed
+            title = "运行时: QEMU + KVM 硬件加速"
+            desc = "硬件加速虚拟化，部分功能可能受限"
+            color = Color(0xFF4CAF50)
+        }
+        canUsePlainQemu -> {
+            icon = Icons.Default.Computer
+            title = "运行时: QEMU 兼容模式"
+            desc = "软件模拟，性能较低"
+            color = Color(0xFFFF9800)
+        }
+        else -> {
+            icon = Icons.Default.Warning
+            title = "运行时: 模拟模式"
+            desc = "数据为演示用途，不会连接真实服务"
+            color = Color(0xFFFF9800)
+        }
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        ),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(title, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = color)
+                Text(desc, fontSize = 11.sp, color = Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
+fun TemplateCard(template: com.droidvisor.vm.model.VmTemplate, isSelected: Boolean, onSelect: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (template.includesDocker) Icons.Default.Cloud else Icons.Default.Terminal,
+                    contentDescription = null,
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(template.name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(
+                    text = "${template.memoryBytes / (1024 * 1024)} MB / ${template.cpuCores} 核 / ${template.diskSizeBytes / (1024 * 1024)} MB",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }

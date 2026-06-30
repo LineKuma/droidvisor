@@ -7,11 +7,11 @@
 ### 1. 环境要求
 - Android SDK 34+
 - Java JDK 17+
-- Gradle 8.5 (或使用项目自带的 gradlew)
+- Gradle 8.13 (或使用项目自带的 gradlew)
 
 ### 2. 克隆项目
 ```bash
-git clone https://github.com/your-username/droidvisor.git
+git clone https://github.com/LineKuma/droidvisor.git
 cd droidvisor
 ```
 
@@ -83,4 +83,4 @@ Closes #123
 
 ## 许可证
 
-提交代码即表示您同意将代码按照项目许可证 (MIT) 发布。
+提交代码即表示您同意将代码按照项目许可证 (AGPL-3.0) 发布。

@@ -17,7 +17,8 @@ data class PermissionState(
     val nonProtectedVmSupported: Boolean = false,
     val vsockSupported: Boolean = false,
     val avfUnavailableReasons: List<AvfCapabilityChecker.AvfUnavailableReason> = emptyList(),
-    val qemuSupported: Boolean = false
+    val qemuSupported: Boolean = false,
+    val plainKvmAccessible: Boolean = false
 ) {
     // 存储权限不再需要：所有数据存储在应用私有空间，导出通过分享接口实现
     val allPermissionsGranted: Boolean
@@ -37,8 +38,8 @@ data class PermissionState(
 
     val avfWarnings: List<String>
         get() = buildList {
-            if (!protectedVmSupported) add("受保护虚拟机 (pKVM) 不可用")
-            if (!nonProtectedVmSupported) add("普通虚拟机 (KVM) 不可用")
+            if (!protectedVmSupported) add("AVF 受保护虚拟机不可用")
+            if (!nonProtectedVmSupported) add("AVF 非保护虚拟机不可用")
             if (!vsockSupported) add("Vsock 通信不可用")
         }
 
@@ -65,8 +66,9 @@ data class PermissionState(
                 AvfCapabilityChecker.AvfUnavailableReason.AVF_CLASS_NOT_FOUND -> "此设备硬件/固件不支持虚拟化，无法通过软件方式开启"
                 AvfCapabilityChecker.AvfUnavailableReason.AVF_INSTANCE_FAILED -> "请尝试重启设备或检查系统更新"
                 AvfCapabilityChecker.AvfUnavailableReason.AVF_PERMISSION_DENIED -> "请通过 ADB 授予虚拟化管理权限，详见下方教程"
-                AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 pKVM，可使用普通虚拟机模式"
-                AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持普通虚拟机，将使用 pKVM 模式"
+                AvfCapabilityChecker.AvfUnavailableReason.AVF_SERVICE_NOT_ACTIVE -> "AVF APEX 已安装但虚拟化服务未运行，请使用支持 AVF 的系统镜像或真机"
+                AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -> "此设备未启用 AVF pKVM，可使用 AVF 非保护模式"
+                AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -> "此设备不支持 AVF 非保护模式，将使用 pKVM 模式"
                 AvfCapabilityChecker.AvfUnavailableReason.VSOCK_NOT_SUPPORTED -> "Vsock 不可用，Docker 和终端功能将无法正常工作"
                 AvfCapabilityChecker.AvfUnavailableReason.UNKNOWN -> "请尝试重启设备或更新系统"
             }
@@ -97,7 +99,8 @@ class PermissionViewModel : ViewModel() {
             nonProtectedVmSupported = capabilities.isNonProtectedVmSupported,
             vsockSupported = capabilities.isVsockSupported,
             avfUnavailableReasons = capabilities.avfUnavailableReasons,
-            qemuSupported = capabilities.isQemuSupported
+            qemuSupported = capabilities.isQemuSupported,
+            plainKvmAccessible = capabilities.isPlainKvmAccessible
         )
     }
 }
