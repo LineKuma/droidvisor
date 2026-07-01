@@ -230,15 +230,20 @@ class VmManagerService : Service() {
         val qemu = qemuRuntime ?: throw VmError.StartError("QEMU runtime not initialized")
 
         val vmConfig = VmConfig(
+            vmName = vm.name,
             memoryBytes = vm.effectiveMemoryBytes,
             cpuCores = vm.effectiveCpuCores,
             diskSizeBytes = vm.effectiveDiskSizeBytes,
+            diskPath = vm.template.diskPath,
+            kernelImagePath = vm.template.kernelImagePath,
+            initrdPath = vm.template.initrdPath,
+            firmwarePath = vm.template.firmwarePath,
             payloadBinaryName = vm.template.payloadBinaryName,
             protectedVm = false
         )
         qemu.configure(vmConfig)
         qemu.startVm()
-        Log.d(TAG, "QEMU VM started for ${vm.name}")
+        Log.d(TAG, "QEMU VM started for ${vm.name} with kernel=${vm.template.kernelImagePath}")
     }
 
     private suspend fun simulateStartVm(vmId: String) {

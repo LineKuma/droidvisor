@@ -18,6 +18,10 @@ data class VmTemplate(
     val memoryBytes: Long = 512 * 1024 * 1024L,
     val cpuCores: Int = 2,
     val diskSizeBytes: Long = 4L * 1024 * 1024 * 1024,
+    val diskPath: String? = null,
+    val kernelImagePath: String? = null,
+    val initrdPath: String? = null,
+    val firmwarePath: String? = null,
     val includesDocker: Boolean = false,
     val includesDesktop: Boolean = false,
     val recommended: Boolean = false,
@@ -32,6 +36,9 @@ data class VmTemplate(
             memoryBytes = 512 * 1024 * 1024L,
             cpuCores = 2,
             diskSizeBytes = 4L * 1024 * 1024 * 1024,
+            diskPath = "/data/local/tmp/vm-images/debian/disk.qcow2",
+            kernelImagePath = "/data/local/tmp/vm-images/debian/vmlinuz",
+            initrdPath = "/data/local/tmp/vm-images/debian/initrd.img",
             includesDocker = false,
             protectedVm = true
         )

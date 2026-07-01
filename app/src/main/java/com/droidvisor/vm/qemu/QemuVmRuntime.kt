@@ -99,8 +99,15 @@ class QemuVmRuntime(
         }
         this.currentConfig = config
 
-        // 更新 QEMU 配置
-        val updatedQemuConfig = qemuConfig.copy(baseConfig = config)
+        // 更新 QEMU 配置，将 VmConfig 的镜像路径映射到 QemuVmConfig
+        val updatedQemuConfig = qemuConfig.copy(
+            baseConfig = config,
+            vmName = config.vmName,
+            diskPath = config.diskPath ?: qemuConfig.diskPath,
+            kernelImagePath = config.kernelImagePath ?: qemuConfig.kernelImagePath,
+            initrdPath = config.initrdPath ?: qemuConfig.initrdPath,
+            firmwarePath = config.firmwarePath ?: qemuConfig.firmwarePath
+        )
         rebuildProcessManager(updatedQemuConfig)
 
         Log.d(TAG, "Configuration updated: ${config.memoryBytes} bytes, ${config.cpuCores} CPUs")

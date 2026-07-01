@@ -1,7 +1,9 @@
 #!/bin/bash
 #
 # Droidvisor E2E Testing Script
-# 功能：启动端到端测试Docker环境,运行AVD模拟器和QEMU提供者,执行E2E测试并验证虚拟机运行
+# 功能：在Docker容器中构建APK、启动模拟器、运行Instrumentation测试
+# 验证项目自身功能（QemuVmRuntime、VM管理、网络配置等）
+# 无外部提供者——所有测试验证项目代码自身功能
 # 使用方法：./scripts/run-e2e-tests.sh [options]
 # 选项：--skip-build 跳过Docker构建 | --headful 使用有头模式(带UI) | --help 显示帮助
 #
@@ -14,7 +16,6 @@ COMPOSE_FILE="${PROJECT_ROOT}/docker-compose-e2e.yml"
 BUILD_LOG="${PROJECT_ROOT}/e2e-build.log"
 TEST_REPORT_DIR="${PROJECT_ROOT}/app/build/reports/androidTests"
 TEST_RESULT_DIR="${PROJECT_ROOT}/app/build/outputs/androidTest-results"
-QEMU_DISK_DIR="/tmp/qemu-e2e-disks"
 
 show_help() {
     cat << EOF
@@ -38,10 +39,9 @@ Droidvisor E2E Testing Script
   - docker-compose-e2e.yml 存在于项目根目录
 
 测试说明:
-  - AVD容器: 运行Android模拟器执行UI测试
-  - QEMU提供者: 提供虚拟化运行时环境
-  - 默认使用QEMU作为虚拟机提供者
-  - 测试US001-US009用户故事
+  - 单一容器架构（无外部提供者）
+  - 编译APK → 启动模拟器 → 运行Instrumentation测试(US001-US009)
+  - 验证项目自身 QemuVmRuntime 功能
 
 EOF
 }
@@ -97,21 +97,11 @@ cleanup_e2e_environment() {
 
     cd "${PROJECT_ROOT}"
 
-    docker-compose -f "${COMPOSE_FILE}" down -v --remove-orphans 2>/dev/null || true
+    docker compose -f "${COMPOSE_FILE}" down -v --remove-orphans 2>/dev/null || true
 
     # 清理特定容器
     docker stop droidvisor-android-e2e 2>/dev/null || true
     docker rm droidvisor-android-e2e 2>/dev/null || true
-    docker stop droidvisor-qemu-provider 2>/dev/null || true
-    docker rm droidvisor-qemu-provider 2>/dev/null || true
-    docker stop droidvisor-avd-setup 2>/dev/null || true
-    docker rm droidvisor-avd-setup 2>/dev/null || true
-    docker stop droidvisor-dind-e2e 2>/dev/null || true
-    docker rm droidvisor-dind-e2e 2>/dev/null || true
-
-    # 清理QEMU磁盘
-    rm -rf "${QEMU_DISK_DIR}" 2>/dev/null || true
-    mkdir -p "${QEMU_DISK_DIR}"
 
     docker image prune -f 2>/dev/null || true
 
@@ -124,10 +114,7 @@ build_e2e_docker_images() {
     cd "${PROJECT_ROOT}"
 
     log_step "构建 android-e2e-test 镜像"
-    docker build -t droidvisor-e2e:latest \
-        -f Dockerfile.e2e \
-        --build-arg BUILDKIT_INLINE_CACHE=1 \
-        . 2>&1 | tee -a "${BUILD_LOG}"
+    docker compose -f "${COMPOSE_FILE}" build 2>&1 | tee -a "${BUILD_LOG}"
 
     if [ $? -eq 0 ]; then
         log_info "E2E Docker镜像构建成功"
@@ -137,89 +124,40 @@ build_e2e_docker_images() {
     fi
 }
 
-start_e2e_containers() {
-    log_info "启动E2E测试容器编排组..."
+start_e2e_container() {
+    log_info "启动E2E测试容器..."
 
     cd "${PROJECT_ROOT}"
 
-    # 创建必要的目录
-    mkdir -p "${QEMU_DISK_DIR}"
-
-    # 启动所有容器服务
-    docker-compose -f "${COMPOSE_FILE}" up -d
+    docker compose -f "${COMPOSE_FILE}" up -d android-e2e-test
 
     log_info "等待E2E容器启动完成..."
 
-    local max_wait=180
+    local max_wait=60
     local wait_count=0
 
     while [ $wait_count -lt $max_wait ]; do
-        local qemu_status=$(docker inspect -f '{{.State.Running}}' droidvisor-qemu-provider 2>/dev/null || echo "false")
-        local avd_status=$(docker inspect -f '{{.State.Running}}' droidvisor-avd-setup 2>/dev/null || echo "false")
         local e2e_status=$(docker inspect -f '{{.State.Running}}' droidvisor-android-e2e 2>/dev/null || echo "false")
 
-        if [ "$qemu_status" = "true" ] && [ "$avd_status" = "true" ] && [ "$e2e_status" = "true" ]; then
-            log_info "所有E2E容器已启动"
-            log_step "QEMU提供者容器就绪"
-            log_step "AVD设置容器就绪"
+        if [ "$e2e_status" = "true" ]; then
+            log_info "E2E测试容器已启动"
             log_step "Android E2E测试容器就绪"
             return 0
         fi
 
         sleep 3
         wait_count=$((wait_count + 3))
-        log_info "等待容器启动... ($wait_count/$max_wait 秒)"
     done
 
     log_error "E2E容器启动超时"
-    docker-compose -f "${COMPOSE_FILE}" logs
+    docker compose -f "${COMPOSE_FILE}" logs
     exit 1
 }
 
-verify_qemu_provider() {
-    log_info "验证QEMU提供者运行状态..."
-    log_step "检查QEMU二进制文件"
-
-    docker exec droidvisor-qemu-provider sh -c "which qemu-system-x86_64 && qemu-system-x86_64 --version" 2>&1 | tee -a "${BUILD_LOG}"
-
-    log_step "验证QEMU磁盘镜像"
-    docker exec droidvisor-qemu-provider sh -c "test -f /tmp/qemu-e2e-disks/e2e-test-disk.qcow2 && qemu-img info /tmp/qemu-e2e-disks/e2e-test-disk.qcow2" 2>&1 | tee -a "${BUILD_LOG}"
-
-    if [ $? -eq 0 ]; then
-        log_info "QEMU提供者验证成功,磁盘镜像可用"
-        log_step "QEMU提供者就绪"
-    else
-        log_error "QEMU提供者验证失败"
-        return 1
-    fi
-}
-
-verify_avd_environment() {
-    log_info "验证AVD环境设置..."
-    log_step "检查Android SDK"
-
-    docker exec droidvisor-avd-setup bash -c "test -d /opt/android-sdk/platforms/android-34 && echo 'Android SDK OK'" 2>&1 | tee -a "${BUILD_LOG}"
-
-    log_step "检查AVD配置"
-    docker exec droidvisor-avd-setup bash -c "test -d /root/.android/avd && ls /root/.android/avd" 2>&1 | tee -a "${BUILD_LOG}"
-
-    if [ $? -eq 0 ]; then
-        log_info "AVD环境验证成功"
-        log_step "AVD环境就绪"
-    else
-        log_error "AVD环境验证失败"
-        return 1
-    fi
-}
-
-run_e2e_tests() {
-    log_info "执行端到端测试..."
-    log_step "开始E2E测试执行"
-
-    cd "${PROJECT_ROOT}"
-
-    # 编译APK
+compile_apk() {
+    log_info "编译APK..."
     log_step "编译Debug APK和测试APK"
+
     docker exec droidvisor-android-e2e \
         /workspace/gradlew assembleDebug assembleDebugAndroidTest \
         --no-daemon \
@@ -232,59 +170,113 @@ run_e2e_tests() {
 
     log_step "APK编译成功"
 
-    # 启动Android模拟器(无头模式)
-    log_step "启动Android模拟器(无头模式)"
+    # 验证APK生成
+    docker exec droidvisor-android-e2e \
+        bash -c "test -f /workspace/app/build/outputs/apk/debug/app-debug.apk && echo 'Debug APK ready'"
+    docker exec droidvisor-android-e2e \
+        bash -c "test -f /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && echo 'Test APK ready'"
+
+    log_info "APK编译验证完成"
+}
+
+start_emulator() {
+    log_info "启动Android模拟器（无头模式）..."
+    log_step "启动Android模拟器"
+
+    # 启动Xvfb虚拟显示
     docker exec -d droidvisor-android-e2e \
-        bash -c "export DISPLAY=:0 && \
-                 Xvfb :0 -screen 0 1080x1920x24 & \
-                 sleep 2 && \
-                 $ANDROID_HOME/emulator/emulator \
-                 -avd e2e_test_avd \
-                 -no-window \
-                 -gpu swiftshader_indirect \
-                 -noaudio \
-                 -no-boot-anim \
-                 -no-snapshot-save \
-                 -memory 4096 \
-                 -qemu -m 4096"
+        bash -c "Xvfb :0 -screen 0 1080x1920x24 &"
+    sleep 2
 
-    log_info "等待模拟器启动..."
-    sleep 30
+    # 启动adb server
+    docker exec droidvisor-android-e2e adb start-server || true
 
-    # 验证模拟器状态
-    log_step "验证模拟器运行状态"
-    docker exec droidvisor-android-e2e \
-        bash -c "adb devices | grep emulator" 2>&1 | tee -a "${BUILD_LOG}"
+    # 启动emulator（后台运行）
+    docker exec -d droidvisor-android-e2e \
+        bash -c '
+          export DISPLAY=:0
+          $ANDROID_HOME/emulator/emulator \
+            -avd e2e_test_avd \
+            -no-window \
+            -gpu off \
+            -noaudio \
+            -no-boot-anim \
+            -no-snapshot \
+            -no-snapshot-save \
+            -accel off \
+            -memory 2048 \
+            -netdelay none \
+            -netspeed full \
+            -verbose 2>&1 | tee /tmp/emulator-launch.log
+        '
 
-    # 推送QEMU测试磁盘到设备
-    log_step "推送QEMU测试环境到模拟器"
-    docker exec droidvisor-android-e2e \
-        bash -c "adb shell mkdir -p /data/local/tmp/qemu-e2e && \
-                 adb push /tmp/qemu-e2e/disks/test-disk.qcow2 /data/local/tmp/qemu-e2e/" 2>&1 | tee -a "${BUILD_LOG}"
+    # 等待模拟器设备可见
+    log_info "等待模拟器设备可见（最长10分钟）..."
+    timeout 600 sh -c '
+      while ! docker exec droidvisor-android-e2e adb devices 2>/dev/null | grep -q emulator; do
+        echo "  [$(date +%H:%M:%S)] Waiting for emulator device..."
+        sleep 10
+      done
+    ' && log_info "模拟器设备已检测到" || log_error "模拟器设备检测超时"
+
+    # 等待系统启动完成
+    log_info "等待系统启动完成（最长8分钟）..."
+    timeout 480 sh -c '
+      while ! docker exec droidvisor-android-e2e adb shell getprop sys.boot_completed 2>/dev/null | grep -q "^1$"; do
+        echo "  [$(date +%H:%M:%S)] Boot not completed yet..."
+        sleep 10
+      done
+    ' && log_info "模拟器系统启动完成" || log_error "模拟器启动超时"
+
+    log_step "模拟器就绪"
+}
+
+run_instrumentation_tests() {
+    log_info "运行 Instrumentation 测试..."
+    log_step "执行E2E测试套件(US001-US009)"
+
+    cd "${PROJECT_ROOT}"
+
+    # 检查设备是否可用
+    local device_ready=$(docker exec droidvisor-android-e2e adb shell getprop sys.boot_completed 2>/dev/null || echo "")
+    if [ "$device_ready" != "1" ]; then
+        log_error "模拟器未就绪，跳过E2E测试"
+        return 1
+    fi
 
     # 安装APK
     log_step "安装应用APK"
     docker exec droidvisor-android-e2e \
-        bash -c "adb install -r app/build/outputs/apk/debug/app-debug.apk && \
-                 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" 2>&1 | tee -a "${BUILD_LOG}"
+        bash -c "adb uninstall com.droidvisor 2>/dev/null || true && \
+                 adb uninstall com.droidvisor.test 2>/dev/null || true && \
+                 adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk && \
+                 adb install -r /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" 2>&1 | tee -a "${BUILD_LOG}"
 
     # 授予必要权限
     log_step "授予应用权限"
     docker exec droidvisor-android-e2e \
         bash -c "adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true && \
-                 adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true" 2>&1 | tee -a "${BUILD_LOG}"
+                 adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true"
+
+    # 推送 Debian VM 镜像（供应用的 QemuVmRuntime 使用）
+    log_step "推送 Debian VM 镜像到设备"
+    docker exec droidvisor-android-e2e \
+        bash -c "adb shell mkdir -p /data/local/tmp/vm-images/debian && \
+                 adb push /opt/vm-images/debian/disk.qcow2 /data/local/tmp/vm-images/debian/ && \
+                 adb push /opt/vm-images/debian/vmlinuz /data/local/tmp/vm-images/debian/ && \
+                 adb push /opt/vm-images/debian/initrd.img /data/local/tmp/vm-images/debian/" 2>&1 | tee -a "${BUILD_LOG}"
 
     # 启动Logcat捕获
     log_step "启动Logcat日志捕获"
     docker exec -d droidvisor-android-e2e \
-        bash -c "adb logcat -c && adb logcat -v time > /workspace/e2e-logcat.log"
+        bash -c "adb logcat -c 2>/dev/null; adb logcat -v time > /workspace/e2e-logcat.log"
 
     # 运行E2E测试套件
-    log_step "执行E2E测试套件(US001-US009)"
+    log_step "执行E2E Instrumentation 测试"
     echo "=========================================="
-    echo "开始运行用户故事 E2E 测试套件"
-    echo "测试结构: US001-US009 共 9 个用户故事"
-    echo "使用QEMU提供者作为虚拟化后端"
+    echo "运行用户故事 E2E 测试套件"
+    echo "测试: US001-US009 共 9 个用户故事"
+    echo "验证项目自身功能: QemuVmRuntime, VM管理, 网络等"
     echo "=========================================="
 
     docker exec droidvisor-android-e2e \
@@ -311,45 +303,58 @@ run_e2e_tests() {
     fi
 }
 
-verify_vm_response() {
-    log_info "验证虚拟机命令响应..."
-    log_step "检查虚拟机运行状态"
+verify_app_qemu_logs() {
+    log_info "验证应用 QemuVmRuntime 日志..."
+    log_step "检查应用QEMU运行时日志"
 
     cd "${PROJECT_ROOT}"
 
-    # 从Logcat中提取VM相关日志
-    if [ -f "${PROJECT_ROOT}/e2e-logcat.log" ]; then
-        log_step "分析E2E日志中的VM操作"
+    # 从Logcat中提取项目自身的QemuVmRuntime日志
+    if docker exec droidvisor-android-e2e test -f /workspace/e2e-logcat.log 2>/dev/null; then
+        # 先复制到宿主机
+        docker cp droidvisor-android-e2e:/workspace/e2e-logcat.log "${PROJECT_ROOT}/e2e-logcat.log" 2>/dev/null || true
 
-        echo "===== VM运行状态日志 ====="
-        grep -E "QEMU|VmManager|VmRuntime|E2E-STEP" "${PROJECT_ROOT}/e2e-logcat.log" | tail -50 || echo "(无VM日志)"
-        echo "===== VM运行状态日志结束 ====="
+        if [ -f "${PROJECT_ROOT}/e2e-logcat.log" ]; then
+            log_step "分析应用的QemuVmRuntime运行日志"
 
-        log_step "检查VM命令响应"
+            echo "===== QemuVmRuntime 运行日志 ====="
+            grep -E "QemuVmRuntime|QemuDiskManager|QemuProcessManager" "${PROJECT_ROOT}/e2e-logcat.log" | tail -30 || echo "(无QemuVmRuntime日志)"
+            echo "===== QemuVmRuntime 日志结束 ====="
 
-        # 验证VM启动、停止等关键操作
-        if grep -q "VM started successfully" "${PROJECT_ROOT}/e2e-logcat.log" || \
-           grep -q "QEMU VM started" "${PROJECT_ROOT}/e2e-logcat.log"; then
-            log_info "VM启动操作验证成功"
-            log_step "VM启动响应正常"
-        else
-            log_info "未检测到VM启动日志(可能使用模拟模式)"
+            log_step "分析E2E测试步骤日志"
+            echo "===== E2E测试步骤日志 ====="
+            grep -E "E2E-STEP|E2E-CLEANUP" "${PROJECT_ROOT}/e2e-logcat.log" | tail -30 || echo "(无E2E步骤日志)"
+            echo "===== E2E测试步骤日志结束 ====="
         fi
-
-        # 验证命令执行
-        if grep -q "Command executed" "${PROJECT_ROOT}/e2e-logcat.log" || \
-           grep -q "Terminal command" "${PROJECT_ROOT}/e2e-logcat.log"; then
-            log_info "VM命令执行验证成功"
-            log_step "VM命令响应正常"
-        fi
+    else
+        log_info "Logcat日志不可用（模拟器可能未启动）"
     fi
 
-    # 验证QEMU进程状态
-    log_step "验证QEMU进程状态"
-    docker exec droidvisor-qemu-provider \
-        sh -c "ps aux | grep qemu | grep -v grep || echo 'QEMU进程未运行(正常,仅在测试时启动)'"
+    log_info "应用QemuVmRuntime日志验证完成"
+}
 
-    log_info "虚拟机运行验证完成"
+verify_debian_vm_ssh() {
+    log_info "最终验证: Debian VM 启动 + SSH 连接 + 基础命令执行..."
+    log_step "Debian VM SSH 连接验证"
+
+    cd "${PROJECT_ROOT}"
+
+    echo "=========================================="
+    echo "最终验证: 连接应用创建的 Debian VM 并执行命令"
+    echo "=========================================="
+
+    # 调用容器内的验证脚本（通过 adb forward 连接应用创建的 VM）
+    docker exec droidvisor-android-e2e /opt/vm-images/debian/verify-debian-ssh.sh 2>&1 | tee -a "${BUILD_LOG}"
+    local verify_exit_code=$?
+
+    if [ $verify_exit_code -eq 0 ]; then
+        log_info "Debian VM SSH 连接验证通过"
+        log_step "Debian VM 可启动、可SSH连接、可执行命令"
+        return 0
+    else
+        log_error "Debian VM SSH 连接验证失败 (退出码: $verify_exit_code)"
+        return 1
+    fi
 }
 
 collect_e2e_reports() {
@@ -357,23 +362,23 @@ collect_e2e_reports() {
 
     cd "${PROJECT_ROOT}"
 
-    if [ -d "${TEST_REPORT_DIR}" ]; then
-        log_info "E2E测试报告目录: ${TEST_REPORT_DIR}"
+    # 从容器复制测试结果到宿主机
+    docker cp droidvisor-android-e2e:/workspace/app/build/reports/androidTests/connected "${TEST_REPORT_DIR}/connected" 2>/dev/null || true
+    docker cp droidvisor-android-e2e:/workspace/app/build/outputs/androidTest-results/connected "${TEST_RESULT_DIR}/connected" 2>/dev/null || true
 
+    if [ -d "${TEST_REPORT_DIR}" ]; then
         local report_count=$(find "${TEST_REPORT_DIR}" -name "*.html" 2>/dev/null | wc -l)
         log_info "发现 ${report_count} 个HTML测试报告"
+    fi
 
-        if [ -f "${PROJECT_ROOT}/e2e-logcat.log" ]; then
-            log_info "E2E Logcat日志已保存: ${PROJECT_ROOT}/e2e-logcat.log"
-        fi
-    else
-        log_info "未找到测试报告目录"
+    if [ -f "${PROJECT_ROOT}/e2e-logcat.log" ]; then
+        log_info "E2E Logcat日志已保存"
     fi
 
     log_step "E2E测试报告收集完成"
 }
 
-stop_e2e_containers() {
+stop_e2e_container() {
     log_info "停止E2E测试容器..."
 
     cd "${PROJECT_ROOT}"
@@ -382,7 +387,7 @@ stop_e2e_containers() {
     docker exec droidvisor-android-e2e bash -c "adb emu kill || true" 2>/dev/null || true
 
     # 停止容器
-    docker-compose -f "${COMPOSE_FILE}" down 2>/dev/null || true
+    docker compose -f "${COMPOSE_FILE}" down 2>/dev/null || true
 
     log_info "E2E测试容器已停止"
 }
@@ -409,8 +414,8 @@ main() {
     echo "========================================" | tee -a "${BUILD_LOG}"
     echo "Droidvisor E2E Testing" | tee -a "${BUILD_LOG}"
     echo "开始时间: $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "${BUILD_LOG}"
-    echo "测试模式: 无头测试(Headless)" | tee -a "${BUILD_LOG}"
-    echo "虚拟化后端: QEMU提供者(默认)" | tee -a "${BUILD_LOG}"
+    echo "架构: 单一容器（无外部提供者）" | tee -a "${BUILD_LOG}"
+    echo "验证: 项目自身 QemuVmRuntime 功能" | tee -a "${BUILD_LOG}"
     echo "========================================" | tee -a "${BUILD_LOG}"
 
     check_prerequisites
@@ -423,26 +428,38 @@ main() {
         log_info "跳过Docker镜像构建"
     fi
 
-    start_e2e_containers
+    start_e2e_container
 
-    # 验证各容器服务
-    verify_qemu_provider || true
-    verify_avd_environment || true
+    # 阶段1: 验证项目编译
+    if ! compile_apk; then
+        log_error "APK编译失败，终止测试"
+        stop_e2e_container
+        exit 1
+    fi
 
-    # 运行E2E测试
+    # 阶段2: 启动模拟器
+    start_emulator
+
+    # 阶段3: 运行Instrumentation测试
     local test_failed=false
-    if ! run_e2e_tests; then
+    if ! run_instrumentation_tests; then
         test_failed=true
     fi
 
-    # 验证虚拟机运行和响应
-    verify_vm_response
+    # 阶段4: 验证应用QEMU运行时日志
+    verify_app_qemu_logs
+
+    # 阶段5: Debian VM SSH 连接验证（最终验证）
+    if ! verify_debian_vm_ssh; then
+        log_error "Debian VM SSH 连接验证失败"
+        test_failed=true
+    fi
 
     # 收集测试报告
     collect_e2e_reports
 
     # 停止容器
-    stop_e2e_containers
+    stop_e2e_container
 
     echo "========================================" | tee -a "${BUILD_LOG}"
     echo "E2E测试完成时间: $(date '+%Y-%m-%d %H:%M:%S')" | tee -a "${BUILD_LOG}"

@@ -1,9 +1,9 @@
 # Droidvisor E2E Testing Docker Compose Configuration
-# 端到端测试环境，包含AVD容器和QEMU提供者
+# 单一容器架构：所有测试在 android-e2e-test 容器内完成
+# 验证项目自身功能（QEMU Provider、VM管理、网络配置等）
 version: '3.8'
 
 services:
-  # Android E2E 测试环境 (AVD容器)
   android-e2e-test:
     build:
       context: .
@@ -12,8 +12,6 @@ services:
     privileged: true  # 需要特权模式以运行KVM/QEMU
     volumes:
       - .:/workspace
-      - /tmp/qemu-e2e-disks:/tmp/qemu-e2e-disks  # QEMU磁盘共享
-      - kvm-volume:/dev/kvm  # KVM设备访问
     working_dir: /workspace
     environment:
       - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -21,104 +19,10 @@ services:
       - ANDROID_SDK_ROOT=/opt/android-sdk
       - GRADLE_USER_HOME=/workspace/.gradle
       - DISPLAY=:0
-      - QEMU_PROVIDER=default  # 默认使用QEMU提供者
-      - E2E_TEST_MODE=headless  # 无头测试模式
     devices:
-      - /dev/kvm:/dev/kvm  # KVM设备映射(如果可用)
+      - /dev/kvm:/dev/kvm  # KVM设备映射（如果可用）
     networks:
       - droidvisor-e2e-network
-    healthcheck:
-      test: ["CMD", "bash", "-c", "ps aux | grep -v grep | grep -E 'gradle|emulator'"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-    depends_on:
-      - qemu-provider
-      - avd-setup
-
-  # QEMU提供者容器
-  qemu-provider:
-    image: alpine:latest
-    container_name: droidvisor-qemu-provider
-    privileged: true
-    volumes:
-      - /tmp/qemu-e2e-disks:/tmp/qemu-e2e-disks
-      - qemu-sockets:/tmp/qemu-sockets
-    environment:
-      - QEMU_DISK_PATH=/tmp/qemu-e2e-disks
-      - QEMU_SOCKET_PATH=/tmp/qemu-sockets
-    command: >
-      sh -c "
-        apk add --no-cache qemu-system-x86_64 qemu-img openssh-client curl wget &&
-        mkdir -p /tmp/qemu-e2e-disks /tmp/qemu-sockets &&
-        qemu-img create -f qcow2 /tmp/qemu-e2e-disks/e2e-test-disk.qcow2 1G &&
-        echo 'QEMU provider ready' &&
-        tail -f /dev/null
-      "
-    healthcheck:
-      test: ["CMD", "sh", "-c", "test -f /tmp/qemu-e2e-disks/e2e-test-disk.qcow2"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 15s
-    networks:
-      - droidvisor-e2e-network
-
-  # AVD环境设置容器
-  avd-setup:
-    image: ubuntu:22.04
-    container_name: droidvisor-avd-setup
-    environment:
-      - ANDROID_HOME=/opt/android-sdk
-      - ANDROID_SDK_ROOT=/opt/android-sdk
-      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-    command: >
-      bash -c "
-        apt-get update &&
-        apt-get install -y wget unzip curl openjdk-17-jdk &&
-        mkdir -p $$ANDROID_HOME/cmdline-tools &&
-        cd $$ANDROID_HOME/cmdline-tools &&
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip &&
-        unzip -q cmdline-tools.zip &&
-        mv cmdline-tools latest &&
-        rm cmdline-tools.zip &&
-        yes | $$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true &&
-        $$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager 'platform-tools' 'platforms;android-34' 'build-tools;34.0.0' 'emulator' 'system-images;android-34;google_apis;x86_64' &&
-        echo 'no' | $$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager create avd -n e2e_test_avd -k 'system-images;android-34;google_apis;x86_64' --force &&
-        echo 'AVD setup complete' &&
-        tail -f /dev/null
-      "
-    volumes:
-      - avd-cache:/root/.android
-    healthcheck:
-      test: ["CMD", "bash", "-c", "test -d /opt/android-sdk/platforms/android-34"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 120s
-    networks:
-      - droidvisor-e2e-network
-
-  # Docker-in-Docker服务 (可选,用于Docker集成测试)
-  dind:
-    image: docker:dind
-    container_name: droidvisor-dind-e2e
-    privileged: true
-    environment:
-      - DOCKER_TLS_CERTDIR=/certs
-    volumes:
-      - docker-certs:/certs
-      - docker-data:/var/lib/docker
-    command: --storage-driver overlay2
-    networks:
-      - droidvisor-e2e-network
-    healthcheck:
-      test: ["CMD", "docker", "info"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
 
 networks:
   droidvisor-e2e-network:
@@ -126,15 +30,3 @@ networks:
     ipam:
       config:
         - subnet: 172.29.0.0/16
-
-volumes:
-  kvm-volume:
-    driver: local
-  qemu-sockets:
-    driver: local
-  avd-cache:
-    driver: local
-  docker-certs:
-    driver: local
-  docker-data:
-    driver: local

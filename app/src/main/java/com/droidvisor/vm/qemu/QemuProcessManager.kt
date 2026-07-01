@@ -98,8 +98,16 @@ class QemuProcessManager(
             }
 
             // 内核启动参数
+            // 注入 vmName=droidvisor-e2e-debian 用于身份验证
+            // 验证脚本连接后会检查 /proc/cmdline 确认这是正确的 VM
+            val baseArgs = "console=ttyS0 root=/dev/vda rw panic=-1"
+            val appendArgs = if (!config.vmName.isNullOrEmpty()) {
+                "$baseArgs vmName=${config.vmName} droidvisor_e2e_verify=yes"
+            } else {
+                baseArgs
+            }
             args.add("-append")
-            args.add("console=ttyS0 root=/dev/vda rw panic=-1")
+            args.add(appendArgs)
         }
 
         // 磁盘配置

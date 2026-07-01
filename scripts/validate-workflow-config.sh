@@ -2,6 +2,7 @@
 #
 # Droidvisor GitHub Actions Workflow Validation Script
 # 功能：验证E2E测试workflow配置的完整性和正确性
+# 架构：单一容器（无外部提供者），最终验证为 Debian VM SSH 连接
 # 使用方法：./scripts/validate-workflow-config.sh
 #
 
@@ -32,6 +33,7 @@ log_fail() {
 
 echo "========================================"
 echo "GitHub Actions Workflow Configuration Validation"
+echo "架构: 单一容器 + Debian VM SSH 最终验证"
 echo "验证时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "========================================"
 
@@ -52,16 +54,13 @@ for file in "${workflow_files[@]}"; do
     fi
 done
 
-# 2. 验证E2E workflow配置
-log_info "验证E2E workflow配置..."
+# 2. 验证E2E workflow核心配置
+log_info "验证E2E workflow核心配置..."
 
 e2e_workflow_checks=(
     "name: E2E Tests"
     "docker compose -f docker-compose-e2e.yml"
-    "droidvisor-qemu-provider"
-    "droidvisor-avd-setup"
     "droidvisor-android-e2e"
-    "qemu-system-x86_64"
     "assembleDebug assembleDebugAndroidTest"
     "adb shell am instrument"
     "upload-artifact@v4"
@@ -75,6 +74,19 @@ for check in "${e2e_workflow_checks[@]}"; do
         log_fail "E2E workflow缺失: $check"
     fi
 done
+
+# 验证无外部提供者
+if grep -q "qemu-provider" "${PROJECT_ROOT}/.github/workflows/e2e.yml"; then
+    log_fail "Workflow包含外部 qemu-provider 引用"
+else
+    log_pass "Workflow无外部 qemu-provider 引用"
+fi
+
+if grep -q "avd-setup" "${PROJECT_ROOT}/.github/workflows/e2e.yml"; then
+    log_fail "Workflow包含外部 avd-setup 引用"
+else
+    log_pass "Workflow无外部 avd-setup 引用"
+fi
 
 # 3. 验证workflow触发条件
 log_info "验证workflow触发条件..."
@@ -94,23 +106,24 @@ for check in "${trigger_checks[@]}"; do
     fi
 done
 
-# 4. 验证容器启动顺序
-log_info "验证容器启动顺序配置..."
+# 4. 验证核心验证步骤
+log_info "验证核心验证步骤配置..."
 
-container_sequence=(
-    "Start QEMU Provider Container"
-    "Start AVD Setup Container"
-    "Start Android E2E Test Container"
+core_verification=(
+    "Compile APK in Container"
+    "Start Android Emulator"
+    "Install APKs on Emulator"
+    "Run E2E Tests (US001-US009)"
+    "Verify App QemuVmRuntime Logs"
+    "Verify Debian VM - SSH into App's Created VM"
+    "Check Debian VM Verification Result"
 )
 
-sequence_found=true
-for i in "${!container_sequence[@]}"; do
-    step="${container_sequence[$i]}"
-    if grep -n "$step" "${PROJECT_ROOT}/.github/workflows/e2e.yml" > /dev/null; then
-        log_pass "容器启动步骤存在: $step"
+for step in "${core_verification[@]}"; do
+    if grep -q "$step" "${PROJECT_ROOT}/.github/workflows/e2e.yml"; then
+        log_pass "核心验证步骤存在: $step"
     else
-        log_fail "容器启动步骤缺失: $step"
-        sequence_found=false
+        log_fail "核心验证步骤缺失: $step"
     fi
 done
 
@@ -122,8 +135,6 @@ compose_commands=(
     "docker compose -f docker-compose-e2e.yml up -d"
     "docker compose -f docker-compose-e2e.yml down"
     "docker exec droidvisor-android-e2e"
-    "docker exec droidvisor-qemu-provider"
-    "docker exec droidvisor-avd-setup"
 )
 
 for cmd in "${compose_commands[@]}"; do
@@ -133,6 +144,13 @@ for cmd in "${compose_commands[@]}"; do
         log_fail "Docker命令配置缺失: $cmd"
     fi
 done
+
+# 验证无外部容器exec命令
+if grep -q "docker exec droidvisor-qemu-provider\|docker exec droidvisor-avd-setup" "${PROJECT_ROOT}/.github/workflows/e2e.yml"; then
+    log_fail "Workflow包含外部容器命令"
+else
+    log_pass "Workflow无外部容器命令"
+fi
 
 # 6. 验证测试执行配置
 log_info "验证测试执行配置..."
@@ -152,26 +170,45 @@ for check in "${test_execution[@]}"; do
     fi
 done
 
-# 7. 验证虚拟机验证步骤
-log_info "验证虚拟机运行验证配置..."
+# 7. 验证 Debian VM SSH 验证步骤
+log_info "验证 Debian VM SSH 连接验证配置..."
 
-vm_verification=(
-    "Verify VM Runtime"
-    "VM started successfully"
-    "QEMU VM started"
-    "Command executed"
-    "grep -E 'QEMU|VmManager|VmRuntime|E2E-STEP'"
+debian_ssh_checks=(
+    "Verify Debian VM - SSH into App's Created VM"
+    "verify-debian-ssh.sh"
+    "E2E_SSH_VERIFY_OK"
+    "Check Debian VM Verification Result"
+    "debian-vm-ssh-verification"
 )
 
-for check in "${vm_verification[@]}"; do
+for check in "${debian_ssh_checks[@]}"; do
     if grep -q "$check" "${PROJECT_ROOT}/.github/workflows/e2e.yml"; then
-        log_pass "VM验证配置包含: $check"
+        log_pass "Debian SSH验证包含: $check"
     else
-        log_fail "VM验证配置缺失: $check"
+        log_fail "Debian SSH验证缺失: $check"
     fi
 done
 
-# 8. 验证报告上传配置
+# 8. 验证 QemuVmRuntime 日志验证
+log_info "验证 QemuVmRuntime 日志配置..."
+
+vm_log_checks=(
+    "Verify App QemuVmRuntime Logs"
+    "QemuVmRuntime"
+    "QemuDiskManager"
+    "QemuProcessManager"
+    "VmManager"
+)
+
+for check in "${vm_log_checks[@]}"; do
+    if grep -q "$check" "${PROJECT_ROOT}/.github/workflows/e2e.yml"; then
+        log_pass "QemuVmRuntime日志包含: $check"
+    else
+        log_fail "QemuVmRuntime日志缺失: $check"
+    fi
+done
+
+# 9. 验证报告上传配置
 log_info "验证测试报告上传配置..."
 
 report_config=(
@@ -192,7 +229,7 @@ for check in "${report_config[@]}"; do
     fi
 done
 
-# 9. 验证清理步骤
+# 10. 验证清理步骤
 log_info "验证环境清理配置..."
 
 cleanup_checks=(
@@ -206,24 +243,6 @@ for check in "${cleanup_checks[@]}"; do
         log_pass "清理配置包含: $check"
     else
         log_fail "清理配置缺失: $check"
-    fi
-done
-
-# 10. 验证Docker集成测试job
-log_info "验证Docker集成测试job..."
-
-docker_integration=(
-    "docker-integration:"
-    "name: Docker Integration Test"
-    "if: github.event_name == 'workflow_dispatch'"
-    "Build and Test Docker Compose Environment"
-)
-
-for check in "${docker_integration[@]}"; do
-    if grep -q "$check" "${PROJECT_ROOT}/.github/workflows/e2e.yml"; then
-        log_pass "Docker集成job包含: $check"
-    else
-        log_fail "Docker集成job缺失: $check"
     fi
 done
 
@@ -297,41 +316,48 @@ for check in "${cache_checks[@]}"; do
     fi
 done
 
-# 15. 验证workflow文档
-log_info "验证workflow说明文档..."
+# 15. 验证 Dockerfile 中的 Debian 镜像准备
+log_info "验证 Dockerfile 中的 Debian 镜像准备..."
 
-workflow_docs=(
-    "GITHUB_ACTIONS_E2E_WORKFLOW.md"
+dockerfile_debian_checks=(
+    "debian-12-genericcloud-arm64"
+    "e2e_ssh_key"
+    "virt-customize"
+    "virt-get-kernel"
+    "verify-debian-ssh.sh"
 )
 
-for doc in "${workflow_docs[@]}"; do
-    if [ -f "${PROJECT_ROOT}/$doc" ]; then
-        log_pass "文档文件存在: $doc"
-        
-        # 验证文档关键章节
-        doc_sections=(
-            "## Workflow概述"
-            "## 测试流程"
-            "## Docker环境构建"
-            "## 启动容器编排组"
-            "## 运行E2E测试"
-            "## 验证虚拟机运行"
-            "## 测试报告查看"
-        )
-        
-        for section in "${doc_sections[@]}"; do
-            if grep -q "$section" "${PROJECT_ROOT}/$doc"; then
-                log_pass "文档包含章节: $section"
-            else
-                log_fail "文档缺失章节: $section"
-            fi
-        done
+for check in "${dockerfile_debian_checks[@]}"; do
+    if grep -q "$check" "${PROJECT_ROOT}/Dockerfile.e2e"; then
+        log_pass "Dockerfile包含: $check"
     else
-        log_fail "文档文件缺失: $doc"
+        log_fail "Dockerfile缺失: $check"
     fi
 done
 
-# 16. 验证相关配置文件
+# 16. 验证 verify-debian-ssh.sh 脚本内容
+log_info "验证 verify-debian-ssh.sh 脚本内容..."
+
+ssh_script_checks=(
+    "adb forward"
+    "ssh -o StrictHostKeyChecking=no"
+    "whoami"
+    "uname -a"
+    "cat /etc/os-release"
+    "hostname"
+    "df -h"
+    "E2E_SSH_VERIFY_OK"
+)
+
+for check in "${ssh_script_checks[@]}"; do
+    if grep -q "$check" "${PROJECT_ROOT}/Dockerfile.e2e"; then
+        log_pass "SSH验证脚本包含: $check"
+    else
+        log_fail "SSH验证脚本缺失: $check"
+    fi
+done
+
+# 17. 验证相关配置文件
 log_info "验证相关配置文件..."
 
 config_files=(
@@ -355,8 +381,10 @@ echo "验证日志: ${VALIDATION_LOG}"
 echo "========================================"
 
 # 统计通过和失败数量
-pass_count=$(grep -c "^\[PASS\]" "${VALIDATION_LOG}" || echo 0)
-fail_count=$(grep -c "^\[FAIL\]" "${VALIDATION_LOG}" || echo 0)
+pass_count=$(grep -c "^\[PASS\]" "${VALIDATION_LOG}" 2>/dev/null)
+pass_count=${pass_count:-0}
+fail_count=$(grep -c "^\[FAIL\]" "${VALIDATION_LOG}" 2>/dev/null)
+fail_count=${fail_count:-0}
 
 echo "验证结果: $pass_count 项通过, $fail_count 项失败"
 

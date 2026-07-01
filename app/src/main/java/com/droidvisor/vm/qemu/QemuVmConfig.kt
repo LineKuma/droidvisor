@@ -13,6 +13,9 @@ data class QemuVmConfig(
     /** 基础 VM 配置 */
     val baseConfig: VmConfig = VmConfig(),
 
+    /** VM 名称（用于内核命令行标识，验证 SSH 连接目标） */
+    val vmName: String = baseConfig.vmName,
+
     /** QEMU 可执行文件路径（默认自动检测） */
     val qemuBinaryPath: String = "",
 

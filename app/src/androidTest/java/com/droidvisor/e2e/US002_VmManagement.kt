@@ -149,4 +149,21 @@ class US002_VmManagement : E2ETestBase() {
 
         StableComposeHelper.deleteVm(composeTestRule, "us002-cycle-vm")
     }
+
+    @Test
+    fun AC9_createDebianForSsh() {
+        step("Create Debian VM (STANDARD_DEBIAN template) for SSH verification")
+        StableComposeHelper.createVm(composeTestRule, "e2e-debian-ssh")
+        StableComposeHelper.waitForText(composeTestRule, "e2e-debian-ssh")
+
+        step("Start Debian VM - app's QemuVmRuntime boots the Debian image")
+        composeTestRule.onNodeWithText("e2e-debian-ssh").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("启动").performClick()
+        composeTestRule.waitForIdle()
+        StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 30_000L)
+
+        step("VM is running - will be used for SSH verification")
+        // Do NOT delete - VM stays running for the workflow's SSH verification step
+    }
 }
