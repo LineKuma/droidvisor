@@ -5,9 +5,7 @@ version: '3.8'
 
 services:
   android-e2e-test:
-    build:
-      context: .
-      dockerfile: Dockerfile.e2e
+    image: droidvisor-e2e:latest
     container_name: droidvisor-android-e2e
     privileged: true  # 需要特权模式以运行KVM/QEMU
     volumes:

@@ -41,7 +41,7 @@ jobs:
         run: |
           echo "Building E2E test environment..."
           set -o pipefail
-          docker compose -f docker-compose-e2e.yml build --progress=plain 2>&1 | tail -100
+          docker build -t droidvisor-e2e -f Dockerfile.e2e . 2>&1 | tail -100
 
       - name: Cache Docker images
         uses: actions/cache@v4
