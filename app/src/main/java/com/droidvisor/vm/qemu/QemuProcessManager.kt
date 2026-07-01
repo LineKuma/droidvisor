@@ -138,6 +138,16 @@ class QemuProcessManager(
                 args.add("-serial")
                 args.add("none")
             }
+            is QemuVmConfig.ConsoleMode.TcpServer -> {
+                args.add("-nographic")
+                args.add("-serial")
+                args.add("tcp:0.0.0.0:${mode.port},server,nowait")
+            }
+            is QemuVmConfig.ConsoleMode.TcpClient -> {
+                args.add("-nographic")
+                args.add("-serial")
+                args.add("tcp:${mode.host}:${mode.port}")
+            }
         }
 
         // 图形输出

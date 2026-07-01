@@ -121,7 +121,6 @@ detekt {
     buildUponDefaultConfig = true
     allRules = false
     config = files("$rootDir/detekt-config.yml")
-    baseline = file("$rootDir/detekt-baseline.xml")
     ignoreFailures = false
 }
 
@@ -375,7 +374,7 @@ tasks.register('runE2E') {
         }
         def serials = devicesOut.toString().readLines()
                 .drop(1)
-                .collect { it.split(/\s+/) }
+                .collect { it.split(/\\s+/) }
                 .findAll { it.size() >= 2 && it[1] == 'device' }
                 .collect { it[0] }
 
@@ -426,3 +425,219 @@ tasks.register('runE2E') {
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// Docker E2E Tasks — pure UI E2E tests via Docker + AVD emulator
+// ═══════════════════════════════════════════════════════════════════════
+
+def dockerCompose = { args ->
+    exec {
+        workingDir = rootDir
+        commandLine = ['docker', 'compose'] + args
+    }
+}
+
+def dockerExec = { container, cmd ->
+    exec {
+        commandLine = ['docker', 'exec', container, 'sh', '-c', cmd]
+    }
+}
+
+def adbInDocker = { container, cmd ->
+    exec {
+        commandLine = ['docker', 'exec', container, 'sh', '-c',
+            "adb wait-for-device && $cmd"]
+    }
+}
+
+ext {
+    e2eContainerName = 'droidvisor-android-test'
+    e2ePackageName = 'com.droidvisor'
+}
+
+tasks.register('dockerBuildE2eEnv') {
+    group = 'docker-e2e'
+    description = 'Build Docker image for E2E testing'
+    doLast {
+        logger.lifecycle(">> Building Docker E2E image...")
+        exec {
+            workingDir = rootDir
+            commandLine = ['docker', 'build', '-t', 'droidvisor-e2e:latest', '.']
+        }
+        logger.lifecycle(">> Docker image built successfully")
+    }
+}
+
+tasks.register('dockerStartEmulator') {
+    group = 'docker-e2e'
+    description = 'Start the android-test container with emulator for E2E tests'
+    dependsOn 'dockerBuildE2eEnv'
+    doLast {
+        logger.lifecycle(">> Starting android-test container with emulator...")
+
+        // Clean up any stale container
+        exec {
+            commandLine = ['docker', 'rm', '-f', e2eContainerName]
+            ignoreExitValue = true
+        }
+
+        dockerCompose(['run', '--rm', '-d',
+            '--name', e2eContainerName,
+            '--service-ports',
+            'android-test'])
+
+        logger.lifecycle(">> Waiting for emulator to boot (healthcheck)...")
+        def maxWait = 300
+        def waited = 0
+        def booted = false
+        while (waited < maxWait) {
+            def out = new ByteArrayOutputStream()
+            exec {
+                commandLine = ['docker', 'exec', e2eContainerName,
+                    'sh', '-c',
+                    'adb shell getprop sys.boot_completed 2>/dev/null']
+                standardOutput = out
+                ignoreExitValue = true
+            }
+            if (out.toString().trim() == '1') {
+                booted = true
+                logger.lifecycle(">> Emulator booted after ${waited}s")
+                break
+            }
+            sleep(3000)
+            waited += 3
+        }
+        if (!booted) {
+            throw new GradleException("Emulator failed to boot within ${maxWait}s")
+        }
+
+        // Disable animations for reliable UI testing
+        dockerExec(e2eContainerName,
+            'adb shell settings put global window_animation_scale 0 && ' +
+            'adb shell settings put global transition_animation_scale 0 && ' +
+            'adb shell settings put global animator_duration_scale 0')
+        logger.lifecycle(">> Emulator ready for E2E tests")
+    }
+}
+
+tasks.register('dockerBuildE2eApks') {
+    group = 'docker-e2e'
+    description = 'Build debug APK and test APK inside Docker container'
+    dependsOn 'dockerStartEmulator'
+    doLast {
+        logger.lifecycle(">> Building debug APK + test APK inside Docker...")
+        dockerExec(e2eContainerName,
+            'cd /workspace && ' +
+            './gradlew assembleDebug assembleDebugAndroidTest --no-daemon --stacktrace')
+        logger.lifecycle(">> APKs built successfully")
+    }
+}
+
+tasks.register('dockerInstallE2eApks') {
+    group = 'docker-e2e'
+    description = 'Install debug APK and test APK on the emulator'
+    dependsOn 'dockerBuildE2eApks'
+    doLast {
+        logger.lifecycle(">> Installing APKs on emulator...")
+        // Uninstall existing APKs first (avoid signature mismatch)
+        dockerExec(e2eContainerName,
+            "adb uninstall ${e2ePackageName} 2>/dev/null || true")
+        dockerExec(e2eContainerName,
+            "adb uninstall ${e2ePackageName}.test 2>/dev/null || true")
+        // Install debug APK
+        dockerExec(e2eContainerName,
+            'adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk')
+        // Install test APK
+        dockerExec(e2eContainerName,
+            'adb install -r /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk')
+        logger.lifecycle(">> APKs installed successfully")
+    }
+}
+
+tasks.register('dockerRunE2eTests') {
+    group = 'docker-e2e'
+    description = 'Run pure-UI E2E tests (Compose UI tests) on the emulator via Docker'
+    dependsOn 'dockerInstallE2eApks'
+    doLast {
+        logger.lifecycle(">> Running E2E tests...")
+
+        def testResultsDir = new File("${project.buildDir}/outputs/androidTest-results/connected")
+        testResultsDir.mkdirs()
+
+        // Run all E2E tests via instrumentation
+        exec {
+            commandLine = ['docker', 'exec', e2eContainerName,
+                'sh', '-c',
+                "timeout 30m adb shell am instrument -w -r " +
+                "-e package com.droidvisor.e2e " +
+                "-e debug false " +
+                "${e2ePackageName}.test/androidx.test.runner.AndroidJUnitRunner " +
+                "2>&1 | tee /workspace/app/build/outputs/androidTest-results/connected/e2e-instrumentation.log"]
+            ignoreExitValue = true
+        }
+
+        // Pull test results from container
+        exec {
+            commandLine = ['docker', 'cp',
+                "${e2eContainerName}:/workspace/app/build/outputs/androidTest-results/connected/.",
+                "${project.buildDir}/outputs/androidTest-results/connected/"]
+            ignoreExitValue = true
+        }
+        exec {
+            commandLine = ['docker', 'cp',
+                "${e2eContainerName}:/workspace/app/build/reports/androidTests/connected/.",
+                "${project.buildDir}/reports/androidTests/connected/"]
+            ignoreExitValue = true
+        }
+
+        logger.lifecycle(">> E2E tests completed. Results in:")
+        logger.lifecycle("   - ${project.buildDir}/outputs/androidTest-results/connected/")
+        logger.lifecycle("   - ${project.buildDir}/reports/androidTests/connected/")
+    }
+}
+
+tasks.register('dockerStopEmulator') {
+    group = 'docker-e2e'
+    description = 'Stop and clean up the E2E Docker container'
+    doLast {
+        logger.lifecycle(">> Stopping E2E container...")
+        exec {
+            commandLine = ['docker', 'rm', '-f', e2eContainerName]
+            ignoreExitValue = true
+        }
+        logger.lifecycle(">> Container stopped")
+    }
+}
+
+tasks.register('dockerE2E') {
+    group = 'docker-e2e'
+    description = 'Full E2E pipeline: build Docker → start emulator → build APKs → run UI tests → cleanup'
+    dependsOn tasks.dockerRunE2eTests
+    // Ensure stop runs even if tests fail
+    tasks.dockerRunE2eTests.finalizedBy tasks.dockerStopEmulator
+    doLast {
+        logger.lifecycle("╔══════════════════════════════════════════════╗")
+        logger.lifecycle("║  Docker E2E Pipeline Complete               ║")
+        logger.lifecycle("╚══════════════════════════════════════════════╝")
+    }
+}
+
+// Quick alias: run only the homepage-route UI E2E tests
+tasks.register('dockerE2EQuick') {
+    group = 'docker-e2e'
+    description = 'Quick E2E: run only HomepageRouteE2ETest (pure UI, fastest feedback)'
+    dependsOn 'dockerInstallE2eApks'
+    doLast {
+        logger.lifecycle(">> Running quick E2E (HomepageRouteE2ETest)...")
+        exec {
+            commandLine = ['docker', 'exec', e2eContainerName,
+                'sh', '-c',
+                "timeout 15m adb shell am instrument -w -r " +
+                "-e class com.droidvisor.e2e.HomepageRouteE2ETest " +
+                "-e debug false " +
+                "${e2ePackageName}.test/androidx.test.runner.AndroidJUnitRunner"]
+            ignoreExitValue = true
+        }
+    }
+}
+dockerE2EQuick.finalizedBy tasks.dockerStopEmulator

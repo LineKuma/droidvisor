@@ -2,9 +2,9 @@ name: Code Quality
 
 on:
   push:
-    branches: [main, develop, agent-develop]
+    branches: [main, agent-develop]
   pull_request:
-    branches: [main, develop, agent-develop]
+    branches: [main, agent-develop]
   schedule:
     - cron: '0 2 * * 1'
   workflow_dispatch:

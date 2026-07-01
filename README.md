@@ -59,12 +59,96 @@
 | 状态管理 | StateFlow / SharedFlow |
 | 异步 | Kotlin Coroutines |
 | 持久化 | DataStore Preferences |
+| 通信 | Vsock (Virtual Socket) |
 
 ## 环境要求
 
-- Android SDK 35
-- Java JDK 17+
-- Gradle 8.13
+- **Android SDK**: 35 (API 35, minSdk 34)
+- **Java JDK**: 17+
+- **Gradle**: 8.13 (由 gradle-wrapper 自动下载)
+- **Docker 24+ / Docker Compose 2.0+** (用于容器化测试)
+
+## 项目结构
+
+```
+com.droidvisor/
+├── MainActivity.kt                    # 主入口，单 Activity 架构
+│
+├── datastore/
+│   ├── DataStoreFactory.kt            # DataStore 配置
+│   └── VmStateDataStore.kt            # VM 状态持久化
+│
+├── docker/
+│   ├── DockerApiClient.kt             # Docker HTTP API 客户端
+│   ├── DockerDashboardViewModel.kt    # Dashboard ViewModel
+│   ├── DockerError.kt                 # Docker 错误类型
+│   ├── DockerHttpClient.kt            # HTTP 客户端（支持 Vsock 模式）
+│   ├── DockerProxyService.kt          # Docker 代理服务
+│   ├── IDockerProxyService.kt         # Docker 代理服务接口
+│   └── model/
+│       ├── Container.kt               # 容器模型
+│       ├── DockerModels.kt            # Docker 通用模型
+│       └── Image.kt                   # 镜像模型
+│
+├── ui/
+│   ├── components/
+│   │   ├── AnimatedStatusIndicator.kt # 动画状态指示器
+│   │   ├── SimulationModeBanner.kt    # 模拟模式横幅
+│   │   ├── Skeleton.kt               # 骨架屏组件
+│   │   └── StatusBadge.kt            # 状态徽章
+│   │
+│   ├── screen/
+│   │   ├── BackupManagementScreen.kt  # 备份管理界面
+│   │   ├── CreateVmScreen.kt         # 创建 VM 界面
+│   │   ├── DockerDashboardScreen.kt   # Docker Dashboard
+│   │   ├── NetworkConfigScreen.kt     # 网络配置界面
+│   │   ├── PermissionScreen.kt        # AVF 权限检测
+│   │   ├── SettingsScreen.kt          # 设置页面
+│   │   ├── TerminalScreen.kt          # 终端界面
+│   │   └── VmManagementScreen.kt      # VM 管理界面
+│   │
+│   └── viewmodel/
+│       ├── BackupViewModel.kt         # 备份 ViewModel
+│       ├── NetworkConfigViewModel.kt  # 网络配置 ViewModel
+│       ├── PermissionViewModel.kt     # 权限检测 ViewModel
+│       ├── SettingsViewModel.kt       # 设置 ViewModel
+│       ├── TerminalViewModel.kt       # 终端 ViewModel
+│       └── VmManagementViewModel.kt   # VM 管理 ViewModel
+│
+├── util/
+│   └── Logger.kt                      # 分级日志系统
+│
+└── vm/
+    ├── AvfCapabilityChecker.kt        # AVF 能力检测
+    ├── BackupManagerService.kt        # 备份管理服务
+    ├── ConsoleOutputService.kt        # 控制台输出服务
+    ├── VirtualMachineManagerService.kt # AVF VM 生命周期管理（反射调用）
+    ├── VmConfig.kt                    # VM 配置
+    ├── VmConfigValidator.kt           # VM 配置验证
+    ├── VmError.kt                     # VM 错误类型
+    ├── VmManagerService.kt            # VM 管理服务（统一 AVF/QEMU 后端）
+    ├── VmStatus.kt                    # VM 状态
+    │
+    ├── model/
+    │   ├── Backup.kt                  # 备份模型
+    │   ├── NetworkConfig.kt           # 网络配置模型
+    │   ├── VmInstance.kt              # VM 实例模型
+    │   └── VmTemplate.kt              # VM 模板模型
+    │
+    ├── qemu/
+    │   ├── QemuDiskManager.kt         # QEMU 磁盘管理 (qcow2/raw)
+    │   ├── QemuProcessManager.kt      # QEMU 进程生命周期管理
+    │   ├── QemuVmConfig.kt            # QEMU VM 配置
+    │   ├── QemuVmRuntime.kt           # QEMU VM 运行时（AVF fallback）
+    │   ├── QemuVsockChannel.kt        # QEMU Vsock 通道
+    │   └── VmRuntime.kt              # VM 运行时抽象接口
+    │
+    └── vsock/
+        ├── VsockChannel.kt            # Vsock 通道接口
+        ├── VsockConnectionState.kt    # 连接状态
+        ├── VsockError.kt             # Vsock 错误类型
+        └── VsockService.kt            # Vsock 通信服务
+```
 
 ## 构建
 
@@ -84,13 +168,46 @@ cd droidvisor
 # 运行单元测试
 ./gradlew testDebugUnitTest
 
+# 运行集成测试
+./gradlew testDebugUnitTest --tests "*IntegrationTest*"
+
 # 完整构建验证（lint + test + assemble）
 ./gradlew clean assembleDebug lintDebug testDebugUnitTest
 ```
 
-### gradle.properties 可配置项
+### Docker E2E 测试
 
-项目根目录的 `gradle.properties` 文件提供以下可配置项：
+项目提供完整的 Gradle 任务链，复用 `docker-compose.yml` 在 Docker 容器中启动 AVD 模拟器并运行纯 UI 端到端测试：
+
+```bash
+# 一键运行完整 E2E 流水线（构建 Docker → 启动模拟器 → 构建 APK → 运行测试 → 清理）
+./gradlew dockerE2E
+
+# 快速运行：仅执行主页路由 UI 测试（最快反馈）
+./gradlew dockerE2EQuick
+
+# 分步执行（调试用）
+./gradlew dockerStartEmulator     # 构建 Docker 镜像 + 启动模拟器
+./gradlew dockerBuildE2eApks      # 构建 debug + test APK
+./gradlew dockerInstallE2eApks    # 安装 APK 到模拟器
+./gradlew dockerRunE2eTests       # 运行所有 E2E UI 测试
+./gradlew dockerStopEmulator      # 停止并清理容器
+```
+
+E2E 测试任务依赖关系：
+```
+dockerBuildE2eEnv → dockerStartEmulator → dockerBuildE2eApks → dockerInstallE2eApks → dockerRunE2eTests
+                                                                                              │
+                                                                                    finalizedBy
+                                                                                              │
+                                                                                         dockerStopEmulator
+```
+
+测试结果输出：
+- `app/build/outputs/androidTest-results/connected/` — XML 测试结果
+- `app/build/reports/androidTests/connected/` — HTML 测试报告
+
+### gradle.properties 可配置项
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
@@ -113,49 +230,29 @@ Android SDK 源码和 Javadoc 完整下载属于**实验级功能**，默认禁�
 
 ## CI/CD 流水线
 
-项目使用 GitHub Actions，包含以下 workflow 文件：
+项目使用 GitHub Actions，包含以下 workflow：
 
 | Workflow | 触发条件 | 说明 |
 |----------|----------|------|
-| `release.yml` | tag push 或手动触发 | 发布构建（包含 lint 和测试） |
-| `pr-preview.yml` | PR 打开/同步 | PR 预览构建（包含 lint 和测试） |
-| `security-scan.yml` | push / PR / schedule | 安全扫描 |
-| `ci.yml` | push / PR | 统一 CI 流水线 |
-
-所有 workflow 均包含超时设置和 lint/test 步骤。
-
-## 项目结构
-
-```
-com.droidvisor/
-├── MainActivity.kt           # 主入口
-├── datastore/                # DataStore 配置
-├── docker/                   # Docker 集成
-│   ├── model/               # Docker 数据模型
-│   └── DockerDashboardViewModel.kt
-├── ui/
-│   ├── components/          # 可复用组件
-│   ├── screen/              # 页面组件
-│   └── viewmodel/           # ViewModel
-├── util/                    # 工具类
-└── vm/
-    ├── model/               # VM 数据模型
-    └── vsock/               # Vsock 通信
-```
+| `ci.yml` | push / PR (main, agent-develop) | 统一 CI：lint + 单元测试 + 构建 |
+| `code-quality.yml` | push / PR / 每周一 | Detekt 静态分析 + 依赖审查 |
+| `e2e.yml` | push / PR (main, agent-develop) | 模拟器 E2E 测试 (API 34) |
+| `docker-integration.yml` | push / PR (main, agent-develop) | Docker 容器构建验证 |
+| `dev-build.yml` | push (agent-develop) | 自动开发版构建（日期编码版本号） |
+| `release.yml` | tag push (v*) | 发布构建 + GitHub Release |
+| `gradle-wrapper-validation.yml` | push / PR | Gradle Wrapper 完整性验证 |
+| `pr-title-check.yml` | PR 事件 | PR 标题格式检查 |
+| `release-drafter.yml` | push (main) | 自动生成 Release Draft |
+| `stale.yml` | 每周一 | 自动管理 stale issue/PR |
 
 ## Docker Testing
 
 项目支持通过 Docker 容器运行测试，确保测试环境一致性和可移植性。
 
-### 环境要求
-
-- Docker 24+
-- Docker Compose 2.0+
-
 ### 快速开始
 
 ```bash
-# 启动测试环境（包含 Android SDK 测试环境和 Docker-in-Docker 服务）
+# 启动测试环境
 docker compose up --build
 
 # 在后台运行
@@ -163,8 +260,6 @@ docker compose up --build -d
 ```
 
 ### 运行测试
-
-测试脚本位于 `scripts/test-docker.sh`，支持以下运行模式：
 
 ```bash
 # 运行所有测试（单元测试 + 集成测试）
@@ -175,29 +270,9 @@ docker compose up --build -d
 
 # 仅运行集成测试
 ./scripts/test-docker.sh --integration-only
-
-# 查看帮助
-./scripts/test-docker.sh --help
-```
-
-### 手动运行测试
-
-在 Docker 环境中手动运行测试：
-
-```bash
-# 进入测试容器
-docker compose exec android-test bash
-
-# 运行单元测试
-./gradlew testDebugUnitTest
-
-# 运行集成测试
-./gradlew testDebugUnitTest --tests "*IntegrationTest*"
 ```
 
 ### 测试报告
-
-测试报告生成在以下位置：
 
 | 类型 | 路径 |
 |------|------|
@@ -205,20 +280,47 @@ docker compose exec android-test bash
 | 测试结果（XML） | `app/build/test-results/testDebugUnitTest/` |
 | 日志文件 | `app/build/output/logs/` |
 
-通过 Docker Compose 运行时，报告目录挂载到宿主机 `app/build/` 目录下，可直接在宿主机访问。
-
 ### 清理环境
 
 ```bash
-# 停止并移除容器
 docker compose down
-
-# 移除测试数据（包括报告）
-docker compose down -v
-
-# 清理未使用的 Docker 资源
-docker system prune -f
+docker compose down -v  # 移除测试数据
 ```
+
+## 版本信息
+
+- **Min SDK**: 34 (Android 14)
+- **Target SDK**: 35 (Android 15)
+- **Compose BOM**: 2024.03.00
+- **Kotlin**: 1.9.23
+- **AGP**: 8.13.2
+- **Gradle**: 8.13
+
+## 项目待办
+
+### 近期 (High Priority)
+
+- [x] **实现 QemuSerialConsole 串口交互工具** — 基于 QEMU 串口（`-serial tcp`）的双向交互通道，替代当前模拟终端。支持：
+  - TCP 串口客户端模式（连接 QEMU 监听的 serial TCP 端口）
+  - TCP 串口服务端模式（监听端口等待 QEMU 连接）
+  - 命令执行 + 交互式会话 + 非阻塞读取
+  - 文件位置：`app/src/main/java/com/droidvisor/vm/qemu/QemuSerialConsole.kt`
+- [x] **QemuVmConfig.ConsoleMode 扩展** — 新增 `TcpServer(port: Int)` 和 `TcpClient(host: String, port: Int)` 模式
+- [ ] **TerminalViewModel 串口后端集成** — 当 Vsock 不可用时自动降级到串口通道
+
+### 中期
+
+- [ ] **VM 模板管理持久化** — 用户自定义 VM 模板保存/加载
+- [ ] **Docker 镜像拉取进度** — 在 DockerDashboard 显示 pull 进度条
+- [ ] **备份加密** — 备份文件可选 AES 加密
+- [ ] **QEMU x86_64 支持** — 当前仅 aarch64，需适配 x86_64 机器类型和 CPU
+
+### 长期
+
+- [ ] **多语言支持 (i18n)** — 中/英/日界面切换
+- [ ] **CI 缓存优化** — Gradle build cache 持久化到 GitHub Actions
+- [ ] **性能监控面板** — VM CPU/内存/磁盘实时图表
+- [ ] **WiFi ADB 连接** — 无线部署调试
 
 ## 许可证
 
