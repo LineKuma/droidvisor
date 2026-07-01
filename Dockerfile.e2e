@@ -86,10 +86,14 @@ RUN ssh-keygen -t rsa -b 2048 -f /opt/vm-images/debian/e2e_ssh_key -N "" -C "dro
 # 下载 arm64 内核包并提取 vmlinuz 和 initrd.img
 RUN echo "Downloading arm64 kernel package..." && \
     cd /tmp && \
-    wget -q "http://ftp.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-49-cloud-arm64-unsigned_6.1.174-1_arm64.deb" -O /tmp/kernel.deb && \
+    wget -nv "http://ftp.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-49-cloud-arm64-unsigned_6.1.174-1_arm64.deb" -O /tmp/kernel.deb || \
+    wget -nv "https://ftp.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-49-cloud-arm64-unsigned_6.1.174-1_arm64.deb" -O /tmp/kernel.deb && \
     echo "Kernel package downloaded" && \
+    ls -la /tmp/kernel.deb && \
     mkdir -p /tmp/kernel-extract && \
     dpkg-deb -x /tmp/kernel.deb /tmp/kernel-extract && \
+    echo "Kernel package extracted, listing boot files:" && \
+    find /tmp/kernel-extract/boot -type f -name "vmlinuz*" -o -name "initrd*" -o -name "config*" | sort && \
     find /tmp/kernel-extract/boot -name "vmlinuz-*" -exec cp {} /opt/vm-images/debian/vmlinuz \; && \
     find /tmp/kernel-extract/boot -name "initrd.img-*" -exec cp {} /opt/vm-images/debian/initrd.img \; && \
     rm -rf /tmp/kernel.deb /tmp/kernel-extract && \
