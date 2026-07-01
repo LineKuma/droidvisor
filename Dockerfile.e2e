@@ -42,9 +42,9 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
 # 设置PATH
 ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
 
-# 接受Android SDK许可并安装平台工具（与工作 Dockerfile 一致，先不加 emulator/system-images）
+# 接受Android SDK许可并安装平台工具 + emulator
 RUN yes | sdkmanager --licenses || true && \
-    sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+    sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator"
 
 # 配置Gradle Wrapper
 COPY gradle gradle/
