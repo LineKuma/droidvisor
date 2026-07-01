@@ -1,0 +1,45 @@
+# Minimal test Dockerfile - isolate build failure
+FROM ubuntu:22.04
+
+WORKDIR /workspace
+
+# Step 1: apt-get install (same as Dockerfile.e2e)
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    curl \
+    git \
+    openjdk-17-jdk \
+    ca-certificates \
+    ca-certificates-java \
+    qemu-system-x86 \
+    qemu-system-arm \
+    qemu-utils \
+    ovmf \
+    openssh-client \
+    genisoimage \
+    dpkg-dev \
+    x11-utils \
+    xvfb \
+    python3 \
+    python3-pip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Step 2: Android SDK command line tools
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+
+RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
+    cd ${ANDROID_HOME}/cmdline-tools && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip && \
+    unzip -q cmdline-tools.zip && \
+    mv cmdline-tools latest && \
+    rm cmdline-tools.zip
+
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
+
+# Step 3: sdkmanager (same as Dockerfile.e2e)
+RUN yes | sdkmanager --licenses || true && \
+    sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
+
+CMD ["tail", "-f", "/dev/null"]

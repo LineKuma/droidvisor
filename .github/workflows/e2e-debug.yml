@@ -1,0 +1,116 @@
+name: E2E Debug - Isolate Build Failure
+
+on:
+  push:
+    branches: [master, agent-develop]
+    paths:
+      - Dockerfile.e2e-test
+      - .github/workflows/e2e-debug.yml
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  debug-build:
+    name: Debug - Docker Build Isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Test Docker Image (Step 1: apt-get only)
+        id: build-step1
+        continue-on-error: true
+        run: |
+          echo "=== Step 1: Testing apt-get install only ==="
+          cat > /tmp/Dockerfile.step1 << 'DOCKERFILE'
+FROM ubuntu:22.04
+RUN apt-get update && apt-get install -y \
+    wget unzip curl git openjdk-17-jdk ca-certificates ca-certificates-java \
+    qemu-system-x86 qemu-system-arm qemu-utils ovmf openssh-client \
+    genisoimage dpkg-dev x11-utils xvfb python3 python3-pip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+CMD ["echo", "apt-get done"]
+DOCKERFILE
+          docker build -t e2e-test-step1 -f /tmp/Dockerfile.step1 . 2>&1 | tee /tmp/build-step1.log
+          echo "EXIT=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Step 1 Result
+        run: |
+          if [ "${{ steps.build-step1.outputs.EXIT }}" != "0" ]; then
+            echo "❌ Step 1 (apt-get install) FAILED"
+            echo "=== Last 50 lines ==="
+            tail -50 /tmp/build-step1.log
+            exit 1
+          fi
+          echo "✅ Step 1 (apt-get install) PASSED"
+
+      - name: Build Test Docker Image (Step 2: + SDK tools)
+        id: build-step2
+        continue-on-error: true
+        run: |
+          echo "=== Step 2: Testing apt-get + SDK download ==="
+          cat > /tmp/Dockerfile.step2 << 'DOCKERFILE'
+FROM ubuntu:22.04
+RUN apt-get update && apt-get install -y \
+    wget unzip curl git openjdk-17-jdk ca-certificates ca-certificates-java \
+    qemu-system-x86 qemu-system-arm qemu-utils ovmf openssh-client \
+    genisoimage dpkg-dev x11-utils xvfb python3 python3-pip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
+    cd ${ANDROID_HOME}/cmdline-tools && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip && \
+    unzip -q cmdline-tools.zip && mv cmdline-tools latest && rm cmdline-tools.zip
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
+CMD ["echo", "SDK tools done"]
+DOCKERFILE
+          docker build -t e2e-test-step2 -f /tmp/Dockerfile.step2 . 2>&1 | tee /tmp/build-step2.log
+          echo "EXIT=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Step 2 Result
+        run: |
+          if [ "${{ steps.build-step2.outputs.EXIT }}" != "0" ]; then
+            echo "❌ Step 2 (apt-get + SDK tools) FAILED"
+            echo "=== Last 50 lines ==="
+            tail -50 /tmp/build-step2.log
+            exit 1
+          fi
+          echo "✅ Step 2 (apt-get + SDK tools) PASSED"
+
+      - name: Build Test Docker Image (Step 3: + sdkmanager packages)
+        id: build-step3
+        continue-on-error: true
+        run: |
+          echo "=== Step 3: Testing full minimal build (apt-get + SDK + sdkmanager) ==="
+          docker build -t e2e-test-step3 -f Dockerfile.e2e-test . 2>&1 | tee /tmp/build-step3.log
+          echo "EXIT=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Step 3 Result
+        run: |
+          if [ "${{ steps.build-step3.outputs.EXIT }}" != "0" ]; then
+            echo "❌ Step 3 (apt-get + SDK + sdkmanager) FAILED"
+            echo "=== Last 50 lines ==="
+            tail -50 /tmp/build-step3.log
+            exit 1
+          fi
+          echo "✅ Step 3 (apt-get + SDK + sdkmanager) PASSED"
+
+      - name: Upload Debug Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-debug-logs
+          path: /tmp/build-step*.log
+          retention-days: 7
