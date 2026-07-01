@@ -1,4 +1,4 @@
-name: E2E Tests
+name: E2E Tests (Docker Compose)
 
 on:
   push:
@@ -17,131 +17,237 @@ permissions:
 
 jobs:
   e2e-test:
-    name: Instrumented E2E Tests (User Stories)
+    name: E2E Tests with Docker Compose (AVD + QEMU Provider)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        api-level: [34]
+    timeout-minutes: 120
 
     steps:
-      - name: Enable KVM group perms
+      # ========== 环境准备 ==========
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Enable KVM support
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+          echo "KVM support enabled"
 
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Android Project
-        uses: ./.github/actions/setup-android
-
-      # ========== QEMU 环境安装 ==========
-      - name: Install QEMU for VM runtime testing
+      # ========== Docker环境构建 ==========
+      - name: Build E2E Docker images
         run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-system-x86 qemu-utils \
-            qemu-system-arm ovmf \
-            openssh-client wget curl
+          echo "Building E2E test environment..."
+          docker compose -f docker-compose-e2e.yml build
 
-          qemu-system-x86_64 --version
-          qemu-img --version
-
-          mkdir -p /tmp/qemu-test-disks
-          qemu-img create -f qcow2 /tmp/qemu-test-disks/e2e-test-disk.qcow2 1G
-
-          echo "QEMU 安装完成"
-          which qemu-system-x86_64
-          which qemu-img
-
-      # ========== AVD 模拟器设置 ==========
-      - name: AVD Cache
+      - name: Cache Docker images
         uses: actions/cache@v4
-        id: avd-cache
         with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-api-${{ matrix.api-level }}-${{ runner.os }}-v8
+          path: /tmp/docker-cache
+          key: docker-e2e-${{ runner.os }}-${{ hashFiles('Dockerfile.e2e', 'docker-compose-e2e.yml') }}
+          restore-keys: |
+            docker-e2e-${{ runner.os }}-
 
-      - name: Create AVD and Generate Snapshot
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          arch: x86_64
-          target: google_apis
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics -memory 4096
-          disable-animations: true
-          script: echo "AVD snapshot generated"
+      # ========== 启动容器编排组 ==========
+      - name: Start QEMU Provider Container
+        run: |
+          echo "Starting QEMU provider container..."
+          docker compose -f docker-compose-e2e.yml up -d qemu-provider
 
-      # ========== 运行 E2E 测试 ==========
-      - name: Run E2E Tests (User Stories)
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api-level }}
-          arch: x86_64
-          target: google_apis
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -no-metrics -memory 4096
-          disable-animations: true
-          script: |
-            # 编译 APK
-            ./gradlew assembleDebug assembleDebugAndroidTest
+          # 等待QEMU提供者就绪
+          sleep 10
+          docker exec droidvisor-qemu-provider sh -c "qemu-system-x86_64 --version || echo 'QEMU check failed'"
+          docker exec droidvisor-qemu-provider sh -c "test -f /tmp/qemu-e2e-disks/e2e-test-disk.qcow2 && echo 'QEMU disk ready'"
 
-            # 清理旧安装
-            adb uninstall com.droidvisor 2>/dev/null || true
-            adb uninstall com.droidvisor.test 2>/dev/null || true
+      - name: Start AVD Setup Container
+        run: |
+          echo "Starting AVD setup container..."
+          docker compose -f docker-compose-e2e.yml up -d avd-setup
 
-            # 安装 APK
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          # 等待AVD环境就绪(最长等待5分钟)
+          echo "Waiting for AVD setup (max 5 minutes)..."
+          timeout 300 sh -c 'while ! docker exec droidvisor-avd-setup test -d /opt/android-sdk/platforms/android-34; do sleep 5; done' || true
 
-            # 授予必要权限
-            adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true
-            adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true
+      - name: Start Android E2E Test Container
+        run: |
+          echo "Starting Android E2E test container..."
+          docker compose -f docker-compose-e2e.yml up -d android-e2e-test
 
-            # 推送 QEMU 测试环境信息到设备
-            adb shell "mkdir -p /data/local/tmp/qemu-e2e"
-            adb push /tmp/qemu-test-disks/e2e-test-disk.qcow2 /data/local/tmp/qemu-e2e/
+          # 等待容器启动
+          sleep 15
+          docker ps | grep droidvisor-android-e2e
 
-            # 启动 Logcat 捕获（后台），用于收集 E2E-STEP 日志
-            adb logcat -c
-            adb logcat -v time > e2e-logcat.log &
+      # ========== 编译和测试准备 ==========
+      - name: Compile APK in Container
+        run: |
+          echo "Compiling Debug and Test APKs..."
+          docker exec droidvisor-android-e2e \
+            /workspace/gradlew assembleDebug assembleDebugAndroidTest \
+            --no-daemon \
+            --stacktrace
 
-            echo "=========================================="
-            echo "开始运行用户故事 E2E 测试套件"
-            echo "测试结构：US001-US009 共 9 个用户故事"
-            echo "=========================================="
+          # 验证APK生成
+          docker exec droidvisor-android-e2e \
+            bash -c "test -f /workspace/app/build/outputs/apk/debug/app-debug.apk && echo 'Debug APK ready'"
 
-            # 运行完整 E2E 测试套件（必须单行，android-emulator-runner 的 script 按行分割执行）
-            adb shell am instrument -w -e package com.droidvisor.e2e -e debug false com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
+      # ========== 启动Android模拟器 ==========
+      - name: Start Android Emulator (Headless)
+        run: |
+          echo "Starting Android emulator in headless mode..."
+          docker exec -d droidvisor-android-e2e \
+            bash -c "
+              export DISPLAY=:0 &&
+              Xvfb :0 -screen 0 1080x1920x24 &
+              sleep 2 &&
+              $ANDROID_HOME/emulator/emulator \
+                -avd e2e_test_avd \
+                -no-window \
+                -gpu swiftshader_indirect \
+                -noaudio \
+                -no-boot-anim \
+                -no-snapshot-save \
+                -memory 4096 \
+                -qemu -m 4096
+            "
 
-            # 停止 logcat 捕获
-            kill %1 2>/dev/null || true
+          echo "Waiting for emulator to boot (30 seconds)..."
+          sleep 30
 
-            echo "=========================================="
-            echo "E2E 测试执行完毕"
-            echo "=========================================="
+      - name: Verify Emulator Connection
+        run: |
+          echo "Verifying emulator connection..."
+          docker exec droidvisor-android-e2e adb devices
+
+          # 等待设备连接(最长等待1分钟)
+          timeout 60 sh -c 'while ! docker exec droidvisor-android-e2e adb devices | grep -q emulator; do sleep 2; done'
+
+          echo "Emulator connected successfully"
+
+      # ========== 推送QEMU环境到设备 ==========
+      - name: Push QEMU Test Environment
+        run: |
+          echo "Pushing QEMU test environment to emulator..."
+          docker exec droidvisor-android-e2e \
+            bash -c "
+              adb shell mkdir -p /data/local/tmp/qemu-e2e &&
+              adb push /tmp/qemu-e2e/disks/test-disk.qcow2 /data/local/tmp/qemu-e2e/
+            "
+
+          echo "QEMU environment pushed successfully"
+
+      # ========== 安装应用和测试APK ==========
+      - name: Install APKs
+        run: |
+          echo "Installing application and test APKs..."
+          docker exec droidvisor-android-e2e \
+            bash -c "
+              adb uninstall com.droidvisor 2>/dev/null || true &&
+              adb uninstall com.droidvisor.test 2>/dev/null || true &&
+              adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk &&
+              adb install -r /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            "
+
+          echo "APKs installed successfully"
+
+      - name: Grant Permissions
+        run: |
+          echo "Granting necessary permissions..."
+          docker exec droidvisor-android-e2e \
+            bash -c "
+              adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true &&
+              adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true
+            "
+
+      # ========== 运行E2E测试 ==========
+      - name: Start Logcat Capture
+        run: |
+          echo "Starting logcat capture..."
+          docker exec -d droidvisor-android-e2e \
+            bash -c "adb logcat -c && adb logcat -v time > /workspace/e2e-logcat.log"
+
+      - name: Run E2E Tests (US001-US009)
+        run: |
+          echo "=========================================="
+          echo "Running E2E test suite (User Stories US001-US009)"
+          echo "Using QEMU provider as default backend"
+          echo "Headless test mode enabled"
+          echo "=========================================="
+
+          docker exec droidvisor-android-e2e \
+            bash -c "
+              adb shell am instrument -w \
+                -e package com.droidvisor.e2e \
+                -e debug false \
+                com.droidvisor.test/androidx.test.runner.AndroidJUnitRunner
+            "
+
+          echo "=========================================="
+          echo "E2E test execution completed"
+          echo "=========================================="
+
+      - name: Stop Logcat Capture
+        if: always()
+        run: |
+          docker exec droidvisor-android-e2e \
+            bash -c "pkill -f 'adb logcat' || true"
+
+      # ========== 验证虚拟机运行和命令响应 ==========
+      - name: Verify VM Runtime
+        if: always()
+        run: |
+          echo "Verifying VM runtime and command response..."
+
+          # 提取VM相关日志
+          if docker exec droidvisor-android-e2e test -f /workspace/e2e-logcat.log; then
+            echo "===== VM Runtime Logs ====="
+            docker exec droidvisor-android-e2e \
+              bash -c "grep -E 'QEMU|VmManager|VmRuntime|E2E-STEP' /workspace/e2e-logcat.log | tail -50 || echo '(No VM logs found)'"
+            echo "===== VM Runtime Logs End ====="
+
+            # 检查VM启动成功标志
+            if docker exec droidvisor-android-e2e \
+              bash -c "grep -q 'VM started successfully' /workspace/e2e-logcat.log || grep -q 'QEMU VM started' /workspace/e2e-logcat.log"; then
+              echo "✅ VM startup verified"
+            else
+              echo "⚠️ No VM startup logs found (may be using simulation mode)"
+            fi
+
+            # 检查命令执行响应
+            if docker exec droidvisor-android-e2e \
+              bash -c "grep -q 'Command executed' /workspace/e2e-logcat.log || grep -q 'Terminal command' /workspace/e2e-logcat.log"; then
+              echo "✅ VM command response verified"
+            fi
+          fi
 
       # ========== 结果收集与报告 ==========
-      - name: Collect Logcat Logs
+      - name: Collect Test Results
+        if: always()
+        run: |
+          echo "Collecting test results..."
+
+          # 从容器复制测试结果到宿主机
+          docker cp droidvisor-android-e2e:/workspace/app/build/reports/androidTests/connected ./app/build/reports/androidTests/connected || true
+          docker cp droidvisor-android-e2e:/workspace/app/build/outputs/androidTest-results/connected ./app/build/outputs/androidTest-results/connected || true
+          docker cp droidvisor-android-e2e:/workspace/e2e-logcat.log ./e2e-logcat.log || true
+
+          echo "Test results collected"
+
+      - name: Extract E2E Step Logs
         if: always()
         run: |
           if [ -f e2e-logcat.log ]; then
-            echo "===== E2E 步骤日志 (grep E2E-STEP) ====="
-            grep -E "E2E-STEP|E2E-CLEANUP|E2E-RETRY" e2e-logcat.log || echo "(无 E2E 结构化日志)"
-            echo "===== E2E 步骤日志结束 ====="
+            echo "===== E2E Step Logs ====="
+            grep -E "E2E-STEP|E2E-CLEANUP|E2E-RETRY" e2e-logcat.log || echo "(No E2E structured logs)"
+            echo "===== E2E Step Logs End ====="
           fi
 
       - name: Upload E2E Test Results
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: e2e-test-results-api${{ matrix.api-level }}
+          name: e2e-test-results-docker
           path: |
             app/build/reports/androidTests/connected/
             app/build/outputs/androidTest-results/connected/
@@ -153,5 +259,78 @@ jobs:
         if: success() || failure()
         with:
           report_paths: app/build/outputs/androidTest-results/connected/*.xml
-          check_name: E2E Test Results (API ${{ matrix.api-level }})
+          check_name: E2E Test Results (Docker Compose)
           include_passed: false
+
+      - name: Upload QEMU Provider Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qemu-provider-logs
+          path: |
+            /tmp/qemu-e2e-disks/
+          retention-days: 7
+
+      # ========== 清理环境 ==========
+      - name: Cleanup Docker Environment
+        if: always()
+        run: |
+          echo "Cleaning up Docker environment..."
+          docker compose -f docker-compose-e2e.yml down -v --remove-orphans || true
+          docker system prune -f || true
+
+      # ========== 测试总结 ==========
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "E2E Test Summary"
+          echo "=========================================="
+          echo "Test Environment: Docker Compose"
+          echo "Containers Used: android-e2e-test, qemu-provider, avd-setup"
+          echo "Virtualization Backend: QEMU (default provider)"
+          echo "Test Mode: Headless"
+          echo "Test Coverage: US001-US009 (9 user stories)"
+          echo "=========================================="
+          echo "Test execution completed. Check artifacts for detailed results."
+          echo "=========================================="
+
+  # ========== Docker集成测试(可选) ==========
+  docker-integration:
+    name: Docker Integration Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Test Docker Compose Environment
+        run: |
+          echo "Building Docker Compose environment..."
+          docker compose -f docker-compose-e2e.yml build
+
+          echo "Starting all containers..."
+          docker compose -f docker-compose-e2e.yml up -d
+
+          echo "Waiting for containers to be ready..."
+          sleep 30
+
+          echo "Checking container status..."
+          docker compose -f docker-compose-e2e.yml ps
+
+          echo "Verifying QEMU provider..."
+          docker exec droidvisor-qemu-provider sh -c "qemu-system-x86_64 --version"
+
+          echo "Verifying AVD setup..."
+          docker exec droidvisor-avd-setup bash -c "test -d /opt/android-sdk/platforms/android-34 && echo 'AVD ready'"
+
+          echo "Docker integration test completed successfully"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose -f docker-compose-e2e.yml down -v

@@ -1,0 +1,90 @@
+# Droidvisor E2E Testing Environment
+# 包含Android SDK、QEMU环境和测试工具
+FROM ubuntu:22.04
+
+# 设置工作目录
+WORKDIR /workspace
+
+# 安装基础依赖和QEMU
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    curl \
+    git \
+    openjdk-17-jdk \
+    ca-certificates \
+    ca-certificates-java \
+    qemu-system-x86 \
+    qemu-system-arm \
+    qemu-utils \
+    ovmf \
+    openssh-client \
+    x11-utils \
+    xvfb \
+    python3 \
+    python3-pip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 下载并安装 Android SDK command line tools
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+
+RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
+    cd ${ANDROID_HOME}/cmdline-tools && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip && \
+    unzip -q cmdline-tools.zip && \
+    mv cmdline-tools latest && \
+    rm cmdline-tools.zip
+
+# 设置PATH
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
+
+# 接受Android SDK许可并安装平台工具和AVD组件
+RUN yes | sdkmanager --licenses || true && \
+    sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "emulator" "system-images;android-34;google_apis;x86_64"
+
+# 创建默认AVD配置
+RUN echo "no" | avdmanager create avd -n e2e_test_avd -k "system-images;android-34;google_apis;x86_64" --force
+
+# 配置AVD为无头模式
+RUN mkdir -p /root/.android/avd/e2e_test_avd.avd && \
+    echo "hw.lcd.density=420\nhw.lcd.width=1080\nhw.lcd.height=1920\nhw.cpu.arch=x86_64\nhw.cpu.model=kvm\nhw.gpu.mode=swiftshader_indirect\nshowDeviceFrame=no\nskin.path=1080x1920\nskin.name=1080x1920" > /root/.android/avd/e2e_test_avd.avd/config.ini
+
+# 配置Gradle Wrapper
+COPY gradle gradle/
+COPY gradlew gradlew
+COPY gradle.properties gradle.properties
+
+RUN chmod +x /workspace/gradlew
+
+# 设置环境变量
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+# 设置Gradle JVM参数允许TLS协议降级
+ENV JAVA_TOOL_OPTIONS="-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2"
+
+# 配置QEMU工作目录
+ENV QEMU_WORK_DIR=/tmp/qemu-e2e
+RUN mkdir -p $QEMU_WORK_DIR/disks $QEMU_WORK_DIR/sockets $QEMU_WORK_DIR/console
+
+# 创建测试磁盘镜像
+RUN qemu-img create -f qcow2 $QEMU_WORK_DIR/disks/test-disk.qcow2 1G
+
+# 清理可能的损坏缓存
+RUN rm -rf /root/.gradle /workspace/.gradle 2>/dev/null || true
+
+# 复制项目源码
+COPY app /workspace/app
+COPY build.gradle /workspace/build.gradle
+COPY settings.gradle /workspace/settings.gradle
+
+# 创建测试报告目录
+RUN mkdir -p /workspace/app/build/reports/tests /workspace/app/build/reports/androidTests
+
+# 设置E2E测试环境变量
+ENV E2E_TEST_MODE=headless
+ENV QEMU_PROVIDER=default
+ENV DISPLAY=:0
+
+# 启动命令 - 保持容器运行
+CMD ["tail", "-f", "/dev/null"]
