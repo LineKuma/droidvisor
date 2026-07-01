@@ -8,9 +8,9 @@ FROM ubuntu:22.04
 WORKDIR /workspace
 
 # 安装基础依赖
-# - libguestfs-tools: 用于 virt-customize（注入SSH密钥）和 virt-get-kernel（提取内核）
 # - qemu-system-arm: 应用默认使用 aarch64 架构
 # - genisoimage: 用于创建 cloud-init ISO
+# - dpkg-dev: 用于解包 .deb 内核包
 RUN apt-get update && apt-get install -y \
     wget \
     unzip \
@@ -22,10 +22,10 @@ RUN apt-get update && apt-get install -y \
     qemu-system-x86 \
     qemu-system-arm \
     qemu-utils \
-    libguestfs-tools \
     ovmf \
     openssh-client \
     genisoimage \
+    dpkg-dev \
     x11-utils \
     xvfb \
     python3 \
@@ -75,7 +75,9 @@ RUN mkdir -p /root/.android/avd/e2e_test_avd.avd && \
 # 准备 Debian arm64 虚拟机镜像（供应用 QemuVmRuntime 启动）
 # ============================================================================
 # 应用默认使用 aarch64 架构（machine=virt, cpu=cortex-a72）
-# 下载 Debian 12 arm64 云镜像，注入 SSH 密钥，提取内核和 initrd
+# 下载 Debian 12 arm64 云镜像作为磁盘
+# 下载 arm64 内核包并提取 vmlinuz + initrd.img
+# 使用 cloud-init seed ISO 注入 SSH 密钥
 # ============================================================================
 
 # 下载 Debian 12 (Bookworm) arm64 云镜像
@@ -88,23 +90,56 @@ RUN mkdir -p /opt/vm-images/debian && \
 RUN ssh-keygen -t rsa -b 2048 -f /opt/vm-images/debian/e2e_ssh_key -N "" -C "droidvisor-e2e" && \
     echo "SSH key pair generated"
 
-# 使用 virt-customize 注入 SSH 公钥并启用 SSH 服务
-# 这样 VM 启动后即可通过 SSH 免密登录
-RUN virt-customize -a /opt/vm-images/debian/disk.qcow2 \
-      --ssh-inject root:file:/opt/vm-images/debian/e2e_ssh_key.pub \
-      --run-command 'systemctl enable ssh' \
-      --run-command 'echo "PermitRootLogin yes" >> /etc/ssh/sshd_config' \
-      --run-command 'echo "PasswordAuthentication no" >> /etc/ssh/sshd_config' && \
-    echo "SSH key injected into Debian image"
+# 下载 arm64 内核包并提取 vmlinuz 和 initrd.img
+# 使用 deb.debian.org 下载 linux-image-cloud-arm64 包
+RUN echo "Downloading arm64 kernel package..." && \
+    cd /tmp && \
+    # 先获取可用内核版本的包名
+    apt-get update -o Dir::Etc::sourcelist="sources.list.d/debian.sources" \
+      -o Dir::Etc::sourceparts="-" \
+      -o APT::Get::List-Cleanup="0" 2>/dev/null || true && \
+    # 直接下载内核包（使用已知的 bookworm 内核版本）
+    KERNEL_URL="http://deb.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-25-cloud-arm64_6.1.123-1_arm64.deb" && \
+    echo "Trying: ${KERNEL_URL}" && \
+    wget -q "${KERNEL_URL}" -O /tmp/kernel.deb && \
+    echo "Kernel package downloaded" && \
+    # 解包提取内核文件
+    mkdir -p /tmp/kernel-extract && \
+    dpkg-deb -x /tmp/kernel.deb /tmp/kernel-extract && \
+    # 查找并复制 vmlinuz 和 initrd
+    find /tmp/kernel-extract/boot -name "vmlinuz-*" -exec cp {} /opt/vm-images/debian/vmlinuz \; && \
+    find /tmp/kernel-extract/boot -name "initrd.img-*" -exec cp {} /opt/vm-images/debian/initrd.img \; && \
+    # 清理
+    rm -rf /tmp/kernel.deb /tmp/kernel-extract && \
+    ls -la /opt/vm-images/debian/vmlinuz /opt/vm-images/debian/initrd.img && \
+    echo "Kernel and initrd extracted"
 
-# 从云镜像中提取内核和 initrd（供 QEMU -kernel/-initrd 启动）
-RUN virt-get-kernel -a /opt/vm-images/debian/disk.qcow2 \
-      -o /opt/vm-images/debian/ && \
-    # 重命名为固定名称
-    (mv /opt/vm-images/debian/vmlinuz-* /opt/vm-images/debian/vmlinuz 2>/dev/null || true) && \
-    (mv /opt/vm-images/debian/initrd.img-* /opt/vm-images/debian/initrd.img 2>/dev/null || true) && \
-    ls -la /opt/vm-images/debian/ && \
-    echo "Kernel and initrd extracted from Debian image"
+# 创建 cloud-init 配置（自动配置 SSH 密钥和网络）
+RUN mkdir -p /opt/vm-images/debian/cloud-init && \
+    printf 'instance-id: debian-e2e-test\nlocal-hostname: debian-e2e\n' \
+      > /opt/vm-images/debian/cloud-init/meta-data && \
+    printf '#cloud-config\n' \
+      > /opt/vm-images/debian/cloud-init/user-data && \
+    printf 'ssh_pwauth: false\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf 'disable_root: false\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf 'ssh_authorized_keys:\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf '  - %s\n' "$(cat /opt/vm-images/debian/e2e_ssh_key.pub)" \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf 'runcmd:\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf '  - [systemctl, enable, ssh]\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf '  - [systemctl, start, ssh]\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data
+
+# 创建 cloud-init seed ISO
+RUN cd /opt/vm-images/debian/cloud-init && \
+    genisoimage -output /opt/vm-images/debian/seed.iso \
+      -volid cidata -joliet -rock user-data meta-data && \
+    echo "Cloud-init seed ISO created"
 
 # 创建 SSH 验证脚本（通过 adb forward 连接到应用创建的 VM）
 RUN printf '%s\n' \
@@ -216,6 +251,59 @@ ENV JAVA_TOOL_OPTIONS="-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2"
 # 创建 QEMU 工作目录，供应用的 QemuVmRuntime 使用
 ENV QEMU_WORK_DIR=/tmp/qemu-e2e
 RUN mkdir -p $QEMU_WORK_DIR/disks $QEMU_WORK_DIR/sockets $QEMU_WORK_DIR/console
+
+# ============================================================================
+# 准备 QEMU 二进制文件（推送到模拟器供应用的 QemuVmRuntime 使用）
+# 模拟器是 Android Bionic 环境，需要使用静态链接的 QEMU 或带 glibc 的 bundle
+# ============================================================================
+# 方案：复制 qemu-system-aarch64 及其 glibc 依赖，打包为 bundle
+# 在模拟器上通过 glibc ld-linux 直接加载运行
+# 目录结构：
+#   /opt/qemu-bundle/real-bin/  - 实际二进制文件
+#   /opt/qemu-bundle/bin/        - wrapper 脚本（供应用调用）
+#   /opt/qemu-bundle/lib/        - glibc 依赖库
+RUN mkdir -p /opt/qemu-bundle/real-bin /opt/qemu-bundle/bin /opt/qemu-bundle/lib && \
+    cp /usr/bin/qemu-system-aarch64 /opt/qemu-bundle/real-bin/ && \
+    cp /usr/bin/qemu-img /opt/qemu-bundle/real-bin/ && \
+    echo "QEMU binaries copied"
+
+# 收集 qemu-system-aarch64 和 qemu-img 的 glibc 依赖库
+RUN echo "Collecting shared library dependencies..." && \
+    for bin in qemu-system-aarch64 qemu-img; do \
+      echo "--- ${bin} ---" ; \
+      for lib in $(ldd "/usr/bin/${bin}" 2>/dev/null | grep -oP '/\S+'); do \
+        if [ -f "$lib" ]; then \
+          cp -n "$lib" /opt/qemu-bundle/lib/ ; \
+          echo "  Copied: $lib" ; \
+        fi ; \
+      done ; \
+    done && \
+    # 复制动态链接器
+    cp /lib64/ld-linux-x86-64.so.2 /opt/qemu-bundle/lib/ 2>/dev/null || true && \
+    echo "Library collection complete" && \
+    ls -la /opt/qemu-bundle/lib/
+
+# 创建 QEMU wrapper 脚本（在模拟器上使用 glibc 环境运行 QEMU）
+# 命名为 qemu-system-aarch64，使应用的 QemuVmRuntime 能直接找到
+RUN printf '%s\n' \
+    '#!/system/bin/sh' \
+    '# QEMU wrapper for Android emulator - uses bundled glibc' \
+    'QEMU_DIR="/data/local/tmp/qemu-bundle"' \
+    'GLIBC_LD="${QEMU_DIR}/lib/ld-linux-x86-64.so.2"' \
+    'export LD_LIBRARY_PATH="${QEMU_DIR}/lib:${LD_LIBRARY_PATH}"' \
+    'exec "${GLIBC_LD}" --library-path "${QEMU_DIR}/lib" "${QEMU_DIR}/real-bin/qemu-system-aarch64" "$@"' \
+    > /opt/qemu-bundle/bin/qemu-system-aarch64 && \
+    chmod +x /opt/qemu-bundle/bin/qemu-system-aarch64
+
+# 同样创建 qemu-img wrapper
+RUN printf '%s\n' \
+    '#!/system/bin/sh' \
+    'QEMU_DIR="/data/local/tmp/qemu-bundle"' \
+    'GLIBC_LD="${QEMU_DIR}/lib/ld-linux-x86-64.so.2"' \
+    'export LD_LIBRARY_PATH="${QEMU_DIR}/lib:${LD_LIBRARY_PATH}"' \
+    'exec "${GLIBC_LD}" --library-path "${QEMU_DIR}/lib" "${QEMU_DIR}/real-bin/qemu-img" "$@"' \
+    > /opt/qemu-bundle/bin/qemu-img && \
+    chmod +x /opt/qemu-bundle/bin/qemu-img
 
 # 清理可能的损坏缓存
 RUN rm -rf /root/.gradle /workspace/.gradle 2>/dev/null || true

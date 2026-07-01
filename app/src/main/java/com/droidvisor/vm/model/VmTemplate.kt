@@ -22,6 +22,7 @@ data class VmTemplate(
     val kernelImagePath: String? = null,
     val initrdPath: String? = null,
     val firmwarePath: String? = null,
+    val cloudInitSeedPath: String? = null,
     val includesDocker: Boolean = false,
     val includesDesktop: Boolean = false,
     val recommended: Boolean = false,
@@ -39,6 +40,7 @@ data class VmTemplate(
             diskPath = "/data/local/tmp/vm-images/debian/disk.qcow2",
             kernelImagePath = "/data/local/tmp/vm-images/debian/vmlinuz",
             initrdPath = "/data/local/tmp/vm-images/debian/initrd.img",
+            cloudInitSeedPath = "/data/local/tmp/vm-images/debian/seed.iso",
             includesDocker = false,
             protectedVm = true
         )

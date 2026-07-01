@@ -232,12 +232,20 @@ object StableComposeHelper {
         rule: E2EComposeRule,
         vmName: String,
         cpuCores: Int? = null,
-        memoryMb: Long? = null
+        memoryMb: Long? = null,
+        templateName: String? = null
     ) {
         Log.d(TAG, "创建VM: $vmName")
 
         safeClickContentDescription(rule, "创建虚拟机")
         rule.waitForIdle()
+
+        // 如果指定了模板名称，点击对应的模板卡片
+        templateName?.let { tplName ->
+            rule.onNodeWithText(tplName).performClick()
+            rule.waitForIdle()
+            Thread.sleep(300)
+        }
 
         rule.onNodeWithText("虚拟机名称").performTextInput(vmName)
         rule.waitForIdle()

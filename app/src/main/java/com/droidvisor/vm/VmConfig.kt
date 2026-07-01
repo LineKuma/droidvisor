@@ -9,6 +9,7 @@ data class VmConfig(
     val kernelImagePath: String? = null,
     val initrdPath: String? = null,
     val firmwarePath: String? = null,
+    val cloudInitSeedPath: String? = null,
     val payloadApkPath: String? = null,
     val payloadBinaryName: String = "libmicrodroid_payload.so",
     val protectedVm: Boolean = true

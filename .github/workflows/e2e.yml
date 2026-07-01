@@ -180,10 +180,23 @@ jobs:
               adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true
             "
 
-      - name: Push Debian VM Images to Emulator
+      - name: Push Debian VM Images and QEMU Bundle to Emulator
         if: success() || failure()
         continue-on-error: true
         run: |
+          echo "Pushing QEMU bundle to emulator for app's QemuVmRuntime..."
+          docker exec droidvisor-android-e2e \
+            bash -c "
+              adb shell mkdir -p /data/local/tmp/qemu-bundle/bin /data/local/tmp/qemu-bundle/real-bin /data/local/tmp/qemu-bundle/lib && \
+              adb push /opt/qemu-bundle/bin/ /data/local/tmp/qemu-bundle/bin/ && \
+              adb push /opt/qemu-bundle/real-bin/ /data/local/tmp/qemu-bundle/real-bin/ && \
+              adb push /opt/qemu-bundle/lib/ /data/local/tmp/qemu-bundle/lib/ && \
+              adb shell chmod 755 /data/local/tmp/qemu-bundle/bin/qemu-system-aarch64 && \
+              adb shell chmod 755 /data/local/tmp/qemu-bundle/bin/qemu-img && \
+              adb shell ls -la /data/local/tmp/qemu-bundle/bin/ && \
+              echo 'QEMU bundle pushed'
+            " || echo "QEMU push skipped"
+
           echo "Pushing Debian VM images to emulator for app's QemuVmRuntime..."
           docker exec droidvisor-android-e2e \
             bash -c "
@@ -191,6 +204,7 @@ jobs:
               adb push /opt/vm-images/debian/disk.qcow2 /data/local/tmp/vm-images/debian/ 2>/dev/null &&
               adb push /opt/vm-images/debian/vmlinuz /data/local/tmp/vm-images/debian/ 2>/dev/null &&
               adb push /opt/vm-images/debian/initrd.img /data/local/tmp/vm-images/debian/ 2>/dev/null &&
+              adb push /opt/vm-images/debian/seed.iso /data/local/tmp/vm-images/debian/ 2>/dev/null &&
               adb shell ls -la /data/local/tmp/vm-images/debian/ 2>/dev/null
             " || echo "Push skipped - no emulator"
 

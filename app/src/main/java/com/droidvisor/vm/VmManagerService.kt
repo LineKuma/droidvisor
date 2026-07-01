@@ -238,6 +238,7 @@ class VmManagerService : Service() {
             kernelImagePath = vm.template.kernelImagePath,
             initrdPath = vm.template.initrdPath,
             firmwarePath = vm.template.firmwarePath,
+            cloudInitSeedPath = vm.template.cloudInitSeedPath,
             payloadBinaryName = vm.template.payloadBinaryName,
             protectedVm = false
         )

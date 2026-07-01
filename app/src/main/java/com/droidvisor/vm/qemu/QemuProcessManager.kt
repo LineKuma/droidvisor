@@ -174,6 +174,7 @@ class QemuProcessManager(
 
     private fun detectQemuBinary(): String {
         val candidates = listOf(
+            "/data/local/tmp/qemu-bundle/bin/qemu-system-aarch64",
             "qemu-system-aarch64",
             "/system/bin/qemu-system-aarch64",
             "qemu-system-aarch64-static"

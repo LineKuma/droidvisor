@@ -153,7 +153,10 @@ class US002_VmManagement : E2ETestBase() {
     @Test
     fun AC9_createDebianForSsh() {
         step("Create Debian VM (STANDARD_DEBIAN template) for SSH verification")
-        StableComposeHelper.createVm(composeTestRule, "e2e-debian-ssh")
+        StableComposeHelper.createVm(
+            composeTestRule, "e2e-debian-ssh",
+            templateName = "Debian Standard"
+        )
         StableComposeHelper.waitForText(composeTestRule, "e2e-debian-ssh")
 
         step("Start Debian VM - app's QemuVmRuntime boots the Debian image")

@@ -258,13 +258,24 @@ run_instrumentation_tests() {
         bash -c "adb shell pm grant com.droidvisor android.permission.READ_MEDIA_IMAGES 2>/dev/null || true && \
                  adb shell pm grant com.droidvisor android.permission.WRITE_EXTERNAL_STORAGE 2>/dev/null || true"
 
+    # 推送 QEMU bundle 到模拟器（供应用的 QemuVmRuntime 使用）
+    log_step "推送 QEMU bundle 到设备"
+    docker exec droidvisor-android-e2e \
+        bash -c "adb shell mkdir -p /data/local/tmp/qemu-bundle/bin /data/local/tmp/qemu-bundle/real-bin /data/local/tmp/qemu-bundle/lib && \
+                 adb push /opt/qemu-bundle/bin/ /data/local/tmp/qemu-bundle/bin/ && \
+                 adb push /opt/qemu-bundle/real-bin/ /data/local/tmp/qemu-bundle/real-bin/ && \
+                 adb push /opt/qemu-bundle/lib/ /data/local/tmp/qemu-bundle/lib/ && \
+                 adb shell chmod 755 /data/local/tmp/qemu-bundle/bin/qemu-system-aarch64 && \
+                 adb shell chmod 755 /data/local/tmp/qemu-bundle/bin/qemu-img" 2>&1 | tee -a "${BUILD_LOG}"
+
     # 推送 Debian VM 镜像（供应用的 QemuVmRuntime 使用）
     log_step "推送 Debian VM 镜像到设备"
     docker exec droidvisor-android-e2e \
         bash -c "adb shell mkdir -p /data/local/tmp/vm-images/debian && \
                  adb push /opt/vm-images/debian/disk.qcow2 /data/local/tmp/vm-images/debian/ && \
                  adb push /opt/vm-images/debian/vmlinuz /data/local/tmp/vm-images/debian/ && \
-                 adb push /opt/vm-images/debian/initrd.img /data/local/tmp/vm-images/debian/" 2>&1 | tee -a "${BUILD_LOG}"
+                 adb push /opt/vm-images/debian/initrd.img /data/local/tmp/vm-images/debian/ && \
+                 adb push /opt/vm-images/debian/seed.iso /data/local/tmp/vm-images/debian/" 2>&1 | tee -a "${BUILD_LOG}"
 
     # 启动Logcat捕获
     log_step "启动Logcat日志捕获"

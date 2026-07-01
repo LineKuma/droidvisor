@@ -100,13 +100,26 @@ class QemuVmRuntime(
         this.currentConfig = config
 
         // 更新 QEMU 配置，将 VmConfig 的镜像路径映射到 QemuVmConfig
+        val seedExtraDisks = if (config.cloudInitSeedPath != null) {
+            listOf(QemuDisk(
+                path = config.cloudInitSeedPath,
+                sizeGb = 0,
+                format = "raw",
+                readOnly = true,
+                interfaceName = "virtio"
+            ))
+        } else {
+            emptyList()
+        }
+
         val updatedQemuConfig = qemuConfig.copy(
             baseConfig = config,
             vmName = config.vmName,
             diskPath = config.diskPath ?: qemuConfig.diskPath,
             kernelImagePath = config.kernelImagePath ?: qemuConfig.kernelImagePath,
             initrdPath = config.initrdPath ?: qemuConfig.initrdPath,
-            firmwarePath = config.firmwarePath ?: qemuConfig.firmwarePath
+            firmwarePath = config.firmwarePath ?: qemuConfig.firmwarePath,
+            extraDisks = qemuConfig.extraDisks + seedExtraDisks
         )
         rebuildProcessManager(updatedQemuConfig)
 
@@ -391,6 +404,7 @@ class QemuVmRuntime(
     private fun checkQemuBinary(): Boolean {
         return try {
             val candidates = listOf(
+                "/data/local/tmp/qemu-bundle/bin/qemu-system-aarch64",
                 "qemu-system-aarch64",
                 "qemu-system-x86_64",
                 "/system/bin/qemu-system-aarch64"
@@ -409,8 +423,18 @@ class QemuVmRuntime(
     private fun checkRequiredTools(): Boolean {
         return try {
             // 检查 qemu-img 用于磁盘管理
-            val imgCheck = Runtime.getRuntime().exec(arrayOf("qemu-img", "--version"))
-            imgCheck.waitFor() == 0
+            val candidates = listOf(
+                "/data/local/tmp/qemu-bundle/bin/qemu-img",
+                "qemu-img"
+            )
+            candidates.any { candidate ->
+                try {
+                    val imgCheck = Runtime.getRuntime().exec(arrayOf(candidate, "--version"))
+                    imgCheck.waitFor() == 0
+                } catch (e: Exception) {
+                    false
+                }
+            }
         } catch (e: Exception) {
             Log.d(TAG, "qemu-img not available", e)
             false
