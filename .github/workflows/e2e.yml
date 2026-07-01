@@ -40,7 +40,8 @@ jobs:
       - name: Build E2E Docker image
         run: |
           echo "Building E2E test environment..."
-          docker compose -f docker-compose-e2e.yml build
+          set -o pipefail
+          docker compose -f docker-compose-e2e.yml build --progress=plain 2>&1 | tail -100
 
       - name: Cache Docker images
         uses: actions/cache@v4
