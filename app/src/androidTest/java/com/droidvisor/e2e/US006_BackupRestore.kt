@@ -27,7 +27,7 @@ class US006_BackupRestore : E2ETestBase() {
     }
 
     @Test
-    fun AC1_创建完整备份() {
+    fun AC1_createFullBackup() {
         step("创建VM")
         StableComposeHelper.createVm(composeTestRule, "us006-full-backup-vm")
 
@@ -52,7 +52,7 @@ class US006_BackupRestore : E2ETestBase() {
     }
 
     @Test
-    fun AC2_创建增量备份() {
+    fun AC2_createIncrementalBackup() {
         step("创建VM和基础备份")
         StableComposeHelper.createVm(composeTestRule, "us006-incr-backup-vm")
         composeTestRule.onNodeWithText("us006-incr-backup-vm").performClick()
@@ -76,7 +76,7 @@ class US006_BackupRestore : E2ETestBase() {
     }
 
     @Test
-    fun AC3_恢复备份() {
+    fun AC3_restoreBackup() {
         step("创建VM和备份")
         StableComposeHelper.createVm(composeTestRule, "us006-restore-vm")
         composeTestRule.onNodeWithText("us006-restore-vm").performClick()
@@ -96,7 +96,7 @@ class US006_BackupRestore : E2ETestBase() {
     }
 
     @Test
-    fun AC4_删除备份() {
+    fun AC4_deleteBackup() {
         step("创建VM和备份")
         StableComposeHelper.createVm(composeTestRule, "us006-del-backup-vm")
         composeTestRule.onNodeWithText("us006-del-backup-vm").performClick()
@@ -116,7 +116,7 @@ class US006_BackupRestore : E2ETestBase() {
     }
 
     @Test
-    fun AC5_查看备份元数据() {
+    fun AC5_viewBackupMetadata() {
         step("创建带描述的备份")
         StableComposeHelper.createVm(composeTestRule, "us006-meta-vm")
         composeTestRule.onNodeWithText("us006-meta-vm").performClick()
@@ -139,7 +139,7 @@ class US006_BackupRestore : E2ETestBase() {
     }
 
     @Test
-    fun AC6_备份名称校验() {
+    fun AC6_backupNameValidation() {
         step("创建VM并进入备份管理")
         StableComposeHelper.createVm(composeTestRule, "us006-validate-vm")
         composeTestRule.onNodeWithText("us006-validate-vm").performClick()

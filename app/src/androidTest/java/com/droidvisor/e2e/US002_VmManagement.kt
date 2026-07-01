@@ -29,16 +29,16 @@ class US002_VmManagement : E2ETestBase() {
     }
 
     @Test
-    fun AC1_创建默认配置虚拟机() {
-        step("创建默认VM")
+    fun AC1_createDefaultConfigVm() {
+        step("Create default VM")
         StableComposeHelper.createVm(composeTestRule, "us002-default-vm")
         StableComposeHelper.waitForText(composeTestRule, "us002-default-vm")
         StableComposeHelper.deleteVm(composeTestRule, "us002-default-vm")
     }
 
     @Test
-    fun AC2_创建自定义配置虚拟机() {
-        step("创建自定义CPU/内存VM")
+    fun AC2_createCustomConfigVm() {
+        step("Create custom CPU/memory VM")
         StableComposeHelper.createVm(
             composeTestRule, "us002-custom-vm",
             cpuCores = 4, memoryMb = 4096L
@@ -48,16 +48,16 @@ class US002_VmManagement : E2ETestBase() {
     }
 
     @Test
-    fun AC3_VM创建后在列表中可选() {
-        step("创建VM并选择")
+    fun AC3_vmSelectableInList() {
+        step("Create VM and select")
         StableComposeHelper.createVm(composeTestRule, "us002-selectable-vm")
         StableComposeHelper.waitForText(composeTestRule, "us002-selectable-vm")
 
-        step("点击VM进入详情")
+        step("Click VM to enter details")
         composeTestRule.onNodeWithText("us002-selectable-vm").performClick()
         composeTestRule.waitForIdle()
 
-        step("详情页应显示操作按钮")
+        step("Detail page should show action buttons")
         StableComposeHelper.waitForText(composeTestRule, "停止")
         StableComposeHelper.nodeExists(composeTestRule, "删除")
 
@@ -65,15 +65,15 @@ class US002_VmManagement : E2ETestBase() {
     }
 
     @Test
-    fun AC4_启动虚拟机到运行状态() {
-        step("创建并启动VM")
+    fun AC4_startVmToRunning() {
+        step("Create and start VM")
         StableComposeHelper.fullVmLifecycleNoDelete(composeTestRule, "us002-start-vm")
         StableComposeHelper.deleteVm(composeTestRule, "us002-start-vm")
     }
 
     @Test
-    fun AC5_停止运行中的虚拟机() {
-        step("创建、启动、停止VM")
+    fun AC5_stopRunningVm() {
+        step("Create, start, stop VM")
         StableComposeHelper.createVm(composeTestRule, "us002-stop-vm")
         StableComposeHelper.waitForText(composeTestRule, "us002-stop-vm")
 
@@ -83,7 +83,7 @@ class US002_VmManagement : E2ETestBase() {
         composeTestRule.waitForIdle()
         StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 10_000L)
 
-        step("停止VM")
+        step("Stop VM")
         StableComposeHelper.safeClick(composeTestRule, "停止")
         composeTestRule.waitForIdle()
         StableComposeHelper.waitForText(composeTestRule, "已停止")
@@ -92,56 +92,56 @@ class US002_VmManagement : E2ETestBase() {
     }
 
     @Test
-    fun AC6_删除已停止的虚拟机() {
-        step("创建并删除VM")
+    fun AC6_deleteStoppedVm() {
+        step("Create and delete VM")
         StableComposeHelper.createVm(composeTestRule, "us002-delete-vm")
         StableComposeHelper.waitForText(composeTestRule, "us002-delete-vm")
         StableComposeHelper.deleteVm(composeTestRule, "us002-delete-vm")
 
-        step("验证VM已删除")
+        step("Verify VM deleted")
         assert(!StableComposeHelper.nodeExists(composeTestRule, "us002-delete-vm"))
     }
 
     @Test
-    fun AC7_多虚拟机同时管理() {
-        step("创建多个VM")
+    fun AC7_multiVmManagement() {
+        step("Create multiple VMs")
         StableComposeHelper.createVm(composeTestRule, "us002-multi-a")
         StableComposeHelper.createVm(composeTestRule, "us002-multi-b")
 
-        step("验证两个VM都存在")
+        step("Verify both VMs exist")
         StableComposeHelper.waitForText(composeTestRule, "us002-multi-a")
         StableComposeHelper.waitForText(composeTestRule, "us002-multi-b")
 
-        step("启动第一个VM")
+        step("Start first VM")
         composeTestRule.onNodeWithText("us002-multi-a").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("启动").performClick()
         composeTestRule.waitForIdle()
         StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 10_000L)
 
-        step("切换到第二个VM确认状态独立")
+        step("Switch to second VM and verify independent state")
         composeTestRule.onNodeWithText("us002-multi-b").performClick()
         composeTestRule.waitForIdle()
-        // 第二个VM应该不是运行状态
-        runSafely("检查第二个VM非运行状态") {
+        // Second VM should not be in running state
+        runSafely("Check second VM not running") {
             StableComposeHelper.waitForText(composeTestRule, "启动", timeoutMs = 2000L)
         }
     }
 
     @Test
-    fun AC8_多次启停循环() {
-        step("创建VM并执行3次启停循环")
+    fun AC8_startStopCycle() {
+        step("Create VM and run 3 start-stop cycles")
         StableComposeHelper.createVm(composeTestRule, "us002-cycle-vm")
         composeTestRule.onNodeWithText("us002-cycle-vm").performClick()
         composeTestRule.waitForIdle()
 
         repeat(3) { i ->
-            step("第 ${i + 1} 次启动")
+            step("Cycle ${i + 1} start")
             composeTestRule.onNodeWithText("启动").performClick()
             composeTestRule.waitForIdle()
             StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 10_000L)
 
-            step("第 ${i + 1} 次停止")
+            step("Cycle ${i + 1} stop")
             StableComposeHelper.safeClick(composeTestRule, "停止")
             composeTestRule.waitForIdle()
             StableComposeHelper.waitForText(composeTestRule, "已停止")

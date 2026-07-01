@@ -24,7 +24,7 @@ class US007_Settings : E2ETestBase() {
     }
 
     @Test
-    fun AC1_设置页面可正常打开() {
+    fun AC1_settingsPageOpensNormally() {
         step("导航到设置页面")
         StableComposeHelper.navigateToTab(composeTestRule, "设置")
         StableComposeHelper.waitForCondition(timeoutMs = 3000L, description = "设置页面加载") { true }
@@ -35,7 +35,7 @@ class US007_Settings : E2ETestBase() {
     }
 
     @Test
-    fun AC2_从设置导航回其他页面() {
+    fun AC2_navigateFromSettingsToOtherPages() {
         step("从设置出发遍历所有标签")
         StableComposeHelper.navigateToTab(composeTestRule, "设置")
 
@@ -48,7 +48,7 @@ class US007_Settings : E2ETestBase() {
     }
 
     @Test
-    fun AC3_设置页面交互稳定性() {
+    fun AC3_settingsPageInteractionStability() {
         step("多次进出设置页面")
         repeat(3) {
             StableComposeHelper.navigateToTab(composeTestRule, "设置")

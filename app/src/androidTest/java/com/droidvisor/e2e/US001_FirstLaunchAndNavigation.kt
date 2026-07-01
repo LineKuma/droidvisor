@@ -26,14 +26,14 @@ class US001_FirstLaunchAndNavigation : E2ETestBase() {
     }
 
     @Test
-    fun AC1_关闭权限引导进入主界面() {
+    fun AC1_closePermissionAndEnterMain() {
         step("验证主界面已加载")
         // 权限引导已关闭，应能看到主界面元素
         composeTestRule.onNodeWithText("虚拟机").assertExists()
     }
 
     @Test
-    fun AC2_四个底部导航标签都存在() {
+    fun AC2_allFourBottomNavTabsExist() {
         step("检查所有导航标签")
         composeTestRule.onNodeWithText("虚拟机").assertExists()
         composeTestRule.onNodeWithText("Docker").assertExists()
@@ -42,13 +42,13 @@ class US001_FirstLaunchAndNavigation : E2ETestBase() {
     }
 
     @Test
-    fun AC3_默认页面为虚拟机管理页() {
+    fun AC3_defaultPageIsVmManagement() {
         step("验证默认页面")
         composeTestRule.onNodeWithContentDescription("创建虚拟机").assertExists()
     }
 
     @Test
-    fun AC4_可在各标签页之间切换() {
+    fun AC4_canSwitchBetweenTabs() {
         val tabs = listOf("Docker", "终端", "设置")
         tabs.forEach { tab ->
             step("切换到 $tab 标签")
@@ -61,7 +61,7 @@ class US001_FirstLaunchAndNavigation : E2ETestBase() {
     }
 
     @Test
-    fun AC5_多次切换后状态持久化() {
+    fun AC5_statePersistsAfterMultipleSwitches() {
         step("创建测试VM")
         StableComposeHelper.createVm(composeTestRule, "us001-persist-vm")
 

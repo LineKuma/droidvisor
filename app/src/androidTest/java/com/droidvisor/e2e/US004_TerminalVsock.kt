@@ -27,7 +27,7 @@ class US004_TerminalVsock : E2ETestBase() {
     }
 
     @Test
-    fun AC1_终端页面导航() {
+    fun AC1_terminalPageNavigation() {
         step("导航到终端标签")
         StableComposeHelper.navigateToTab(composeTestRule, "终端")
         Thread.sleep(1000)
@@ -38,7 +38,7 @@ class US004_TerminalVsock : E2ETestBase() {
     }
 
     @Test
-    fun AC2_无VM时终端不崩溃() {
+    fun AC2_terminalNoCrashWithoutVm() {
         step("无VM状态下进入终端")
         StableComposeHelper.navigateToTab(composeTestRule, "终端")
         StableComposeHelper.waitForCondition(timeoutMs = 3000L, description = "终端页面渲染") { true }
@@ -49,7 +49,7 @@ class US004_TerminalVsock : E2ETestBase() {
     }
 
     @Test
-    fun AC3_VM运行时访问终端() {
+    fun AC3_accessTerminalWhenVmRunning() {
         step("创建并启动VM")
         StableComposeHelper.createVm(composeTestRule, "us004-running-vm")
         composeTestRule.onNodeWithText("us004-running-vm").performClick()
@@ -68,7 +68,7 @@ class US004_TerminalVsock : E2ETestBase() {
     }
 
     @Test
-    fun AC4_VM停止后终端处理断连() {
+    fun AC4_terminalHandlesDisconnectWhenVmStopped() {
         step("创建、启动、停止VM")
         StableComposeHelper.createVm(composeTestRule, "us004-disconnect-vm")
         composeTestRule.onNodeWithText("us004-disconnect-vm").performClick()
@@ -100,7 +100,7 @@ class US004_TerminalVsock : E2ETestBase() {
     }
 
     @Test
-    fun AC5_多VM环境终端跟随切换() {
+    fun AC5_terminalFollowsMultiVmSwitch() {
         step("创建两个VM")
         StableComposeHelper.createVm(composeTestRule, "us004-vm-a")
         StableComposeHelper.createVm(composeTestRule, "us004-vm-b")
@@ -129,7 +129,7 @@ class US004_TerminalVsock : E2ETestBase() {
     }
 
     @Test
-    fun AC6_快速连续终端切换压力() {
+    fun AC6_rapidTerminalSwitchStress() {
         step("创建目标VM")
         StableComposeHelper.createVm(composeTestRule, "us004-toggle-vm")
         composeTestRule.onNodeWithText("us004-toggle-vm").performClick()

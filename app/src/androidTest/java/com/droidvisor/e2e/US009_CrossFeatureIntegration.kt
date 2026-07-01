@@ -24,7 +24,7 @@ class US009_CrossFeatureIntegration : E2ETestBase() {
     }
 
     @Test
-    fun AC1_全功能集成流程() {
+    fun AC1_fullFeatureIntegrationFlow() {
         step("1. 创建VM")
         StableComposeHelper.createVm(
             composeTestRule, "us009-integration-vm",
@@ -66,7 +66,7 @@ class US009_CrossFeatureIntegration : E2ETestBase() {
     }
 
     @Test
-    fun AC2_多VM并发跨页面操作() {
+    fun AC2_multiVmCrossPageOperation() {
         step("创建3个VM")
         listOf("us009-alpha", "us009-beta", "us009-gamma").forEach { name ->
             StableComposeHelper.createVm(composeTestRule, name)
@@ -98,7 +98,7 @@ class US009_CrossFeatureIntegration : E2ETestBase() {
     }
 
     @Test
-    fun AC3_快速连续操作压力测试() {
+    fun AC3_rapidContinuousOperationStress() {
         step("快速连续创建3个VM")
         (1..3).forEach { i ->
             StableComposeHelper.createVm(composeTestRule, "us009-rapid-$i")

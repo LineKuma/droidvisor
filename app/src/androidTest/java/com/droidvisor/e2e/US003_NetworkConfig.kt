@@ -24,7 +24,7 @@ class US003_NetworkConfig : E2ETestBase() {
     }
 
     @Test
-    fun AC1_进入网络配置界面() {
+    fun AC1_enterNetworkConfigPage() {
         step("创建VM并进入详情")
         StableComposeHelper.createVm(composeTestRule, "us003-net-vm")
         composeTestRule.onNodeWithText("us003-net-vm").performClick()
@@ -40,7 +40,7 @@ class US003_NetworkConfig : E2ETestBase() {
     }
 
     @Test
-    fun AC2_添加端口转发规则() {
+    fun AC2_addPortForwardingRule() {
         step("创建VM并进入网络配置")
         StableComposeHelper.createVm(composeTestRule, "us003-port-vm")
         composeTestRule.onNodeWithText("us003-port-vm").performClick()
@@ -66,7 +66,7 @@ class US003_NetworkConfig : E2ETestBase() {
     }
 
     @Test
-    fun AC3_无效端口号校验() {
+    fun AC3_invalidPortNumberValidation() {
         step("创建VM并进入网络配置")
         StableComposeHelper.createVm(composeTestRule, "us003-invalid-port-vm")
         composeTestRule.onNodeWithText("us003-invalid-port-vm").performClick()

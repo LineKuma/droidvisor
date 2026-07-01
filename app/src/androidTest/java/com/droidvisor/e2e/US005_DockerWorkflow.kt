@@ -27,7 +27,7 @@ class US005_DockerWorkflow : E2ETestBase() {
     }
 
     @Test
-    fun AC1_查看Docker版本信息() {
+    fun AC1_viewDockerVersion() {
         step("导航到Docker页面")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
 
@@ -41,7 +41,7 @@ class US005_DockerWorkflow : E2ETestBase() {
     }
 
     @Test
-    fun AC2_拉取Docker镜像() {
+    fun AC2_pullDockerImage() {
         step("导航到Docker镜像页面")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
         StableComposeHelper.safeClick(composeTestRule, "镜像")
@@ -55,7 +55,7 @@ class US005_DockerWorkflow : E2ETestBase() {
     }
 
     @Test
-    fun AC3_创建并启动容器() {
+    fun AC3_createAndStartContainer() {
         step("准备：确保 alpine 镜像存在")
         prepareAlpineImage()
 
@@ -90,7 +90,7 @@ class US005_DockerWorkflow : E2ETestBase() {
     }
 
     @Test
-    fun AC4_停止并删除容器() {
+    fun AC4_stopAndDeleteContainer() {
         step("确保测试容器存在")
         // 如果 AC3 的容器还在，复用它；否则创建新的
         if (!StableComposeHelper.nodeExists(composeTestRule, "us005-test-container")) {
@@ -117,7 +117,7 @@ class US005_DockerWorkflow : E2ETestBase() {
     }
 
     @Test
-    fun AC5_完整的Docker工作流() {
+    fun AC5_completeDockerWorkflow() {
         step("阶段1: 拉取 nginx 镜像")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
         StableComposeHelper.safeClick(composeTestRule, "镜像")
@@ -146,7 +146,7 @@ class US005_DockerWorkflow : E2ETestBase() {
     }
 
     @Test
-    fun AC6_Docker输入校验() {
+    fun AC6_dockerInputValidation() {
         step("空容器名称应禁用创建按钮")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
         StableComposeHelper.safeClick(composeTestRule, "容器")

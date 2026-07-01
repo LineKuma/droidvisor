@@ -38,7 +38,7 @@ class US008_InputValidation : E2ETestBase() {
     }
 
     @Test
-    fun AC1_空VM名称禁止创建() {
+    fun AC1_emptyVmNameNotAllowed() {
         step("输入空名称")
         openCreateDialog()
         composeTestRule.onNodeWithText("虚拟机名称").performTextInput("")
@@ -47,7 +47,7 @@ class US008_InputValidation : E2ETestBase() {
     }
 
     @Test
-    fun AC2_特殊字符VM名称禁止创建() {
+    fun AC2_specialCharsVmNameNotAllowed() {
         step("输入特殊字符名称")
         openCreateDialog()
         composeTestRule.onNodeWithText("虚拟机名称").performTextInput("vm@#\$%^&*!")
@@ -56,7 +56,7 @@ class US008_InputValidation : E2ETestBase() {
     }
 
     @Test
-    fun AC3_超长VM名称禁止创建() {
+    fun AC3_oversizedVmNameNotAllowed() {
         step("输入256字符名称")
         openCreateDialog()
         composeTestRule.onNodeWithText("虚拟机名称").performTextInput("a".repeat(256))
@@ -65,7 +65,7 @@ class US008_InputValidation : E2ETestBase() {
     }
 
     @Test
-    fun AC4_负数CPU值禁止创建() {
+    fun AC4_negativeCpuValueNotAllowed() {
         step("输入负数CPU")
         openCreateDialog()
         composeTestRule.onNodeWithText("虚拟机名称").performTextInput("neg-cpu-vm")
@@ -75,7 +75,7 @@ class US008_InputValidation : E2ETestBase() {
     }
 
     @Test
-    fun AC5_过大内存值禁止创建() {
+    fun AC5_excessiveMemoryNotAllowed() {
         step("输入超大内存")
         openCreateDialog()
         composeTestRule.onNodeWithText("虚拟机名称").performTextInput("huge-mem-vm")
@@ -85,7 +85,7 @@ class US008_InputValidation : E2ETestBase() {
     }
 
     @Test
-    fun AC6_重复VM名称禁止创建() {
+    fun AC6_duplicateVmNameNotAllowed() {
         step("创建第一个VM")
         StableComposeHelper.createVm(composeTestRule, "us008-dup-vm")
         StableComposeHelper.waitForText(composeTestRule, "us008-dup-vm")
@@ -100,7 +100,7 @@ class US008_InputValidation : E2ETestBase() {
     }
 
     @Test
-    fun AC7_运行中VM需先停止才能删除() {
+    fun AC7_runningVmMustStopBeforeDelete() {
         step("创建并启动VM")
         StableComposeHelper.createVm(composeTestRule, "us008-running-del-vm")
         composeTestRule.onNodeWithText("us008-running-del-vm").performClick()
