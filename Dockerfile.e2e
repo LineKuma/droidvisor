@@ -92,24 +92,20 @@ RUN ssh-keygen -t rsa -b 2048 -f /opt/vm-images/debian/e2e_ssh_key -N "" -C "dro
 
 # 下载 arm64 内核包并提取 vmlinuz 和 initrd.img
 # 使用 deb.debian.org 下载 linux-image-cloud-arm64 包
+# 步骤: 更新源 → 下载内核包 → 解包 → 提取 vmlinuz/initrd → 清理
 RUN echo "Downloading arm64 kernel package..." && \
     cd /tmp && \
-    # 先获取可用内核版本的包名
     apt-get update -o Dir::Etc::sourcelist="sources.list.d/debian.sources" \
       -o Dir::Etc::sourceparts="-" \
       -o APT::Get::List-Cleanup="0" 2>/dev/null || true && \
-    # 直接下载内核包（使用已知的 bookworm 内核版本）
     KERNEL_URL="http://deb.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-25-cloud-arm64_6.1.123-1_arm64.deb" && \
     echo "Trying: ${KERNEL_URL}" && \
     wget -q "${KERNEL_URL}" -O /tmp/kernel.deb && \
     echo "Kernel package downloaded" && \
-    # 解包提取内核文件
     mkdir -p /tmp/kernel-extract && \
     dpkg-deb -x /tmp/kernel.deb /tmp/kernel-extract && \
-    # 查找并复制 vmlinuz 和 initrd
     find /tmp/kernel-extract/boot -name "vmlinuz-*" -exec cp {} /opt/vm-images/debian/vmlinuz \; && \
     find /tmp/kernel-extract/boot -name "initrd.img-*" -exec cp {} /opt/vm-images/debian/initrd.img \; && \
-    # 清理
     rm -rf /tmp/kernel.deb /tmp/kernel-extract && \
     ls -la /opt/vm-images/debian/vmlinuz /opt/vm-images/debian/initrd.img && \
     echo "Kernel and initrd extracted"
@@ -268,6 +264,7 @@ RUN mkdir -p /opt/qemu-bundle/real-bin /opt/qemu-bundle/bin /opt/qemu-bundle/lib
     echo "QEMU binaries copied"
 
 # 收集 qemu-system-aarch64 和 qemu-img 的 glibc 依赖库
+# 同时复制动态链接器 ld-linux-x86-64.so.2
 RUN echo "Collecting shared library dependencies..." && \
     for bin in qemu-system-aarch64 qemu-img; do \
       echo "--- ${bin} ---" ; \
@@ -278,7 +275,6 @@ RUN echo "Collecting shared library dependencies..." && \
         fi ; \
       done ; \
     done && \
-    # 复制动态链接器
     cp /lib64/ld-linux-x86-64.so.2 /opt/qemu-bundle/lib/ 2>/dev/null || true && \
     echo "Library collection complete" && \
     ls -la /opt/qemu-bundle/lib/
