@@ -79,6 +79,170 @@ RUN mkdir -p /opt/vm-images/debian && \
       "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-arm64.qcow2" && \
     echo "Debian 12 arm64 cloud image downloaded"
 
+# 生成 SSH 密钥对
+RUN ssh-keygen -t rsa -b 2048 -f /opt/vm-images/debian/e2e_ssh_key -N "" -C "droidvisor-e2e" && \
+    echo "SSH key pair generated"
+
+# 下载 arm64 内核包并提取 vmlinuz 和 initrd.img
+# 依赖链: linux-image-cloud-arm64 → linux-image-X.X.X-XX-cloud-arm64 → linux-image-X.X.X-XX-cloud-arm64-unsigned
+RUN echo "Downloading arm64 kernel package..." && \
+    apt-get update && apt-get install -y debian-archive-keyring && \
+    dpkg --add-architecture arm64 && \
+    echo "deb [arch=arm64] http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/debian-arm64.list && \
+    echo "deb [arch=arm64] http://security.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list.d/debian-arm64.list && \
+    apt-get update && \
+    cd /tmp && \
+    apt-get download linux-image-cloud-arm64:arm64 && \
+    KERNEL_SIGNED=$(dpkg-deb -f linux-image-cloud-arm64*.deb Depends | tr ',' '\n' | grep -oP 'linux-image-[0-9.]+-[0-9]+-cloud-arm64' | head -1) && \
+    echo "Signed kernel package: ${KERNEL_SIGNED}" && \
+    apt-get download ${KERNEL_SIGNED}:arm64 && \
+    KERNEL_UNSIGNED=$(dpkg-deb -f ${KERNEL_SIGNED}*.deb Depends 2>/dev/null | tr ',' '\n' | grep -oP 'linux-image-[0-9.]+-[0-9]+-cloud-arm64-unsigned' | head -1) && \
+    if [ -n "${KERNEL_UNSIGNED}" ]; then \
+      echo "Unsigned kernel package: ${KERNEL_UNSIGNED}"; \
+      apt-get download ${KERNEL_UNSIGNED}:arm64; \
+    fi && \
+    echo "Kernel packages downloaded" && \
+    mkdir -p /tmp/kernel-extract && \
+    for deb in /tmp/linux-image-*-cloud-arm64*.deb; do \
+      dpkg-deb -x "$deb" /tmp/kernel-extract; \
+    done && \
+    find /tmp/kernel-extract/boot -name "vmlinuz-*" -exec cp {} /opt/vm-images/debian/vmlinuz \; && \
+    find /tmp/kernel-extract/boot -name "initrd.img-*" -exec cp {} /opt/vm-images/debian/initrd.img \; && \
+    rm -rf /tmp/linux-image-*.deb /tmp/kernel-extract && \
+    ls -la /opt/vm-images/debian/vmlinuz /opt/vm-images/debian/initrd.img && \
+    echo "Kernel and initrd extracted"
+
+# 创建 cloud-init 配置（自动配置 SSH 密钥和网络）
+RUN mkdir -p /opt/vm-images/debian/cloud-init && \
+    printf 'instance-id: debian-e2e-test\nlocal-hostname: debian-e2e\n' \
+      > /opt/vm-images/debian/cloud-init/meta-data && \
+    printf '#cloud-config\n' \
+      > /opt/vm-images/debian/cloud-init/user-data && \
+    printf 'ssh_pwauth: false\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf 'disable_root: false\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf 'ssh_authorized_keys:\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf '  - %s\n' "$(cat /opt/vm-images/debian/e2e_ssh_key.pub)" \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf 'runcmd:\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf '  - [systemctl, enable, ssh]\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data && \
+    printf '  - [systemctl, start, ssh]\n' \
+      >> /opt/vm-images/debian/cloud-init/user-data
+
+# 创建 cloud-init seed ISO
+RUN cd /opt/vm-images/debian/cloud-init && \
+    genisoimage -output /opt/vm-images/debian/seed.iso \
+      -volid cidata -joliet -rock user-data meta-data && \
+    echo "Cloud-init seed ISO created"
+
+# 创建 SSH 验证脚本
+RUN printf '%s\n' \
+    '#!/bin/bash' \
+    'set -e' \
+    '' \
+    'DEBIAN_DIR="/opt/vm-images/debian"' \
+    'SSH_KEY="${DEBIAN_DIR}/e2e_ssh_key"' \
+    'SSH_PORT=2222' \
+    '' \
+    'echo "=== Debian VM SSH Verification ==="' \
+    '' \
+    'adb forward tcp:${SSH_PORT} tcp:${SSH_PORT} 2>/dev/null || true' \
+    '' \
+    'echo "Waiting for SSH on port ${SSH_PORT}..."' \
+    'CONNECTED=false' \
+    'for i in $(seq 1 90); do' \
+    '  if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=2 \' \
+    '     -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 \' \
+    '     "echo SSH_OK" 2>/dev/null; then' \
+    '    CONNECTED=true' \
+    '    echo "SSH connected (attempt $i)"' \
+    '    break' \
+    '  fi' \
+    '  printf "."' \
+    '  sleep 2' \
+    'done' \
+    'echo ""' \
+    '' \
+    'if [ "$CONNECTED" != "true" ]; then' \
+    '  echo "ERROR: SSH connection failed"' \
+    '  exit 1' \
+    'fi' \
+    '' \
+    'echo "=== VM Identity Verification ==="' \
+    'CMD_LINE=$(ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "cat /proc/cmdline" 2>/dev/null)' \
+    'echo "Kernel cmdline: ${CMD_LINE}"' \
+    '' \
+    'if echo "${CMD_LINE}" | grep -q "droidvisor_e2e_verify=yes"; then' \
+    '  echo "PASS: droidvisor_e2e_verify=yes found"' \
+    'else' \
+    '  echo "FAIL: droidvisor_e2e_verify=yes not found"' \
+    '  exit 1' \
+    'fi' \
+    '' \
+    'if echo "${CMD_LINE}" | grep -q "vmName="; then' \
+    '  VM_NAME=$(echo "${CMD_LINE}" | grep -o "vmName=[^ ]*" | cut -d= -f2)' \
+    '  echo "PASS: VM name = ${VM_NAME}"' \
+    'fi' \
+    '' \
+    'echo "=== Basic Commands ==="' \
+    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "whoami"' \
+    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "uname -a"' \
+    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "echo E2E_SSH_VERIFY_OK"' \
+    'echo "=== SSH Verification PASSED ==="' \
+    > /opt/vm-images/debian/verify-debian-ssh.sh && \
+    chmod +x /opt/vm-images/debian/verify-debian-ssh.sh
+
+# ============================================================================
+# 准备 QEMU 二进制文件（推送到模拟器供应用的 QemuVmRuntime 使用）
+# ============================================================================
+
+# 创建 QEMU 工作目录
+ENV QEMU_WORK_DIR=/tmp/qemu-e2e
+RUN mkdir -p $QEMU_WORK_DIR/disks $QEMU_WORK_DIR/sockets $QEMU_WORK_DIR/console
+
+# 复制 QEMU 二进制文件到 bundle 目录
+RUN mkdir -p /opt/qemu-bundle/real-bin /opt/qemu-bundle/bin /opt/qemu-bundle/lib && \
+    cp /usr/bin/qemu-system-aarch64 /opt/qemu-bundle/real-bin/ && \
+    cp /usr/bin/qemu-img /opt/qemu-bundle/real-bin/ && \
+    echo "QEMU binaries copied"
+
+# 收集 glibc 依赖库
+RUN for bin in qemu-system-aarch64 qemu-img; do \
+      echo "--- ${bin} ---" ; \
+      for lib in $(ldd "/usr/bin/${bin}" 2>/dev/null | grep -oP '/\S+'); do \
+        if [ -f "$lib" ]; then \
+          cp -n "$lib" /opt/qemu-bundle/lib/ ; \
+          echo "  Copied: $lib" ; \
+        fi ; \
+      done ; \
+    done && \
+    cp /lib64/ld-linux-x86-64.so.2 /opt/qemu-bundle/lib/ 2>/dev/null || true && \
+    echo "Library collection complete" && \
+    ls -la /opt/qemu-bundle/lib/
+
+# 创建 QEMU wrapper 脚本（Android Bionic 环境使用 glibc bundle）
+RUN printf '%s\n' \
+    '#!/system/bin/sh' \
+    'QEMU_DIR="/data/local/tmp/qemu-bundle"' \
+    'GLIBC_LD="${QEMU_DIR}/lib/ld-linux-x86-64.so.2"' \
+    'export LD_LIBRARY_PATH="${QEMU_DIR}/lib:${LD_LIBRARY_PATH}"' \
+    'exec "${GLIBC_LD}" --library-path "${QEMU_DIR}/lib" "${QEMU_DIR}/real-bin/qemu-system-aarch64" "$@"' \
+    > /opt/qemu-bundle/bin/qemu-system-aarch64 && \
+    chmod +x /opt/qemu-bundle/bin/qemu-system-aarch64
+
+RUN printf '%s\n' \
+    '#!/system/bin/sh' \
+    'QEMU_DIR="/data/local/tmp/qemu-bundle"' \
+    'GLIBC_LD="${QEMU_DIR}/lib/ld-linux-x86-64.so.2"' \
+    'export LD_LIBRARY_PATH="${QEMU_DIR}/lib:${LD_LIBRARY_PATH}"' \
+    'exec "${GLIBC_LD}" --library-path "${QEMU_DIR}/lib" "${QEMU_DIR}/real-bin/qemu-img" "$@"' \
+    > /opt/qemu-bundle/bin/qemu-img && \
+    chmod +x /opt/qemu-bundle/bin/qemu-img
+
 # ============================================================================
 # 项目源码和构建
 # ============================================================================
