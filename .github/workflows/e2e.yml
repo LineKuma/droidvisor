@@ -113,22 +113,25 @@ jobs:
               $ANDROID_HOME/emulator/emulator \
                 -avd e2e_test_avd \
                 -no-window \
-                -gpu swiftshader_indirect \
+                -gpu off \
                 -noaudio \
                 -no-boot-anim \
+                -no-snapshot \
                 -no-snapshot-save \
-                -memory 4096 \
-                -qemu -m 4096 \
+                -accel off \
+                -memory 2048 \
+                -netdelay none \
+                -netspeed full \
                 -verbose 2>&1 | tee /tmp/emulator-launch.log
             '
 
-          # 等待模拟器连接(使用adb wait-for-device,最长等待5分钟)
-          echo "Waiting for emulator to become visible via adb (max 5 minutes)..."
-          timeout 300 sh -c '
+          # 等待模拟器连接(使用adb wait-for-device,最长等待10分钟)
+          echo "Waiting for emulator to become visible via adb (max 10 minutes)..."
+          timeout 600 sh -c '
             while ! docker exec droidvisor-android-e2e adb devices 2>/dev/null | grep -q emulator; do
               echo "  [$(date +%H:%M:%S)] Waiting for emulator device..."
               docker exec droidvisor-android-e2e adb devices 2>/dev/null || true
-              sleep 5
+              sleep 10
             done
           ' && echo "✅ Emulator device detected" || echo "⚠️ Emulator device detection timed out"
 
@@ -137,12 +140,12 @@ jobs:
           echo "Verifying emulator connection..."
           docker exec droidvisor-android-e2e adb devices
 
-          # 等待系统启动完成(最长等待5分钟,轮询sys.boot_completed)
-          echo "Waiting for emulator to fully boot (max 300 seconds)..."
-          timeout 300 sh -c '
+          # 等待系统启动完成(最长等待8分钟,轮询sys.boot_completed)
+          echo "Waiting for emulator to fully boot (max 480 seconds)..."
+          timeout 480 sh -c '
             while ! docker exec droidvisor-android-e2e adb shell getprop sys.boot_completed 2>/dev/null | grep -q "^1$"; do
               echo "  [$(date +%H:%M:%S)] Boot not completed yet..."
-              sleep 5
+              sleep 10
             done
           ' && echo "✅ Emulator fully booted" || echo "⚠️ Emulator boot check timed out"
 

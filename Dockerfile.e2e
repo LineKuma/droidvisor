@@ -46,9 +46,23 @@ RUN yes | sdkmanager --licenses || true && \
 # 创建默认AVD配置
 RUN echo "no" | avdmanager create avd -n e2e_test_avd -k "system-images;android-34;google_apis;x86_64" --force
 
-# 配置AVD为无头模式
+# 配置AVD为无头模式（使用printf确保\n被解释为换行符）
 RUN mkdir -p /root/.android/avd/e2e_test_avd.avd && \
-    echo "hw.lcd.density=420\nhw.lcd.width=1080\nhw.lcd.height=1920\nhw.cpu.arch=x86_64\nhw.cpu.model=kvm\nhw.gpu.mode=swiftshader_indirect\nshowDeviceFrame=no\nskin.path=1080x1920\nskin.name=1080x1920" > /root/.android/avd/e2e_test_avd.avd/config.ini
+    printf '%s\n' \
+      'hw.lcd.density=420' \
+      'hw.lcd.width=1080' \
+      'hw.lcd.height=1920' \
+      'hw.cpu.arch=x86_64' \
+      'hw.cpu.model=qemu64' \
+      'hw.gpu.mode=off' \
+      'hw.ramSize=2048' \
+      'showDeviceFrame=no' \
+      'skin.path=1080x1920' \
+      'skin.name=1080x1920' \
+      'hw.gpu.enabled=no' \
+      'hw.mainKeys=no' \
+      'fastboot.forceColdBoot=yes' \
+      > /root/.android/avd/e2e_test_avd.avd/config.ini
 
 # 配置Gradle Wrapper
 COPY gradle gradle/
