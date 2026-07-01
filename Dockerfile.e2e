@@ -1,16 +1,12 @@
 # Droidvisor E2E Testing Environment
-# 构建 Android 应用并运行 Instrumentation 测试
-# QEMU 工具作为基础设施依赖（供应用的 QemuVmRuntime 使用）
-# 无外部提供者——所有测试验证项目自身功能
+# 增量构建版本 - 从工作 Dockerfile 开始逐步添加 E2E 组件
+# Step 1: 基础 apt-get + QEMU 包 + SDK tools（无 emulator/system-images）
 FROM ubuntu:22.04
 
 # 设置工作目录
 WORKDIR /workspace
 
-# 安装基础依赖
-# - qemu-system-arm: 应用默认使用 aarch64 架构
-# - genisoimage: 用于创建 cloud-init ISO
-# - dpkg-dev: 用于解包 .deb 内核包
+# 安装基础依赖 + QEMU 包
 RUN apt-get update && apt-get install -y \
     wget \
     unzip \
@@ -46,203 +42,9 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
 # 设置PATH
 ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
 
-# 接受Android SDK许可并安装平台工具和AVD组件
-# 使用 android-35 (与工作 Dockerfile 一致) + emulator + system-images
+# 接受Android SDK许可并安装平台工具（与工作 Dockerfile 一致，先不加 emulator/system-images）
 RUN yes | sdkmanager --licenses || true && \
-    sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
-
-# 创建默认AVD配置
-RUN echo "no" | avdmanager create avd -n e2e_test_avd -k "system-images;android-35;google_apis;x86_64" --force
-
-# 配置AVD为无头模式
-RUN mkdir -p /root/.android/avd/e2e_test_avd.avd && \
-    printf '%s\n' \
-      'hw.lcd.density=420' \
-      'hw.lcd.width=1080' \
-      'hw.lcd.height=1920' \
-      'hw.cpu.arch=x86_64' \
-      'hw.cpu.model=qemu64' \
-      'hw.gpu.mode=off' \
-      'hw.ramSize=2048' \
-      'showDeviceFrame=no' \
-      'skin.path=1080x1920' \
-      'skin.name=1080x1920' \
-      'hw.gpu.enabled=no' \
-      'hw.mainKeys=no' \
-      'fastboot.forceColdBoot=yes' \
-      > /root/.android/avd/e2e_test_avd.avd/config.ini
-
-# ============================================================================
-# 准备 Debian arm64 虚拟机镜像（供应用 QemuVmRuntime 启动）
-# ============================================================================
-# 应用默认使用 aarch64 架构（machine=virt, cpu=cortex-a72）
-# 下载 Debian 12 arm64 云镜像作为磁盘
-# 下载 arm64 内核包并提取 vmlinuz + initrd.img
-# 使用 cloud-init seed ISO 注入 SSH 密钥
-# ============================================================================
-
-# 下载 Debian 12 (Bookworm) arm64 云镜像
-RUN mkdir -p /opt/vm-images/debian && \
-    wget -q -O /opt/vm-images/debian/disk.qcow2 \
-      "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-arm64.qcow2" && \
-    echo "Debian 12 arm64 cloud image downloaded"
-
-# 生成 SSH 密钥对
-RUN ssh-keygen -t rsa -b 2048 -f /opt/vm-images/debian/e2e_ssh_key -N "" -C "droidvisor-e2e" && \
-    echo "SSH key pair generated"
-
-# 下载 arm64 内核包并提取 vmlinuz 和 initrd.img
-# 依赖链: linux-image-cloud-arm64 → linux-image-X.X.X-XX-cloud-arm64 → linux-image-X.X.X-XX-cloud-arm64-unsigned
-# 使用 apt-get download 自动获取最新版本，安全且不安装任何 arm64 包
-RUN echo "Downloading arm64 kernel package..." && \
-    apt-get update && apt-get install -y debian-archive-keyring && \
-    dpkg --add-architecture arm64 && \
-    echo "deb [arch=arm64] http://deb.debian.org/debian bookworm main" > /etc/apt/sources.list.d/debian-arm64.list && \
-    echo "deb [arch=arm64] http://security.debian.org/debian-security bookworm-security main" >> /etc/apt/sources.list.d/debian-arm64.list && \
-    apt-get update && \
-    cd /tmp && \
-    apt-get download linux-image-cloud-arm64:arm64 && \
-    KERNEL_SIGNED=$(dpkg-deb -f linux-image-cloud-arm64*.deb Depends | tr ',' '\n' | grep -oP 'linux-image-[0-9.]+-[0-9]+-cloud-arm64' | head -1) && \
-    echo "Signed kernel package: ${KERNEL_SIGNED}" && \
-    apt-get download ${KERNEL_SIGNED}:arm64 && \
-    KERNEL_UNSIGNED=$(dpkg-deb -f ${KERNEL_SIGNED}*.deb Depends 2>/dev/null | tr ',' '\n' | grep -oP 'linux-image-[0-9.]+-[0-9]+-cloud-arm64-unsigned' | head -1) && \
-    if [ -n "${KERNEL_UNSIGNED}" ]; then \
-      echo "Unsigned kernel package: ${KERNEL_UNSIGNED}"; \
-      apt-get download ${KERNEL_UNSIGNED}:arm64; \
-    fi && \
-    echo "Kernel packages downloaded" && \
-    mkdir -p /tmp/kernel-extract && \
-    for deb in /tmp/linux-image-*-cloud-arm64*.deb; do \
-      dpkg-deb -x "$deb" /tmp/kernel-extract; \
-    done && \
-    find /tmp/kernel-extract/boot -name "vmlinuz-*" -exec cp {} /opt/vm-images/debian/vmlinuz \; && \
-    find /tmp/kernel-extract/boot -name "initrd.img-*" -exec cp {} /opt/vm-images/debian/initrd.img \; && \
-    rm -rf /tmp/linux-image-*.deb /tmp/kernel-extract && \
-    ls -la /opt/vm-images/debian/vmlinuz /opt/vm-images/debian/initrd.img && \
-    echo "Kernel and initrd extracted"
-
-# 创建 cloud-init 配置（自动配置 SSH 密钥和网络）
-RUN mkdir -p /opt/vm-images/debian/cloud-init && \
-    printf 'instance-id: debian-e2e-test\nlocal-hostname: debian-e2e\n' \
-      > /opt/vm-images/debian/cloud-init/meta-data && \
-    printf '#cloud-config\n' \
-      > /opt/vm-images/debian/cloud-init/user-data && \
-    printf 'ssh_pwauth: false\n' \
-      >> /opt/vm-images/debian/cloud-init/user-data && \
-    printf 'disable_root: false\n' \
-      >> /opt/vm-images/debian/cloud-init/user-data && \
-    printf 'ssh_authorized_keys:\n' \
-      >> /opt/vm-images/debian/cloud-init/user-data && \
-    printf '  - %s\n' "$(cat /opt/vm-images/debian/e2e_ssh_key.pub)" \
-      >> /opt/vm-images/debian/cloud-init/user-data && \
-    printf 'runcmd:\n' \
-      >> /opt/vm-images/debian/cloud-init/user-data && \
-    printf '  - [systemctl, enable, ssh]\n' \
-      >> /opt/vm-images/debian/cloud-init/user-data && \
-    printf '  - [systemctl, start, ssh]\n' \
-      >> /opt/vm-images/debian/cloud-init/user-data
-
-# 创建 cloud-init seed ISO
-RUN cd /opt/vm-images/debian/cloud-init && \
-    genisoimage -output /opt/vm-images/debian/seed.iso \
-      -volid cidata -joliet -rock user-data meta-data && \
-    echo "Cloud-init seed ISO created"
-
-# 创建 SSH 验证脚本（通过 adb forward 连接到应用创建的 VM）
-RUN printf '%s\n' \
-    '#!/bin/bash' \
-    'set -e' \
-    '' \
-    'DEBIAN_DIR="/opt/vm-images/debian"' \
-    'SSH_KEY="${DEBIAN_DIR}/e2e_ssh_key"' \
-    'SSH_PORT=2222' \
-    '' \
-    'echo "=========================================="' \
-    'echo "Debian VM SSH 连接验证"' \
-    'echo "=========================================="' \
-    '' \
-    '# 设置 adb 端口转发：Docker 2222 → 模拟器 2222 → VM 22' \
-    'echo "Setting up adb port forwarding..."' \
-    'adb forward tcp:${SSH_PORT} tcp:${SSH_PORT} 2>/dev/null || true' \
-    '' \
-    '# 等待 SSH 端口可用（最多 180 秒）' \
-    'echo "Waiting for SSH on port ${SSH_PORT}..."' \
-    'CONNECTED=false' \
-    'for i in $(seq 1 90); do' \
-    '  if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=2 \' \
-    '     -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 \' \
-    '     "echo SSH_OK" 2>/dev/null; then' \
-    '    CONNECTED=true' \
-    '    echo "SSH connection established (attempt $i)"' \
-    '    break' \
-    '  fi' \
-    '  printf "."' \
-    '  sleep 2' \
-    'done' \
-    'echo ""' \
-    '' \
-    'if [ "$CONNECTED" != "true" ]; then \
-    '  echo "ERROR: SSH connection failed after 180 seconds"' \
-    '  echo "Checking adb forward status:"' \
-    '  adb forward --list 2>/dev/null || true' \
-    '  exit 1' \
-    'fi' \
-    '' \
-    '# === VM 身份验证：确认 SSH 连接的是 App 创建的 VM ===' \
-    'echo ""' \
-    'echo "=== VM 身份验证 ==="' \
-    'echo "Verifying this VM was created by the Droidvisor app..."' \
-    'echo ""' \
-    'CMD_LINE=$(ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "cat /proc/cmdline" 2>/dev/null)' \
-    'echo "Kernel cmdline: ${CMD_LINE}"' \
-    '' \
-    '# 检查内核命令行中是否存在 App 注入的唯一标识' \
-    'if echo "${CMD_LINE}" | grep -q "droidvisor_e2e_verify=yes"; then' \
-    '  echo "✓ 身份确认: droidvisor_e2e_verify=yes 标记存在"' \
-    'else' \
-    '  echo "✗ 身份验证失败: 未找到 droidvisor_e2e_verify=yes 标记"' \
-    '  echo "  此 SSH 连接可能不是 Droidvisor App 创建的 VM"' \
-    '  exit 1' \
-    'fi' \
-    '' \
-    'if echo "${CMD_LINE}" | grep -q "vmName="; then' \
-    '  VM_NAME=$(echo "${CMD_LINE}" | grep -o "vmName=[^ ]*" | cut -d= -f2)' \
-    '  echo "✓ 身份确认: VM 名称为 ${VM_NAME}"' \
-    '  if [ "${VM_NAME}" != "e2e-debian-ssh" ]; then' \
-    '    echo "⚠ 警告: VM 名称不匹配 (期望: e2e-debian-ssh, 实际: ${VM_NAME})"' \
-    '  fi' \
-    'else' \
-    '  echo "✗ 身份验证失败: 未找到 vmName 标记"' \
-    '  exit 1' \
-    'fi' \
-    '' \
-    'echo "✓ VM 身份验证通过: 此 SSH 连接确实连接到 App 创建的虚拟机"' \
-    '' \
-    '# 执行基础命令验证' \
-    'echo ""' \
-    'echo "=== 基础命令验证 ==="' \
-    'echo ""' \
-    'echo "--- whoami ---"' \
-    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "whoami"' \
-    'echo ""' \
-    'echo "--- uname -a ---"' \
-    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "uname -a"' \
-    'echo ""' \
-    'echo "--- /etc/os-release ---"' \
-    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "cat /etc/os-release | head -5"' \
-    'echo ""' \
-    'echo "--- hostname ---"' \
-    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "hostname"' \
-    'echo ""' \
-    'echo "--- df -h ---"' \
-    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "df -h | head -5"' \
-    'echo ""' \
-    'echo "--- E2E_SSH_VERIFY_OK ---"' \
-    'ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} -p ${SSH_PORT} root@127.0.0.1 "echo E2E_SSH_VERIFY_OK"' \
-    'echo ""' \
-    'echo "=== SSH 连接验证通过 ==="' \
-    > /opt/vm-images/debian/verify-debian-ssh.sh && \
-    chmod +x /opt/vm-images/debian/verify-debian-ssh.sh
+    sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
 # 配置Gradle Wrapper
 COPY gradle gradle/
@@ -254,54 +56,6 @@ RUN chmod +x /workspace/gradlew
 # 设置环境变量
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV JAVA_TOOL_OPTIONS="-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2"
-
-# 创建 QEMU 工作目录，供应用的 QemuVmRuntime 使用
-ENV QEMU_WORK_DIR=/tmp/qemu-e2e
-RUN mkdir -p $QEMU_WORK_DIR/disks $QEMU_WORK_DIR/sockets $QEMU_WORK_DIR/console
-
-# ============================================================================
-# 准备 QEMU 二进制文件（推送到模拟器供应用的 QemuVmRuntime 使用）
-# 模拟器是 Android Bionic 环境，需要使用带 glibc 的 bundle
-# ============================================================================
-# 简单复制 qemu-system-aarch64，依赖收集在后续 RUN 中完成
-RUN mkdir -p /opt/qemu-bundle/real-bin /opt/qemu-bundle/bin /opt/qemu-bundle/lib && \
-    cp /usr/bin/qemu-system-aarch64 /opt/qemu-bundle/real-bin/ && \
-    cp /usr/bin/qemu-img /opt/qemu-bundle/real-bin/ && \
-    echo "QEMU binaries copied"
-
-# 收集 glibc 依赖库
-RUN for bin in qemu-system-aarch64 qemu-img; do \
-      echo "--- ${bin} ---" ; \
-      for lib in $(ldd "/usr/bin/${bin}" 2>/dev/null | grep -oP '/\S+'); do \
-        if [ -f "$lib" ]; then \
-          cp -n "$lib" /opt/qemu-bundle/lib/ ; \
-          echo "  Copied: $lib" ; \
-        fi ; \
-      done ; \
-    done && \
-    cp /lib64/ld-linux-x86-64.so.2 /opt/qemu-bundle/lib/ 2>/dev/null || true && \
-    echo "Library collection complete" && \
-    ls -la /opt/qemu-bundle/lib/
-
-# 创建 QEMU wrapper 脚本
-RUN printf '%s\n' \
-    '#!/system/bin/sh' \
-    '# QEMU wrapper for Android emulator - uses bundled glibc' \
-    'QEMU_DIR="/data/local/tmp/qemu-bundle"' \
-    'GLIBC_LD="${QEMU_DIR}/lib/ld-linux-x86-64.so.2"' \
-    'export LD_LIBRARY_PATH="${QEMU_DIR}/lib:${LD_LIBRARY_PATH}"' \
-    'exec "${GLIBC_LD}" --library-path "${QEMU_DIR}/lib" "${QEMU_DIR}/real-bin/qemu-system-aarch64" "$@"' \
-    > /opt/qemu-bundle/bin/qemu-system-aarch64 && \
-    chmod +x /opt/qemu-bundle/bin/qemu-system-aarch64
-
-RUN printf '%s\n' \
-    '#!/system/bin/sh' \
-    'QEMU_DIR="/data/local/tmp/qemu-bundle"' \
-    'GLIBC_LD="${QEMU_DIR}/lib/ld-linux-x86-64.so.2"' \
-    'export LD_LIBRARY_PATH="${QEMU_DIR}/lib:${LD_LIBRARY_PATH}"' \
-    'exec "${GLIBC_LD}" --library-path "${QEMU_DIR}/lib" "${QEMU_DIR}/real-bin/qemu-img" "$@"' \
-    > /opt/qemu-bundle/bin/qemu-img && \
-    chmod +x /opt/qemu-bundle/bin/qemu-img
 
 # 清理可能的损坏缓存
 RUN rm -rf /root/.gradle /workspace/.gradle 2>/dev/null || true
