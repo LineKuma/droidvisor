@@ -250,23 +250,16 @@ RUN mkdir -p $QEMU_WORK_DIR/disks $QEMU_WORK_DIR/sockets $QEMU_WORK_DIR/console
 
 # ============================================================================
 # 准备 QEMU 二进制文件（推送到模拟器供应用的 QemuVmRuntime 使用）
-# 模拟器是 Android Bionic 环境，需要使用静态链接的 QEMU 或带 glibc 的 bundle
+# 模拟器是 Android Bionic 环境，需要使用带 glibc 的 bundle
 # ============================================================================
-# 方案：复制 qemu-system-aarch64 及其 glibc 依赖，打包为 bundle
-# 在模拟器上通过 glibc ld-linux 直接加载运行
-# 目录结构：
-#   /opt/qemu-bundle/real-bin/  - 实际二进制文件
-#   /opt/qemu-bundle/bin/        - wrapper 脚本（供应用调用）
-#   /opt/qemu-bundle/lib/        - glibc 依赖库
+# 简单复制 qemu-system-aarch64，依赖收集在后续 RUN 中完成
 RUN mkdir -p /opt/qemu-bundle/real-bin /opt/qemu-bundle/bin /opt/qemu-bundle/lib && \
     cp /usr/bin/qemu-system-aarch64 /opt/qemu-bundle/real-bin/ && \
     cp /usr/bin/qemu-img /opt/qemu-bundle/real-bin/ && \
     echo "QEMU binaries copied"
 
-# 收集 qemu-system-aarch64 和 qemu-img 的 glibc 依赖库
-# 同时复制动态链接器 ld-linux-x86-64.so.2
-RUN echo "Collecting shared library dependencies..." && \
-    for bin in qemu-system-aarch64 qemu-img; do \
+# 收集 glibc 依赖库
+RUN for bin in qemu-system-aarch64 qemu-img; do \
       echo "--- ${bin} ---" ; \
       for lib in $(ldd "/usr/bin/${bin}" 2>/dev/null | grep -oP '/\S+'); do \
         if [ -f "$lib" ]; then \
@@ -279,8 +272,7 @@ RUN echo "Collecting shared library dependencies..." && \
     echo "Library collection complete" && \
     ls -la /opt/qemu-bundle/lib/
 
-# 创建 QEMU wrapper 脚本（在模拟器上使用 glibc 环境运行 QEMU）
-# 命名为 qemu-system-aarch64，使应用的 QemuVmRuntime 能直接找到
+# 创建 QEMU wrapper 脚本
 RUN printf '%s\n' \
     '#!/system/bin/sh' \
     '# QEMU wrapper for Android emulator - uses bundled glibc' \
@@ -291,7 +283,6 @@ RUN printf '%s\n' \
     > /opt/qemu-bundle/bin/qemu-system-aarch64 && \
     chmod +x /opt/qemu-bundle/bin/qemu-system-aarch64
 
-# 同样创建 qemu-img wrapper
 RUN printf '%s\n' \
     '#!/system/bin/sh' \
     'QEMU_DIR="/data/local/tmp/qemu-bundle"' \
