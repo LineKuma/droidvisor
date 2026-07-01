@@ -38,10 +38,34 @@ jobs:
 
       # ========== 阶段2: Docker 镜像构建 ==========
       - name: Build E2E Docker image
+        id: docker-build
+        continue-on-error: true
         run: |
           echo "Building E2E test environment..."
-          set -o pipefail
-          docker build -t droidvisor-e2e -f Dockerfile.e2e . 2>&1 | tail -100
+          docker build -t droidvisor-e2e -f Dockerfile.e2e . 2>&1 | tee /tmp/docker-build.log
+          echo "BUILD_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Upload Docker Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-build-log
+          path: /tmp/docker-build.log
+          retention-days: 7
+
+      - name: Check Build Result
+        if: always()
+        run: |
+          if [ "${{ steps.docker-build.outputs.BUILD_EXIT_CODE }}" != "0" ]; then
+            echo "=========================================="
+            echo "❌ Docker build failed with exit code ${{ steps.docker-build.outputs.BUILD_EXIT_CODE }}"
+            echo "=========================================="
+            echo "Last 80 lines of build log:"
+            tail -80 /tmp/docker-build.log
+            echo "=========================================="
+            exit 1
+          fi
+          echo "✅ Docker build succeeded"
 
       - name: Cache Docker images
         uses: actions/cache@v4
