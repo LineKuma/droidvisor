@@ -92,7 +92,10 @@ class PermissionViewModel : ViewModel() {
 
         val meetsMinSdk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
-        val capabilityChecker = AvfCapabilityChecker(context)
+        val capabilityChecker = AvfCapabilityChecker(
+            context,
+            qemuBinaryDir = "${context.filesDir}/qemu/bin"
+        )
         val capabilities = capabilityChecker.checkCapabilities()
 
         _permissionState.value = PermissionState(

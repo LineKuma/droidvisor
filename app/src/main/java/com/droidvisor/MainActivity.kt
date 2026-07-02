@@ -41,20 +41,19 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.droidvisor.datastore.dataStore
+import com.droidvisor.datastore.SETUP_PASSED_KEY
 import com.droidvisor.datastore.dataStore
 import com.droidvisor.docker.DockerDashboardViewModel
 import com.droidvisor.docker.DockerProxyService
+import com.droidvisor.setup.SetupViewModel
 import com.droidvisor.ui.screen.CreateVmScreen
 import com.droidvisor.ui.screen.DockerDashboardScreen
-import com.droidvisor.ui.screen.PermissionScreen
-import com.droidvisor.ui.viewmodel.PermissionViewModel
+import com.droidvisor.ui.screen.SetupScreen
 import com.droidvisor.ui.screen.SettingsScreen
 import com.droidvisor.ui.screen.TerminalScreen
 import com.droidvisor.ui.screen.VmManagementScreen
@@ -221,39 +220,37 @@ fun DroidvisorApp(
     val navController = rememberNavController()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-    // ── 权限页面一次性显示 ─────────────────────────────────────────
-    // 默认安装后仅展示一次，通过 DataStore 持久化已读状态。
+    // ── 初始化页面（安装后仅展示一次） ────────────────────────────
     val context = LocalContext.current
-    var hasPassedPermissionCheck by remember { mutableStateOf(false) }
+    var hasPassedSetup by remember { mutableStateOf(false) }
     var dataStoreLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val prefs = context.dataStore.data.first()
-        hasPassedPermissionCheck = prefs[PERMISSION_CHECK_PASSED_KEY] ?: false
+        hasPassedSetup = prefs[SETUP_PASSED_KEY] ?: false
         dataStoreLoaded = true
     }
 
-    // 当用户通过权限检测后，持久化已读状态
-    LaunchedEffect(hasPassedPermissionCheck) {
-        if (hasPassedPermissionCheck) {
+    // 当用户完成初始化后，持久化已读状态
+    LaunchedEffect(hasPassedSetup) {
+        if (hasPassedSetup) {
             context.dataStore.edit { prefs ->
-                prefs[PERMISSION_CHECK_PASSED_KEY] = true
+                prefs[SETUP_PASSED_KEY] = true
             }
         }
     }
 
-    val permissionViewModel: PermissionViewModel = viewModel()
-    val permissionState by permissionViewModel.permissionState.collectAsState()
+    val setupViewModel: SetupViewModel = viewModel()
 
     if (!dataStoreLoaded) {
         // 等待 DataStore 读取完成
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
-    } else if (!hasPassedPermissionCheck) {
-        PermissionScreen(
-            viewModel = permissionViewModel,
-            onAllPermissionsGranted = { hasPassedPermissionCheck = true }
+    } else if (!hasPassedSetup) {
+        SetupScreen(
+            viewModel = setupViewModel,
+            onSetupComplete = { hasPassedSetup = true }
         )
     } else if (!allServicesReady) {
         // Loading state while services bind
@@ -360,6 +357,3 @@ fun DroidvisorApp(
         }
     }
 }
-
-/** 权限检测页面已读标记 — 安装后仅展示一次 */
-private val PERMISSION_CHECK_PASSED_KEY = booleanPreferencesKey("permission_check_passed")

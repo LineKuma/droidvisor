@@ -59,7 +59,14 @@ data class QemuVmConfig(
     val enableKvm: Boolean = false,
 
     /** 是否启用图形输出 */
-    val enableGraphic: Boolean = false
+    val enableGraphic: Boolean = false,
+
+    /**
+     * App 自主下载管理的 QEMU 二进制文件目录。
+     * 设置后，QemuProcessManager 会优先在此目录中查找 QEMU 可执行文件。
+     * 例如: context.filesDir + "/qemu/bin"
+     */
+    val qemuBinaryDir: String = ""
 ) {
 
     /**

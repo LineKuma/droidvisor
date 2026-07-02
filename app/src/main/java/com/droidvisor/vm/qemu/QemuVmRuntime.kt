@@ -34,7 +34,13 @@ import java.io.File
 class QemuVmRuntime(
     private val context: Context,
     private val qemuConfig: QemuVmConfig = QemuVmConfig(),
-    private val enableKvm: Boolean = false
+    private val enableKvm: Boolean = false,
+    /**
+     * App 自主下载管理的 QEMU 二进制文件目录。
+     * 例如: context.filesDir + "/qemu/bin"
+     * 设置后，QemuProcessManager 会优先在此目录中查找 QEMU 可执行文件。
+     */
+    private val qemuBinaryDir: String = ""
 ) : VmRuntime {
 
     override val runtimeType: VmRuntime.RuntimeType = VmRuntime.RuntimeType.QEMU
@@ -311,6 +317,7 @@ class QemuVmRuntime(
     private fun launchQemuProcess() {
         val effectiveConfig = qemuConfig.copy(
             workingDirectory = workDir,
+            qemuBinaryDir = qemuBinaryDir,  // 传递 app 私有 QEMU 目录
             consoleMode = when {
                 consoleService != null -> QemuVmConfig.ConsoleMode.FileOutput(
                     path = "${File(workDir, "console").absolutePath}/vm_console.log"
@@ -394,11 +401,16 @@ class QemuVmRuntime(
 
     private fun checkQemuBinary(): Boolean {
         return try {
-            val candidates = listOf(
+            val candidates = mutableListOf(
                 "qemu-system-aarch64",
                 "qemu-system-x86_64",
                 "/system/bin/qemu-system-aarch64"
             )
+            // 如果设置了 app 私有 QEMU 目录，加入候选路径
+            if (qemuBinaryDir.isNotEmpty()) {
+                candidates.add(0, "$qemuBinaryDir/qemu-system-aarch64")
+                candidates.add(1, "$qemuBinaryDir/qemu-system-x86_64")
+            }
             candidates.any { File(it).canExecute() } ||
             run {
                 val p = Runtime.getRuntime().exec(arrayOf("which", "qemu-system-aarch64"))

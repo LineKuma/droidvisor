@@ -10,7 +10,15 @@ import androidx.annotation.RequiresApi
 
 @RequiresApi(34)
 @SuppressLint("NewApi")
-class AvfCapabilityChecker(private val context: Context) {
+class AvfCapabilityChecker(
+    private val context: Context,
+    /**
+     * App 自主下载管理的 QEMU 二进制文件目录。
+     * 例如: context.filesDir + "/qemu/bin"
+     * 如果为空，则只检查系统路径。
+     */
+    private val qemuBinaryDir: String = ""
+) {
 
     private val TAG = "AvfCapabilityChecker"
 
@@ -380,11 +388,16 @@ class AvfCapabilityChecker(private val context: Context) {
 
     private fun checkQemuBinary(): Boolean {
         return try {
-            val candidates = listOf(
+            val candidates = mutableListOf(
                 "qemu-system-aarch64",
                 "qemu-system-x86_64",
                 "/system/bin/qemu-system-aarch64"
             )
+            // 如果设置了 app 私有 QEMU 目录，加入候选路径
+            if (qemuBinaryDir.isNotEmpty()) {
+                candidates.add(0, "$qemuBinaryDir/qemu-system-aarch64")
+                candidates.add(1, "$qemuBinaryDir/qemu-system-x86_64")
+            }
             candidates.any { candidate ->
                 val file = java.io.File(candidate)
                 file.exists() && file.canExecute()

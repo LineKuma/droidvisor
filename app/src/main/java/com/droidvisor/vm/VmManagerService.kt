@@ -115,7 +115,10 @@ class VmManagerService : Service() {
 
     /** 重新检测 AVF 能力（供 UI 刷新按钮调用） */
     fun checkAvfCapabilities() {
-        val checker = AvfCapabilityChecker(this)
+        val checker = AvfCapabilityChecker(
+            this,
+            qemuBinaryDir = "${filesDir}/qemu/bin"
+        )
         val capabilities = checker.checkCapabilities()
         _avfCapabilities.value = capabilities
         _isAvfAvailable.value = capabilities.canRunRealVm
@@ -125,7 +128,11 @@ class VmManagerService : Service() {
     private fun initQemuRuntime() {
         val caps = _avfCapabilities.value
         val enableKvm = caps?.isPlainKvmAccessible ?: false
-        val qemu = QemuVmRuntime(this, enableKvm = enableKvm)
+        val qemu = QemuVmRuntime(
+            this,
+            enableKvm = enableKvm,
+            qemuBinaryDir = "${filesDir}/qemu/bin"
+        )
         val available = qemu.isAvailable()
         _isQemuAvailable.value = available
 

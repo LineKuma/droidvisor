@@ -180,11 +180,17 @@ class QemuProcessManager(
     }
 
     private fun detectQemuBinary(): String {
-        val candidates = listOf(
+        val candidates = mutableListOf(
             "qemu-system-aarch64",
             "/system/bin/qemu-system-aarch64",
             "qemu-system-aarch64-static"
         )
+
+        // 如果设置了 app 私有 QEMU 目录，优先检查
+        if (config.qemuBinaryDir.isNotEmpty()) {
+            candidates.add(0, "${config.qemuBinaryDir}/qemu-system-aarch64")
+            candidates.add(1, "${config.qemuBinaryDir}/qemu-system-x86_64")
+        }
 
         for (candidate in candidates) {
             if (File(candidate).canExecute()) {
