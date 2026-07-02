@@ -30,7 +30,7 @@ cd droidvisor
 ## 分支管理
 
 - `main` - 生产版本
-- `develop` - 开发分支
+- `agent-develop` - 开发分支
 - `feature/*` - 功能分支
 - `fix/*` - 修复分支
 

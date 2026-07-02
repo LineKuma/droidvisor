@@ -49,3 +49,6 @@ captures/
 
 # Kotlin
 .kotlin/
+
+# Hermes
+.hermes/

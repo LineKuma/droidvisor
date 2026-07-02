@@ -99,6 +99,12 @@ data class QemuVmConfig(
 
         /** 禁用控制台 */
         object None : ConsoleMode()
+
+        /** TCP 服务端 — QEMU 监听端口，等待本机连接 */
+        data class TcpServer(val port: Int = 4444) : ConsoleMode()
+
+        /** TCP 客户端 — QEMU 主动连接本机监听的端口 */
+        data class TcpClient(val host: String = "127.0.0.1", val port: Int = 4444) : ConsoleMode()
     }
 
     companion object {
