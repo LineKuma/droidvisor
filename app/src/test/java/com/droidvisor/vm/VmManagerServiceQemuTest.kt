@@ -525,6 +525,7 @@ class TestableQemuVmManagerService {
             if (it.id == vmId) it.copy(status = status) else it
         }
     }
+}
 
 /**
  * QEMU 运行时的 Mock 实现
