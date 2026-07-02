@@ -286,7 +286,7 @@ class SetupViewModel : ViewModel() {
             _state.value = _state.value.copy(overallDownloadProgress = 1f)
             return
         }
-        val total = tasks.sumOf { if (it.state == DownloadTaskState.SKIPPED) 1f else it.progress.toDouble() }
+        val total = tasks.sumOf { if (it.state == DownloadTaskState.SKIPPED) 1.0 else it.progress.toDouble() }
         _state.value = _state.value.copy(
             overallDownloadProgress = (total / tasks.size).toFloat().coerceIn(0f, 1f)
         )

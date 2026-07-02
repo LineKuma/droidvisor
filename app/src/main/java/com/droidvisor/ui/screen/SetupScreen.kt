@@ -132,6 +132,7 @@ private fun SetupStepIndicator(currentStep: SetupStep) {
             val isDone = when (step) {
                 SetupStep.ENVIRONMENT_CHECK -> currentStep.ordinal > SetupStep.ENVIRONMENT_CHECK.ordinal
                 SetupStep.DOWNLOAD_QEMU -> currentStep.ordinal > SetupStep.DOWNLOAD_QEMU.ordinal
+                SetupStep.DOWNLOAD_IMAGES -> currentStep.ordinal > SetupStep.DOWNLOAD_IMAGES.ordinal
                 SetupStep.COMPLETE -> currentStep == SetupStep.COMPLETE
             }
 
