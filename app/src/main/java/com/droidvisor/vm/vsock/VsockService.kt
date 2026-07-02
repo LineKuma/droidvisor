@@ -106,7 +106,17 @@ class VsockService : Service() {
 
                 Logger.d(TAG, "Connecting to Vsock port $port (Guest CID: $GUEST_CID)")
 
-                vsockChannel = createVsockChannel(port)
+                val channel = createVsockChannel(port)
+                if (channel == null) {
+                    Logger.e(TAG, "Failed to create Vsock channel")
+                    _error.value = VsockError.ConnectionError("No Vsock channel available")
+                    _connectionState.value = VsockConnectionState.DISCONNECTED
+                    if (autoReconnect) {
+                        scheduleReconnect()
+                    }
+                    return@launch
+                }
+                vsockChannel = channel
                 _connectionState.value = VsockConnectionState.CONNECTED
                 _reconnecting.value = false
 
@@ -230,7 +240,7 @@ class VsockService : Service() {
 
     fun isConnected(): Boolean = _connectionState.value.isConnected()
 
-    private fun createVsockChannel(port: Int): VsockChannel {
+    private fun createVsockChannel(port: Int): VsockChannel? {
         // 优先尝试 AVF vsock
         if (avfBound && avfService != null) {
             val pfd = avfService?.connectVsock(port) as? ParcelFileDescriptor
@@ -258,8 +268,8 @@ class VsockService : Service() {
             }
         }
 
-        Logger.w(TAG, "AVF and QEMU Vsock not available, creating simulation channel on port $port")
-        return SimulationVsockChannel(port)
+        Logger.w(TAG, "No Vsock channel available for port $port")
+        return null
     }
 
     override fun onDestroy() {
@@ -334,28 +344,6 @@ private class RealVsockChannel(
         try { inputStream.close() } catch (e: Exception) { Logger.d(TAG, "Error closing input stream", e) }
         try { outputStream.close() } catch (e: Exception) { Logger.d(TAG, "Error closing output stream", e) }
         try { pfd.close() } catch (e: Exception) { Logger.d(TAG, "Error closing PFD", e) }
-    }
-
-    override fun isOpen(): Boolean = open
-}
-
-internal class SimulationVsockChannel(
-    private val port: Int
-) : VsockChannel {
-
-    private var open = true
-
-    override fun send(data: ByteArray) {
-        if (!open) throw VsockError.SendError("Channel is closed")
-    }
-
-    override fun receive(): ByteArray? {
-        if (!open) throw VsockError.ReceiveError("Channel is closed")
-        return null
-    }
-
-    override fun close() {
-        open = false
     }
 
     override fun isOpen(): Boolean = open

@@ -444,10 +444,20 @@ class DockerDashboardViewModel : ViewModel() {
                             progress = 1f
                         )
                     } else {
-                        simulatePullProgress(imageName, tag)
+                        _pullProgress.value = PullProgress(
+                            imageName = "$imageName:$tag",
+                            isPulling = false,
+                            statusMessage = "Docker 服务不可用，无法拉取镜像"
+                        )
+                        return@launch
                     }
                 } else {
-                    simulatePullProgress(imageName, tag)
+                    _pullProgress.value = PullProgress(
+                        imageName = "$imageName:$tag",
+                        isPulling = false,
+                        statusMessage = "Docker 代理服务未就绪"
+                    )
+                    return@launch
                 }
             } catch (e: Exception) {
                 _pullProgress.value = PullProgress(
@@ -457,55 +467,6 @@ class DockerDashboardViewModel : ViewModel() {
                 )
             }
         }
-    }
-
-    private suspend fun simulatePullProgress(imageName: String, tag: String) {
-        val totalBytes = (100..500).random() * 1024 * 1024L
-        var downloaded = 0L
-        val speeds = listOf("1.2 MB/s", "2.5 MB/s", "3.8 MB/s", "1.8 MB/s", "2.1 MB/s")
-        var speedIndex = 0
-        val startTime = System.currentTimeMillis()
-
-        while (downloaded < totalBytes) {
-            val currentSpeed = speeds[speedIndex % speeds.size]
-            val increment = (1..5).random() * 1024 * 1024L / 10
-            downloaded = minOf(downloaded + increment, totalBytes)
-            val elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0
-            val remainingBytes = totalBytes - downloaded
-            val speedNum = currentSpeed.replace(" MB/s", "").toDoubleOrNull() ?: 1.0
-            val remainingSeconds = if (speedNum > 0) (remainingBytes / (speedNum * 1024 * 1024)).toInt() else 999
-
-            _pullProgress.value = PullProgress(
-                imageName = "$imageName:$tag",
-                isPulling = true,
-                statusMessage = "正在拉取 $imageName:$tag",
-                progress = downloaded.toFloat() / totalBytes.toFloat(),
-                downloadedBytes = downloaded,
-                totalBytes = totalBytes,
-                speed = currentSpeed,
-                estimatedTimeRemaining = "${remainingSeconds}s"
-            )
-            speedIndex++
-            delay(300)
-        }
-
-        _pullProgress.value = PullProgress(
-            imageName = "$imageName:$tag",
-            isPulling = false,
-            statusMessage = "拉取完成",
-            progress = 1f,
-            downloadedBytes = totalBytes,
-            totalBytes = totalBytes,
-            speed = speeds.last(),
-            estimatedTimeRemaining = "0s"
-        )
-
-        _images.value = _images.value + Image(
-            Id = "sha256:new${System.currentTimeMillis()}",
-            RepoTags = listOf("$imageName:$tag"),
-            Created = System.currentTimeMillis() / 1000,
-            Size = totalBytes
-        )
     }
 
     fun fetchContainerLogs(containerId: String) {

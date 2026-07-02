@@ -20,14 +20,18 @@ data class PermissionState(
     val qemuSupported: Boolean = false,
     val plainKvmAccessible: Boolean = false
 ) {
-    // 存储权限不再需要：所有数据存储在应用私有空间，导出通过分享接口实现
     val allPermissionsGranted: Boolean
         get() = hasInternetPermission && meetsMinSdk
 
     val isAvfFullyAvailable: Boolean
         get() = avfSupported && (protectedVmSupported || nonProtectedVmSupported) && meetsMinSdk
 
-    val isSimulationOnly: Boolean
+    /** QEMU 是否可作为 AVF 的降级方案 */
+    val canFallbackToQemu: Boolean
+        get() = !isAvfFullyAvailable && qemuSupported
+
+    /** 没有任何可用运行时 */
+    val hasNoRuntime: Boolean
         get() = !isAvfFullyAvailable && !qemuSupported
 
     val missingPermissions: List<String>

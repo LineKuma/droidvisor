@@ -41,10 +41,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.droidvisor.datastore.dataStore
 import com.droidvisor.datastore.dataStore
 import com.droidvisor.docker.DockerDashboardViewModel
 import com.droidvisor.docker.DockerProxyService
@@ -64,6 +67,7 @@ import com.droidvisor.vm.vsock.VsockService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 
 class MainActivity : ComponentActivity() {
 
@@ -216,12 +220,37 @@ fun DroidvisorApp(
 
     val navController = rememberNavController()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+
+    // ── 权限页面一次性显示 ─────────────────────────────────────────
+    // 默认安装后仅展示一次，通过 DataStore 持久化已读状态。
+    val context = LocalContext.current
     var hasPassedPermissionCheck by remember { mutableStateOf(false) }
+    var dataStoreLoaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val prefs = context.dataStore.data.first()
+        hasPassedPermissionCheck = prefs[PERMISSION_CHECK_PASSED_KEY] ?: false
+        dataStoreLoaded = true
+    }
+
+    // 当用户通过权限检测后，持久化已读状态
+    LaunchedEffect(hasPassedPermissionCheck) {
+        if (hasPassedPermissionCheck) {
+            context.dataStore.edit { prefs ->
+                prefs[PERMISSION_CHECK_PASSED_KEY] = true
+            }
+        }
+    }
 
     val permissionViewModel: PermissionViewModel = viewModel()
     val permissionState by permissionViewModel.permissionState.collectAsState()
 
-    if (!hasPassedPermissionCheck) {
+    if (!dataStoreLoaded) {
+        // 等待 DataStore 读取完成
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (!hasPassedPermissionCheck) {
         PermissionScreen(
             viewModel = permissionViewModel,
             onAllPermissionsGranted = { hasPassedPermissionCheck = true }
@@ -331,3 +360,6 @@ fun DroidvisorApp(
         }
     }
 }
+
+/** 权限检测页面已读标记 — 安装后仅展示一次 */
+private val PERMISSION_CHECK_PASSED_KEY = booleanPreferencesKey("permission_check_passed")

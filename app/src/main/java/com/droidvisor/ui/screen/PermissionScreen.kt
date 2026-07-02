@@ -220,70 +220,110 @@ fun PermissionScreen(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (permissionState.isAvfFullyAvailable) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = Color.Green
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "所有条件已满足",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.Green
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = onAllPermissionsGranted,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            @Suppress("DEPRECATION")
-                            Icon(Icons.Default.ArrowForward, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("开始使用")
-                        }
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = Color(0xFFFF9800)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "AVF 不可用，将以模拟模式运行",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color(0xFFFF9800)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "模拟模式下虚拟机、Docker 和终端功能均为演示数据",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { viewModel.updatePermissionState(context) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.Refresh, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("重新检测")
-                            }
+                    when {
+                        // ── AVF 完全可用 ──
+                        permissionState.isAvfFullyAvailable -> {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = Color.Green
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "所有条件已满足，可使用 AVF 模式运行虚拟机",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.Green,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
                             Button(
                                 onClick = onAllPermissionsGranted,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 @Suppress("DEPRECATION")
                                 Icon(Icons.Default.ArrowForward, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("继续使用")
+                                Text("开始使用")
+                            }
+                        }
+
+                        // ── AVF 不可用 ──
+                        else -> {
+                            // 根据可用后端显示不同状态
+                            val (title, color, icon, description, showStartButton) = when {
+                                permissionState.canFallbackToQemu -> arrayOf(
+                                    "将使用 QEMU 模式运行",
+                                    Color(0xFF00BCD4),
+                                    Icons.Default.Bolt,
+                                    if (permissionState.plainKvmAccessible)
+                                        "QEMU + KVM 硬件加速已就绪，性能接近原生。"
+                                    else
+                                        "QEMU 以软件模拟运行，性能低于 AVF 模式。",
+                                    true
+                                )
+                                permissionState.hasNoRuntime -> arrayOf(
+                                    "无可用的虚拟化运行时",
+                                    Color(0xFFE53935),
+                                    Icons.Default.Cancel,
+                                    "设备不支持 AVF 且未检测到 QEMU，无法启动虚拟机。" +
+                                    "请确认系统环境是否满足要求。",
+                                    false
+                                )
+                                else -> arrayOf(
+                                    "AVF 不可用",
+                                    Color(0xFFFF9800),
+                                    Icons.Default.Warning,
+                                    "检测结果未确定，请重新检测。",
+                                    false
+                                )
+                            }
+
+                            Icon(
+                                imageVector = icon as androidx.compose.ui.graphics.vector.ImageVector,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = color as Color
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = title as String,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = color as Color,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = description as String,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.updatePermissionState(context) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(Icons.Default.Refresh, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("重新检测")
+                                }
+                                if (showStartButton as Boolean) {
+                                    Button(
+                                        onClick = onAllPermissionsGranted,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        @Suppress("DEPRECATION")
+                                        Icon(Icons.Default.ArrowForward, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("开始使用")
+                                    }
+                                }
                             }
                         }
                     }

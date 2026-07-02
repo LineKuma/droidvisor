@@ -85,7 +85,6 @@ import com.droidvisor.docker.model.Container
 import com.droidvisor.docker.model.ContainerStats
 import com.droidvisor.docker.model.DockerInfo
 import com.droidvisor.docker.model.Image
-import com.droidvisor.ui.components.SimulationModeBanner
 import com.droidvisor.ui.components.StatusBadge
 
 @Composable

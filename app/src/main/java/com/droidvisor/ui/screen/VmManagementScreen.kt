@@ -119,7 +119,7 @@ fun VmManagementScreen(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (!isAvfAvailable) {
-                    AvfSimulationModeBanner(avfCapabilities)
+                    AvfRuntimeModeBanner(avfCapabilities)
                 }
 
                 if (vmInstances.isEmpty()) {
@@ -409,13 +409,14 @@ fun VmBackupAndNetworkDialogs(
 }
 
 @Composable
-private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabilities?) {
+private fun AvfRuntimeModeBanner(capabilities: AvfCapabilityChecker.AvfCapabilities?) {
     val isKvmAccelerated = capabilities?.canUseKvmAcceleratedQemu ?: false
     val isQemuFallback = capabilities?.isQemuSupported == true && !isKvmAccelerated
+    val hasNoRuntime = capabilities != null && !capabilities.hasAnyRuntime
     val bannerColor = when {
         isKvmAccelerated -> Color(0xFF4CAF50)  // green — good performance
         isQemuFallback -> Color(0xFFFF9800)    // orange — works but slow
-        else -> Color(0xFFFF9800)              // orange — simulation
+        else -> Color(0xFFFF9800)
     }
 
     Card(
@@ -442,7 +443,7 @@ private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabi
                     text = when {
                         isKvmAccelerated -> "QEMU + KVM 硬件加速模式"
                         isQemuFallback -> "QEMU 兼容模式"
-                        else -> "模拟模式运行中"
+                        else -> "无可用的虚拟化运行时"
                     },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
@@ -456,6 +457,7 @@ private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabi
                 text = when {
                     isKvmAccelerated -> "AVF 不可用，但 /dev/kvm 可访问，QEMU 使用硬件加速运行"
                     isQemuFallback -> "AVF 不可用，QEMU 以软件模拟模式运行（性能较低）"
+                    hasNoRuntime -> "设备不支持 AVF 且未检测到 QEMU，无法启动虚拟机"
                     capabilities != null && capabilities.avfUnavailableReasons.isNotEmpty() -> {
                         val reason = capabilities.avfUnavailableReasons.firstOrNull()
                         when (reason) {
@@ -475,12 +477,6 @@ private fun AvfSimulationModeBanner(capabilities: AvfCapabilityChecker.AvfCapabi
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
-            )
-
-            Text(
-                text = "虚拟机操作均为模拟演示，不会创建真实虚拟机",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray.copy(alpha = 0.7f)
             )
         }
     }

@@ -60,8 +60,6 @@ interface VmRuntime {
         /** Android Virtualization Framework (AVF / microdroid) */
         AVF,
         /** QEMU 用户模式模拟器 */
-        QEMU,
-        /** 纯模拟模式（无真实虚拟化） */
-        SIMULATION
+        QEMU
     }
 }

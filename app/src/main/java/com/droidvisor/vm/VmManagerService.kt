@@ -51,7 +51,7 @@ class VmManagerService : Service() {
     val avfCapabilities: StateFlow<AvfCapabilityChecker.AvfCapabilities?> = _avfCapabilities.asStateFlow()
 
     /** 当前使用的运行时后端 */
-    private var activeRuntime: VmRuntime.RuntimeType = VmRuntime.RuntimeType.SIMULATION
+    private var activeRuntime: VmRuntime.RuntimeType = VmRuntime.RuntimeType.QEMU
 
     /** QEMU 运行时实例（AVF 不可用时作为 fallback） */
     private var qemuRuntime: QemuVmRuntime? = null
@@ -60,7 +60,7 @@ class VmManagerService : Service() {
 
     /** 实际可用的运行时（AVF 或 QEMU） */
     val hasRealRuntime: Boolean
-        get() = avfBound || (_isQemuAvailable.value && qemuRuntime != null)
+        get() = _isAvfAvailable.value || (_isQemuAvailable.value && qemuRuntime != null)
 
     private lateinit var vmStateDataStore: VmStateDataStore
 
@@ -215,16 +215,19 @@ class VmManagerService : Service() {
                 )
                 activeVms[vmId] = context
 
-                if (avfBound && avfService != null) {
+                if (avfBound && avfService != null && _isAvfAvailable.value) {
                     activeRuntime = VmRuntime.RuntimeType.AVF
                     configureAndStartAvfVm(vm)
                 } else if (qemuRuntime != null && _isQemuAvailable.value) {
                     activeRuntime = VmRuntime.RuntimeType.QEMU
+                    if (avfBound && !_isAvfAvailable.value) {
+                        Logger.i(TAG, "AVF bound but not available (permission/capability issue), falling back to QEMU")
+                    }
                     configureAndStartQemuVm(vm)
                 } else {
-                    Logger.w(TAG, "No real runtime available, using simulation")
-                    activeRuntime = VmRuntime.RuntimeType.SIMULATION
-                    simulateStartVm(vmId)
+                    Logger.e(TAG, "No real runtime available, cannot start VM")
+                    updateVmStatus(vmId, VmStatus.ERROR)
+                    return@launch
                 }
 
             } catch (e: Exception) {
@@ -277,13 +280,6 @@ class VmManagerService : Service() {
         Logger.d(TAG, "QEMU VM started for ${vm.name}")
     }
 
-    private suspend fun simulateStartVm(vmId: String) {
-        kotlinx.coroutines.delay(1500)
-        updateVmStatus(vmId, VmStatus.RUNNING)
-        updateVmStartedAt(vmId, System.currentTimeMillis())
-        Logger.d(TAG, "VM started (simulation)")
-    }
-
     fun stopVm(vmId: String) {
         coroutineScope.launch {
             try {
@@ -302,9 +298,6 @@ class VmManagerService : Service() {
                     }
                     VmRuntime.RuntimeType.QEMU -> {
                         qemuRuntime?.stopVm()
-                    }
-                    VmRuntime.RuntimeType.SIMULATION -> {
-                        kotlinx.coroutines.delay(500)
                     }
                 }
 

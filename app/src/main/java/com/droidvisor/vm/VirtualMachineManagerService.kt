@@ -159,12 +159,12 @@ class VirtualMachineManagerService : Service() {
                     Logger.d(TAG, "AVF VirtualMachineManager initialized successfully")
                     true
                 } else {
-                    Logger.w(TAG, "AVF VirtualMachineManager is null, falling back to simulation mode")
+                    Logger.w(TAG, "AVF VirtualMachineManager is null")
                     false
                 }
             }
         } catch (e: Exception) {
-            Logger.w(TAG, "AVF not available, falling back to simulation mode", e)
+            Logger.w(TAG, "AVF not available", e)
             false
         }
     }
