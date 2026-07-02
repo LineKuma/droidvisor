@@ -19,12 +19,10 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Droidvisor"
-        tools:targetApi="31">
+        android:theme="@style/Theme.Droidvisor">
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.Droidvisor">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

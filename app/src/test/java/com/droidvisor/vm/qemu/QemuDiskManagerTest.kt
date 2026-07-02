@@ -1,6 +1,11 @@
 package com.droidvisor.vm.qemu
 
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.After
 import org.junit.Test
@@ -37,7 +42,7 @@ class QemuDiskManagerTest {
         val nonExistentDir = File(tempDir, "non_existent_subdir")
         assertFalse("基目录不应预先存在", nonExistentDir.exists())
 
-        val manager = QemuDiskManager(nonExistentDir)
+        QemuDiskManager(nonExistentDir)
 
         assertTrue("init 后基目录应被自动创建", nonExistentDir.exists())
         assertTrue("创建的应是目录", nonExistentDir.isDirectory)
@@ -48,7 +53,7 @@ class QemuDiskManagerTest {
         assertTrue("前置条件：基目录应存在", tempDir.exists())
 
         // 不应抛出异常，且目录仍然存在
-        val manager = QemuDiskManager(tempDir)
+        QemuDiskManager(tempDir)
         assertTrue("已有目录应保持存在", tempDir.exists())
     }
 
@@ -321,13 +326,13 @@ class QemuDiskManagerTest {
 
     @Test
     fun `companion object DEFAULT_CLUSTER_SIZE 常量为 65536`() {
-        assertEquals(65536, QemuDiskManager.DEFAULT_CLUSTER_SIZE)
+        assertEquals(65_536, QemuDiskManager.DEFAULT_CLUSTER_SIZE)
     }
 
     @Test
     fun `companion object 所有常量值符合预期`() {
         assertEquals(".qcow2", QemuDiskManager.QCOW2_EXTENSION)
         assertEquals(".raw", QemuDiskManager.RAW_EXTENSION)
-        assertEquals(65536, QemuDiskManager.DEFAULT_CLUSTER_SIZE)
+        assertEquals(65_536, QemuDiskManager.DEFAULT_CLUSTER_SIZE)
     }
 }

@@ -3,7 +3,6 @@ package com.droidvisor.vm
 import com.droidvisor.vm.model.VmInstance
 import com.droidvisor.vm.model.VmTemplate
 import com.droidvisor.vm.model.VmTemplateType
-import com.droidvisor.vm.qemu.QemuVmRuntime
 import com.droidvisor.vm.qemu.VmRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -265,7 +264,7 @@ class VmManagerServiceQemuTest {
     @Test
     fun ActiveVmContext_构造参数应正确存储() {
         val vmId = "test-vm-123"
-        val startedAt = 1700000000000L
+        val startedAt = 1_700_000_000_000L
 
         val context = ActiveVmContext(
             vmId = vmId,
@@ -464,6 +463,7 @@ class TestableQemuVmManagerService {
                 }
 
             } catch (e: Exception) {
+                android.util.Log.e("TestableQemuVmManagerService", "startVm failed for $vmId", e)
                 updateVmStatus(vmId, VmStatus.ERROR)
             }
         }
@@ -493,6 +493,7 @@ class TestableQemuVmManagerService {
                 updateVmStatus(vmId, VmStatus.STOPPED)
 
             } catch (e: Exception) {
+                android.util.Log.e("TestableQemuVmManagerService", "stopVm failed for $vmId", e)
                 updateVmStatus(vmId, VmStatus.ERROR)
             }
         }
@@ -524,13 +525,6 @@ class TestableQemuVmManagerService {
             if (it.id == vmId) it.copy(status = status) else it
         }
     }
-
-    private fun updateVmStartedAt(vmId: String, startedAt: Long?) {
-        _vmInstances.value = _vmInstances.value.map {
-            if (it.id == vmId) it.copy(startedAt = startedAt) else it
-        }
-    }
-}
 
 /**
  * QEMU 运行时的 Mock 实现

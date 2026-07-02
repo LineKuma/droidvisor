@@ -230,6 +230,7 @@ class VsockService : Service() {
 
     fun isConnected(): Boolean = _connectionState.value.isConnected()
 
+    @Suppress("TooGenericExceptionCaught")
     private fun createVsockChannel(port: Int): VsockChannel {
         // 优先尝试 AVF vsock
         if (avfBound && avfService != null) {

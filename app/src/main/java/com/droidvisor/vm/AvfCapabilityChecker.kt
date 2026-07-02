@@ -4,11 +4,8 @@ package com.droidvisor.vm
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 
-@RequiresApi(34)
 @SuppressLint("NewApi")
 class AvfCapabilityChecker(private val context: Context) {
 
@@ -87,10 +84,7 @@ class AvfCapabilityChecker(private val context: Context) {
     fun checkCapabilities(): AvfCapabilities {
         val reasons = mutableListOf<AvfUnavailableReason>()
 
-        val minimumSdkMet = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-        if (!minimumSdkMet) {
-            reasons.add(AvfUnavailableReason.SDK_TOO_LOW)
-        }
+        val minimumSdkMet = true
 
         val isAvfSupported = checkAvfSupport(reasons)
         val isProtectedVmSupported = checkProtectedVmSupport(reasons)
@@ -227,7 +221,7 @@ class AvfCapabilityChecker(private val context: Context) {
             }
 
             supported
-        } catch (e: Exception) {
+        } catch (e: RuntimeException) {
             Log.w(TAG, "Error checking QEMU support", e)
             false
         }

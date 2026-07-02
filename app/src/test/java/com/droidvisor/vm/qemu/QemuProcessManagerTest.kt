@@ -5,7 +5,11 @@ import com.droidvisor.vm.VmError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -437,7 +441,7 @@ class QemuProcessManagerTest {
     }
 
     @Test
-    fun `控制台回调正常设置`() {
+    fun 控制台回调正常设置() {
         val lines = mutableListOf<String>()
         val mgr = QemuProcessManager(createDefaultConfig(), { lines.add(it) }, testScope)
         assertNotNull(mgr)

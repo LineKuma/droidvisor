@@ -7,6 +7,7 @@ import com.droidvisor.vm.vsock.VsockError
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -22,7 +23,7 @@ import java.io.OutputStream
  */
 class QemuVsockChannel(
     private val socketPath: String,
-    private val connectTimeoutMs: Long = 5000L
+    connectTimeoutMs: Long = 5000L
 ) : VsockChannel {
 
     private val TAG = "QemuVsockChannel"
@@ -76,7 +77,7 @@ class QemuVsockChannel(
             this.open = true
 
             Log.d(TAG, "Connected to QEMU Vsock socket file: $socketPath")
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             Log.e(TAG, "Failed to connect to QEMU Vsock socket", e)
             cleanup()
             throw VsockError.ConnectionError(
@@ -90,7 +91,7 @@ class QemuVsockChannel(
         try {
             outputStream?.write(data)
             outputStream?.flush()
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             open = false
             throw VsockError.SendError("Send failed: ${e.message}")
         }

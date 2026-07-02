@@ -27,7 +27,6 @@ import java.lang.reflect.Proxy
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
-@RequiresApi(34)
 @SuppressLint("NewApi")
 class VirtualMachineManagerService : Service() {
 

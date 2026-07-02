@@ -57,6 +57,11 @@ class VmManagementViewModel(
         vmManagerService = null
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        vmManagerService = null
+    }
+
     private fun observeServiceState() {
         viewModelScope.launch {
             vmManagerService?.vmInstances?.collect { instances ->

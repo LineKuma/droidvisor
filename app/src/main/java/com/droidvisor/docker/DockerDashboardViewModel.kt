@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 data class PullProgress(
     val imageName: String = "",
@@ -478,7 +481,7 @@ class DockerDashboardViewModel : ViewModel() {
             } catch (e: Exception) {
                 _containerLogs.value = listOf(
                     ContainerLog(
-                        timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date()),
+                        timestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault()).format(Instant.now()),
                         message = "获取日志失败: ${e.message}",
                         isError = true
                     )
@@ -508,8 +511,8 @@ class DockerDashboardViewModel : ViewModel() {
         for (i in 0 until 20) {
             val message = logMessages[random.nextInt(logMessages.size)]
             val isError = message.startsWith("Error:")
-            val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
-                java.util.Date(baseTime - (20 - i) * 60000L)
+            val timestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault()).format(
+                Instant.ofEpochMilli(baseTime - (20 - i) * 60000L)
             )
             logs.add(ContainerLog(timestamp = timestamp, message = message, isError = isError))
         }
@@ -535,7 +538,7 @@ class DockerDashboardViewModel : ViewModel() {
         val logs = getFilteredLogs()
         return buildString {
             appendLine("Docker Container Logs - Export")
-            appendLine("Exported at: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(java.util.Date())}")
+            appendLine("Exported at: ${DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault()).format(Instant.now())}")
             appendLine("=".padEnd(50, '='))
             logs.forEach { log ->
                 val prefix = if (log.isError) "[ERROR]" else "[INFO]"
@@ -608,5 +611,10 @@ class DockerDashboardViewModel : ViewModel() {
             bytes < 1024 * 1024 * 1024 -> "${"%.2f".format(bytes / (1024.0 * 1024))} MB"
             else -> "${"%.2f".format(bytes / (1024.0 * 1024 * 1024))} GB"
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        dockerProxyService = null
     }
 }

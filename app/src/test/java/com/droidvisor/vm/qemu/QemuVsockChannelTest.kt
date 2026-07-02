@@ -3,7 +3,12 @@ package com.droidvisor.vm.qemu
 import com.droidvisor.vm.vsock.VsockChannel
 import com.droidvisor.vm.vsock.VsockError
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -216,6 +221,7 @@ class QemuVsockChannelTest {
             fail("关闭后 send 应抛出 SendError")
         } catch (e: VsockError.SendError) {
             // 预期行为
+            android.util.Log.d("QemuVsockChannelTest", "Expected SendError after close", e)
         }
     }
 
@@ -232,6 +238,7 @@ class QemuVsockChannelTest {
             fail("关闭后 receive 应抛出 ReceiveError")
         } catch (e: VsockError.ReceiveError) {
             // 预期行为
+            android.util.Log.d("QemuVsockChannelTest", "Expected ReceiveError after close", e)
         }
     }
 

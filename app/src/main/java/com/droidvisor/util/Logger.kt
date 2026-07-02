@@ -12,7 +12,7 @@ object Logger {
 
     private const val TAG = "droidvisor"
     private var logFile: File? = null
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    private fun dateFormat(): SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
     enum class LogLevel {
         DEBUG, INFO, WARN, ERROR
@@ -63,7 +63,7 @@ object Logger {
 
     private fun log(level: LogLevel, message: String) {
         val sanitizedMessage = sanitizeLog(message)
-        val timestamp = dateFormat.format(Date())
+        val timestamp = dateFormat().format(Date())
         val logMessage = "[$timestamp] [${level.name}] $sanitizedMessage"
 
         when (level) {

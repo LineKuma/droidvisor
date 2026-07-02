@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.IOException
 
 /**
  * QEMU 虚拟机运行时实现
@@ -126,6 +127,7 @@ class QemuVmRuntime(
         Log.d(TAG, "Configuration updated: ${config.memoryBytes} bytes, ${config.cpuCores} CPUs")
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun startVm() {
         if (!_status.value.canStart()) {
             throw VmError.StartError("VM is not in a startable state: ${_status.value}")
@@ -157,6 +159,7 @@ class QemuVmRuntime(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun stopVm() {
         if (!_status.value.canStop()) {
             throw VmError.StopError("VM is not in a stoppable state: ${_status.value}")
@@ -180,6 +183,7 @@ class QemuVmRuntime(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun closeVm() {
         try {
             if (_status.value == VmStatus.RUNNING || _status.value == VmStatus.STARTING) {
@@ -196,6 +200,7 @@ class QemuVmRuntime(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun connectVsock(port: Int): ParcelFileDescriptor? {
         if (_status.value != VmStatus.RUNNING) {
             Log.w(TAG, "Cannot connect vsock: VM not running (status=${_status.value})")
@@ -395,7 +400,7 @@ class QemuVmRuntime(
             // 在实际使用中，这里需要将 socket fd 转换为 PFD
             // 目前返回一个有效的 PFD 作为占位符
             pipe[0]
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             Log.e(TAG, "Failed to create PFD from channel", e)
             null
         }
@@ -414,7 +419,7 @@ class QemuVmRuntime(
                 val p = Runtime.getRuntime().exec(arrayOf("which", "qemu-system-aarch64"))
                 p.waitFor() == 0
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             Log.d(TAG, "QEMU binary check failed", e)
             false
         }
@@ -431,11 +436,12 @@ class QemuVmRuntime(
                 try {
                     val imgCheck = Runtime.getRuntime().exec(arrayOf(candidate, "--version"))
                     imgCheck.waitFor() == 0
-                } catch (e: Exception) {
+                } catch (e: IOException) {
+                    Log.e(TAG, "Failed to check qemu-img: $candidate", e)
                     false
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             Log.d(TAG, "qemu-img not available", e)
             false
         }

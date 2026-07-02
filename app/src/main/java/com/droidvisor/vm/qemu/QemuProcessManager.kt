@@ -307,6 +307,7 @@ class QemuProcessManager(
             Log.d(TAG, "QEMU process started, pid=$pid")
 
         } catch (e: IOException) {
+            Log.e(TAG, "Failed to start QEMU process", e)
             _processState.value = ProcessState.ERROR
             _running.set(false)
             throw VmError.StartError("Failed to start QEMU process: ${e.message}")
@@ -371,7 +372,7 @@ class QemuProcessManager(
                     _processState.value = ProcessState.CRASHED
                     Log.e(TAG, "QEMU process crashed (exit code=$exitCode)")
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 Log.e(TAG, "Error monitoring QEMU process", e)
                 _processState.value = ProcessState.ERROR
                 _running.set(false)
@@ -386,6 +387,7 @@ class QemuProcessManager(
      * @param timeoutMs 等待优雅退出的超时时间
      * @return true 如果成功停止
      */
+    @Suppress("TooGenericExceptionCaught")
     fun stop(force: Boolean = false, timeoutMs: Long = 5000L): Boolean {
         if (!_running.get()) {
             Log.w(TAG, "QEMU process not running")

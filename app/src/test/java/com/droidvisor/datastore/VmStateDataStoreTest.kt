@@ -148,7 +148,7 @@ class VmStateDataStoreTest {
             template = testTemplate,
             customMemoryBytes = 8192L,
             customCpuCores = 4,
-            customDiskSizeBytes = 16384L,
+            customDiskSizeBytes = 16_384L,
             status = VmStatus.ERROR,
             createdAt = 5000L,
             startedAt = 6000L,
@@ -167,7 +167,7 @@ class VmStateDataStoreTest {
             assertEquals(testTemplate.payloadBinaryName, restored.template.payloadBinaryName)
             assertEquals(8192L, restored.customMemoryBytes)
             assertEquals(4, restored.customCpuCores)
-            assertEquals(16384L, restored.customDiskSizeBytes)
+            assertEquals(16_384L, restored.customDiskSizeBytes)
             assertEquals(VmStatus.ERROR, restored.status)
             assertEquals(5000L, restored.createdAt)
             assertEquals(6000L, restored.startedAt)

@@ -67,7 +67,7 @@ class PermissionViewModel : ViewModel() {
             "android.permission.INTERNET"
         ) == PackageManager.PERMISSION_GRANTED
 
-        val meetsMinSdk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        val meetsMinSdk = true
 
         val capabilityChecker = AvfCapabilityChecker(context)
         val capabilities = capabilityChecker.checkCapabilities()
