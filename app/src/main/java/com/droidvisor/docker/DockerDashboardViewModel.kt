@@ -457,6 +457,7 @@ class DockerDashboardViewModel : ViewModel() {
         )
     }
 
+    @Suppress("TooGenericExceptionCaught")
     fun fetchContainerLogs(containerId: String) {
         viewModelScope.launch {
             _containerLogs.value = emptyList()

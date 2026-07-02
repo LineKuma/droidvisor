@@ -1,10 +1,11 @@
 package com.droidvisor.vm.qemu
 
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.Before
-import org.junit.After
-import java.io.File
 
 /**
  * QEMU VM 配置单元测试

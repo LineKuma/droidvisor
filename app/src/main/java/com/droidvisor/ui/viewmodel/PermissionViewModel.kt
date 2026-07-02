@@ -1,7 +1,6 @@
 package com.droidvisor.ui.viewmodel
 
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import com.droidvisor.vm.AvfCapabilityChecker

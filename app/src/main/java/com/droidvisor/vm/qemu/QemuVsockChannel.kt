@@ -92,11 +92,13 @@ class QemuVsockChannel(
             outputStream?.write(data)
             outputStream?.flush()
         } catch (e: IOException) {
+            Log.e(TAG, "Send failed", e)
             open = false
             throw VsockError.SendError("Send failed: ${e.message}")
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun receive(): ByteArray? {
         if (!open) throw VsockError.ReceiveError("Channel is closed")
         return try {
@@ -108,6 +110,7 @@ class QemuVsockChannel(
             val bytesRead = stream.read(buffer)
             if (bytesRead > 0) buffer.copyOf(bytesRead) else null
         } catch (e: Exception) {
+            Log.e(TAG, "Receive failed", e)
             open = false
             throw VsockError.ReceiveError("Receive failed: ${e.message}")
         }
@@ -148,6 +151,7 @@ class QemuVsockServer(
     /**
      * 启动监听（创建 socket 文件）
      */
+    @Suppress("TooGenericExceptionCaught")
     fun start(): Boolean {
         if (running) return true
 
@@ -174,6 +178,7 @@ class QemuVsockServer(
      * 尝试接受客户端连接（非阻塞）
      * 检查 socket 文件是否可读，如果可读则创建通道
      */
+    @Suppress("TooGenericExceptionCaught")
     fun acceptClient(): QemuVsockChannel? {
         if (!running) return null
 

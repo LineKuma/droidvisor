@@ -208,6 +208,7 @@ class AvfCapabilityChecker(private val context: Context) {
      * 检查 qemu-system-aarch64 和 qemu-img 是否存在且可执行。
      * QEMU 可以作为 AVF 不可用时的 fallback 运行时。
      */
+    @Suppress("TooGenericExceptionCaught")
     private fun checkQemuSupport(): Boolean {
         return try {
             val qemuBinary = checkQemuBinary()

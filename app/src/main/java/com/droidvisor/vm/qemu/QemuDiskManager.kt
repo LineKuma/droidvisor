@@ -100,6 +100,7 @@ class QemuDiskManager(private val baseDir: File) {
      * @param diskFile 镜像文件
      * @return 镜像信息字符串
      */
+    @Suppress("TooGenericExceptionCaught")
     fun getDiskInfo(diskFile: File): String? {
         if (!diskFile.exists()) return null
 
@@ -173,6 +174,7 @@ class QemuDiskManager(private val baseDir: File) {
     /**
      * 检查 qemu-img 工具是否可用
      */
+    @Suppress("TooGenericExceptionCaught")
     fun isQemuImgAvailable(): Boolean {
         return try {
             val process = ProcessBuilder("qemu-img", "--version")
