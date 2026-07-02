@@ -56,11 +56,6 @@ class BackupViewModel : ViewModel() {
         backupManagerService = null
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        backupManagerService = null
-    }
-
     private fun observeServiceState() {
         viewModelScope.launch {
             backupManagerService?.backups?.collect { backups ->

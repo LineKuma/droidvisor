@@ -67,12 +67,6 @@ class TerminalViewModel : ViewModel() {
         consoleOutputService = null
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        vsockService = null
-        consoleOutputService = null
-    }
-
     private fun observeVsockConnection() {
         viewModelScope.launch {
             vsockService?.connectionState?.collect { connState ->
