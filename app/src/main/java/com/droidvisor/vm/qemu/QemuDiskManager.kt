@@ -14,6 +14,12 @@ class QemuDiskManager(private val baseDir: File) {
 
     private val TAG = "QemuDiskManager"
 
+    init {
+        if (!baseDir.exists()) {
+            baseDir.mkdirs()
+        }
+    }
+
     /** 镜像文件扩展名 */
     companion object {
         const val QCOW2_EXTENSION = ".qcow2"
@@ -21,12 +27,6 @@ class QemuDiskManager(private val baseDir: File) {
 
         /** 默认 qcow2 虚拟大小（实际按需分配） */
         const val DEFAULT_CLUSTER_SIZE = 65536
-    }
-
-    init {
-        if (!baseDir.exists()) {
-            baseDir.mkdirs()
-        }
     }
 
     /**
@@ -78,7 +78,7 @@ class QemuDiskManager(private val baseDir: File) {
 
         Log.d(TAG, "Creating disk image: ${args.joinToString(" ")}")
 
-        val process = ProcessBuilder(*args.toTypedArray())
+        val process = ProcessBuilder(args)
             .redirectErrorStream(true)
             .start()
 
@@ -126,9 +126,7 @@ class QemuDiskManager(private val baseDir: File) {
      * @param newSizeGb 新大小（GB）
      */
     fun resizeDisk(diskFile: File, newSizeGb: Int) {
-        if (!diskFile.exists()) {
-            throw IllegalArgumentException("Disk file does not exist: ${diskFile.absolutePath}")
-        }
+        require(diskFile.exists()) { "Disk file does not exist: ${diskFile.absolutePath}" }
 
         val process = ProcessBuilder("qemu-img", "resize", diskFile.absolutePath, "${newSizeGb}G")
             .redirectErrorStream(true)

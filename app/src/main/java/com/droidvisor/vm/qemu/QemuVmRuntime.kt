@@ -378,7 +378,6 @@ class QemuVmRuntime(
 
     private fun forceCleanup() {
         cleanupResources()
-        System.gc()
     }
 
     private fun rebuildProcessManager(newConfig: QemuVmConfig) {

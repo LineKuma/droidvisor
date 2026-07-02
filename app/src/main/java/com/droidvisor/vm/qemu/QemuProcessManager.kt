@@ -120,9 +120,29 @@ class QemuProcessManager(
         buildVsockArgs(args)
 
         // 控制台配置
+        buildConsoleArgs(args)
+
+        // 图形输出
+        buildGraphicArgs(args)
+
+        // 禁止 QEMU 自动退出（无图形时需要）
+        if (!config.enableGraphic) {
+            args.add("-daemonize")
+            args.removeIf { it == "-nographic" || it == "-serial" || it == "-mon" }
+        }
+
+        // 额外参数
+        args.addAll(config.extraArgs)
+
+        Log.d(TAG, "QEMU command line: ${args.joinToString(" ")}")
+
+        return args
+    }
+
+    private fun buildConsoleArgs(args: MutableList<String>) {
         when (val mode = config.consoleMode) {
             is QemuVmConfig.ConsoleMode.PTY -> {
-                args.add("-nographic")  // 无图形，使用串口
+                args.add("-nographic")
                 args.add("-serial")
                 args.add("mon:stdio")
             }
@@ -141,27 +161,15 @@ class QemuProcessManager(
                 args.add("none")
             }
         }
+    }
 
-        // 图形输出
+    private fun buildGraphicArgs(args: MutableList<String>) {
         if (config.enableGraphic) {
             args.removeIf { it == "-nographic" }
         } else if (!args.contains("-display")) {
             args.add("-display")
             args.add("none")
         }
-
-        // 阻止 QEMU 自动退出（无图形时需要）
-        if (!config.enableGraphic) {
-            args.add("-daemonize")
-            args.removeIf { it == "-nographic" || it == "-serial" || it == "-mon" }
-        }
-
-        // 额外参数
-        args.addAll(config.extraArgs)
-
-        Log.d(TAG, "QEMU command line: ${args.joinToString(" ")}")
-
-        return args
     }
 
     private fun resolveQemuBinary(): String {
@@ -315,7 +323,7 @@ class QemuProcessManager(
     }
 
     private fun startDaemonized(commandLine: List<String>) {
-        val builder = ProcessBuilder(*commandLine.toTypedArray())
+        val builder = ProcessBuilder(commandLine)
         config.workingDirectory?.let { builder.directory(it) }
 
         val process = builder
@@ -338,7 +346,7 @@ class QemuProcessManager(
     }
 
     private fun startForeground(commandLine: List<String>) {
-        val builder = ProcessBuilder(*commandLine.toTypedArray())
+        val builder = ProcessBuilder(commandLine)
         config.workingDirectory?.let { builder.directory(it) }
 
         qemuProcess = builder

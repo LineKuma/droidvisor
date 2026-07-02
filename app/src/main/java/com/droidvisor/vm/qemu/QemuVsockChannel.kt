@@ -23,7 +23,7 @@ import java.io.OutputStream
  */
 class QemuVsockChannel(
     private val socketPath: String,
-    connectTimeoutMs: Long = 5000L
+    _connectTimeoutMs: Long = 5000L
 ) : VsockChannel {
 
     private val TAG = "QemuVsockChannel"

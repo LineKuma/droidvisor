@@ -280,14 +280,20 @@ class VirtualMachineManagerService : Service() {
         this.consoleOutputService = service
     }
 
+    private fun <T> requireAvfOrNull(value: T?, message: String): T {
+        return value ?: throw VmError.AvfNotSupportedError(message)
+    }
+
     private fun startAvfVm() {
         val vmm = avfVmManager ?: throw VmError.AvfNotSupportedError("VirtualMachineManager not initialized")
 
         val vmConfig = buildAvfVmConfig()
         val vmName = "droidvisor_vm"
 
-        val getOrCreateMethod = ReflectCache.vmmGetOrCreate
-            ?: throw VmError.AvfNotSupportedError("VirtualMachineManager.getOrCreate method not found")
+        val getOrCreateMethod = requireAvfOrNull(
+            ReflectCache.vmmGetOrCreate,
+            "VirtualMachineManager.getOrCreate method not found"
+        )
 
         val vm = getOrCreateMethod.invoke(vmm, vmName, vmConfig)
             ?: throw VmError.StartError("Failed to create/get VM instance")
@@ -296,8 +302,10 @@ class VirtualMachineManagerService : Service() {
 
         setupVmCallback(vm)
 
-        val runMethod = ReflectCache.vmRun
-            ?: throw VmError.AvfNotSupportedError("VirtualMachine.run method not found")
+        val runMethod = requireAvfOrNull(
+            ReflectCache.vmRun,
+            "VirtualMachine.run method not found"
+        )
         runMethod.invoke(vm)
 
         consoleOutputService?.appendOutput("AVF VM starting...")
@@ -305,11 +313,15 @@ class VirtualMachineManagerService : Service() {
     }
 
     private fun buildAvfVmConfig(): Any {
-        val builderClass = ReflectCache.vmConfigBuilderClass
-            ?: throw VmError.AvfNotSupportedError("VirtualMachineConfig.Builder class not found")
+        val builderClass = requireAvfOrNull(
+            ReflectCache.vmConfigBuilderClass,
+            "VirtualMachineConfig.Builder class not found"
+        )
 
-        val constructor = ReflectCache.builderConstructor
-            ?: throw VmError.AvfNotSupportedError("VirtualMachineConfig.Builder constructor not found")
+        val constructor = requireAvfOrNull(
+            ReflectCache.builderConstructor,
+            "VirtualMachineConfig.Builder constructor not found"
+        )
 
         val builder = constructor.newInstance(this)
 
@@ -321,8 +333,10 @@ class VirtualMachineManagerService : Service() {
 
         ReflectCache.builderSetNumCpus?.invoke(builder, config.cpuCores)
 
-        val buildMethod = ReflectCache.builderBuild
-            ?: throw VmError.AvfNotSupportedError("VirtualMachineConfig.Builder.build method not found")
+        val buildMethod = requireAvfOrNull(
+            ReflectCache.builderBuild,
+            "VirtualMachineConfig.Builder.build method not found"
+        )
 
         return buildMethod.invoke(builder)
             ?: throw VmError.StartError("VirtualMachineConfig.Builder.build returned null")

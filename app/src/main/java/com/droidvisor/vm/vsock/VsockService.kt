@@ -32,9 +32,8 @@ class VsockService : Service() {
     private val binder = LocalBinder()
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val HOST_CID = 2
-    private val GUEST_CID = 3
-    private val DEFAULT_RECONNECT_DELAY = 5000L
+    private val guestCid = 3
+    private val defaultReconnectDelay = 5000L
 
     private var currentPort: Int = 0
     private var autoReconnect = true
@@ -71,10 +70,6 @@ class VsockService : Service() {
         }
     }
 
-    inner class LocalBinder : Binder() {
-        fun getService(): VsockService = this@VsockService
-    }
-
     override fun onCreate() {
         super.onCreate()
         bindAvfService()
@@ -103,7 +98,7 @@ class VsockService : Service() {
                 _error.value = null
                 _reconnecting.value = false
 
-                Log.d(TAG, "Connecting to Vsock port $port (Guest CID: $GUEST_CID)")
+                Log.d(TAG, "Connecting to Vsock port $port (Guest CID: $guestCid)")
 
                 vsockChannel = createVsockChannel(port)
                 _connectionState.value = VsockConnectionState.CONNECTED
@@ -275,11 +270,15 @@ class VsockService : Service() {
 
     private suspend fun scheduleReconnect() {
         _reconnecting.value = true
-        delay(DEFAULT_RECONNECT_DELAY)
+        delay(defaultReconnectDelay)
         if (_connectionState.value == VsockConnectionState.DISCONNECTED && autoReconnect) {
             Log.d(TAG, "Attempting to reconnect to Vsock port $currentPort")
             connect(currentPort, autoReconnect)
         }
+    }
+
+    inner class LocalBinder : Binder() {
+        fun getService(): VsockService = this@VsockService
     }
 
     companion object {
