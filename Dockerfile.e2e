@@ -77,21 +77,8 @@ RUN mkdir -p /opt/vm-images/debian && \
 RUN ssh-keygen -t rsa -b 2048 -f /opt/vm-images/debian/e2e_ssh_key -N "" -C "droidvisor-e2e" && \
     echo "SSH key pair generated"
 
-# 下载 arm64 内核包并提取 vmlinuz 和 initrd.img
-# 使用 wget 超时+重试，从 deb.debian.org CDN 下载
-RUN echo "Downloading arm64 kernel..." && \
-    mkdir -p /tmp/kernel-extract && \
-    cd /tmp && \
-    wget --timeout=60 --tries=5 -q \
-      "http://deb.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-49-cloud-arm64-unsigned_6.1.174-1_arm64.deb" \
-      -O /tmp/kernel.deb && \
-    echo "Kernel downloaded ($(stat -c%s /tmp/kernel.deb) bytes)" && \
-    dpkg-deb -x /tmp/kernel.deb /tmp/kernel-extract && \
-    find /tmp/kernel-extract -name "vmlinuz-*" -exec cp {} /opt/vm-images/debian/vmlinuz \; && \
-    find /tmp/kernel-extract -name "initrd.img-*" -exec cp {} /opt/vm-images/debian/initrd.img \; && \
-    rm -rf /tmp/kernel.deb /tmp/kernel-extract && \
-    ls -la /opt/vm-images/debian/vmlinuz /opt/vm-images/debian/initrd.img && \
-    echo "Kernel and initrd extracted"
+# 注意：内核包 (vmlinuz/initrd.img) 在 workflow 运行时下载和推送
+# 详见 e2e.yml 的 "Push Debian VM Images" 步骤
 
 # 创建 cloud-init seed ISO
 RUN mkdir -p /opt/vm-images/debian/cloud-init && \

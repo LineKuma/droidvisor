@@ -209,6 +209,21 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         run: |
+          echo "=== Downloading arm64 kernel ==="
+          KERNEL_URL="http://deb.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-49-cloud-arm64-unsigned_6.1.174-1_arm64.deb"
+          docker exec droidvisor-android-e2e \
+            bash -c "
+              mkdir -p /tmp/kernel-extract && cd /tmp && \
+              wget --timeout=120 --tries=5 -q '${KERNEL_URL}' -O /tmp/kernel.deb && \
+              echo 'Kernel downloaded' && \
+              dpkg-deb -x /tmp/kernel.deb /tmp/kernel-extract && \
+              find /tmp/kernel-extract -name 'vmlinuz-*' -exec cp {} /opt/vm-images/debian/vmlinuz \; && \
+              find /tmp/kernel-extract -name 'initrd.img-*' -exec cp {} /opt/vm-images/debian/initrd.img \; && \
+              rm -rf /tmp/kernel.deb /tmp/kernel-extract && \
+              ls -la /opt/vm-images/debian/vmlinuz /opt/vm-images/debian/initrd.img && \
+              echo 'Kernel and initrd extracted'
+            " || echo "Kernel download skipped"
+
           echo "Pushing QEMU bundle to emulator for app's QemuVmRuntime..."
           docker exec droidvisor-android-e2e \
             bash -c "
