@@ -169,7 +169,7 @@ tasks.register('jacocoTestReport', JacocoReport) {
 tasks.register('installandrun') {
     dependsOn 'installDebug'
     group = 'install'
-    description = 'Install debug APK, grant VM permission, enable AVF, and launch the app'
+    description = 'Install debug APK, push QEMU + Debian assets, grant VM permission, enable AVF, and launch the app'
 
     doLast {
         def adb = "${android.sdkDirectory}/platform-tools/adb"
@@ -184,7 +184,7 @@ tasks.register('installandrun') {
         }
         def serials = devicesOut.toString().readLines()
                 .drop(1)
-                .collect { it.split(/\s+/) }
+                .collect { it.split(/\\s+/) }
                 .findAll { it.size() >= 2 && it[1] == 'device' }
                 .collect { it[0] }
 
@@ -198,10 +198,56 @@ tasks.register('installandrun') {
 
             logger.lifecycle(">> Preparing device ${serial ?: '(default)'}")
 
-            // ── Grant MANAGE_VIRTUAL_MACHINE permission
-            // This is a signature|privileged-level permission.  On most devices
-            // (including AVDs) adb shell pm grant will fail unless the shell is
-            // running as root.  We try root first, then fall back to unprivileged.
+            // ── Push QEMU + Debian assets to app private external dir ──
+            // Target: /storage/emulated/0/Android/data/<pkg>/files/
+            //   qemu/bin/  → qemu-system-aarch64, qemu-img
+            //   images/     → debian-12-nocloud-arm64.qcow2
+            def remoteBase = "/storage/emulated/0/Android/data/${pkg}/files"
+            def cacheDir = new File("${System.getProperty('user.home')}/.droidvisor/cache")
+
+            // Ensure remote directories exist
+            exec {
+                commandLine = ([adb] + pkgTarget + [
+                    'shell', 'mkdir', '-p',
+                    "${remoteBase}/qemu/bin",
+                    "${remoteBase}/images"
+                ]) as List<String>
+                ignoreExitValue = true
+            }
+
+            // Push QEMU source tarball
+            def qemuTarball = new File(cacheDir, "qemu-${QEMU_VERSION}.tar.xz")
+            if (qemuTarball.exists()) {
+                logger.lifecycle("   Pushing QEMU source tarball (${qemuTarball.length()} bytes)...")
+                exec {
+                    commandLine = ([adb] + pkgTarget + [
+                        'push', qemuTarball.absolutePath,
+                        "${remoteBase}/qemu/bin/qemu-${QEMU_VERSION}.tar.xz"
+                    ]) as List<String>
+                    ignoreExitValue = true
+                }
+            } else {
+                logger.warn("   QEMU source tarball not found at ${qemuTarball.absolutePath}")
+                logger.warn("   Run 'downloadQemu' task first, or place the file manually.")
+            }
+
+            // Push Debian nocloud image
+            def debianImage = new File(cacheDir, DEBIAN_IMAGE_FILENAME)
+            if (debianImage.exists()) {
+                logger.lifecycle("   Pushing Debian nocloud image (${debianImage.length()} bytes)...")
+                exec {
+                    commandLine = ([adb] + pkgTarget + [
+                        'push', debianImage.absolutePath,
+                        "${remoteBase}/images/${DEBIAN_IMAGE_FILENAME}"
+                    ]) as List<String>
+                    ignoreExitValue = true
+                }
+            } else {
+                logger.warn("   Debian nocloud image not found at ${debianImage.absolutePath}")
+                logger.warn("   Run 'downloadDebianImage' task first, or place the file manually.")
+            }
+
+            // ── Grant MANAGE_VIRTUAL_MACHINE permission ──
             logger.lifecycle(">> Attempting to grant MANAGE_VIRTUAL_MACHINE permission...")
 
             def grantStdout = new ByteArrayOutputStream()
@@ -216,7 +262,6 @@ tasks.register('installandrun') {
             }
             if (rootResult.exitValue == 0) {
                 logger.lifecycle("   adb root succeeded, retrying grant as root...")
-                // Small delay for root shell to settle
                 sleep(500)
             }
 
@@ -289,6 +334,69 @@ tasks.register('installandrun') {
             }
         }
     }
+}
+
+// ── QEMU 官方源码包下载 ─────────────────────────────────────
+// 从 download.qemu.org 获取，缓存到 ~/.droidvisor/cache/
+ext {
+    QEMU_VERSION = '9.2.2'
+    DEBIAN_IMAGE_FILENAME = 'debian-12-nocloud-arm64.qcow2'
+}
+
+tasks.register('downloadQemu') {
+    group = 'install'
+    description = 'Download QEMU official source tarball from download.qemu.org'
+
+    doLast {
+        def cacheDir = new File("${System.getProperty('user.home')}/.droidvisor/cache")
+        cacheDir.mkdirs()
+
+        def filename = "qemu-${QEMU_VERSION}.tar.xz"
+        def url = "https://download.qemu.org/${filename}"
+        def dest = new File(cacheDir, filename)
+
+        if (dest.exists()) {
+            logger.lifecycle(">> QEMU source already cached: ${dest.absolutePath} (${dest.length()} bytes)")
+            return
+        }
+
+        logger.lifecycle(">> Downloading QEMU ${QEMU_VERSION} source from ${url} ...")
+        dest.withOutputStream { out ->
+            out << new URL(url).openStream()
+        }
+        logger.lifecycle(">> Downloaded to ${dest.absolutePath} (${dest.length()} bytes)")
+    }
+}
+
+tasks.register('downloadDebianImage') {
+    group = 'install'
+    description = 'Download Debian 12 nocloud ARM64 disk image from cloud.debian.org'
+
+    doLast {
+        def cacheDir = new File("${System.getProperty('user.home')}/.droidvisor/cache")
+        cacheDir.mkdirs()
+
+        def url = "https://cloud.debian.org/images/cloud/bookworm/latest/${DEBIAN_IMAGE_FILENAME}"
+        def dest = new File(cacheDir, DEBIAN_IMAGE_FILENAME)
+
+        if (dest.exists()) {
+            logger.lifecycle(">> Debian image already cached: ${dest.absolutePath} (${dest.length()} bytes)")
+            return
+        }
+
+        logger.lifecycle(">> Downloading Debian 12 nocloud image from ${url} ...")
+        logger.lifecycle("   (This is a large file, ~2GB, may take a while)")
+        dest.withOutputStream { out ->
+            out << new URL(url).openStream()
+        }
+        logger.lifecycle(">> Downloaded to ${dest.absolutePath} (${dest.length()} bytes)")
+    }
+}
+
+tasks.register('downloadAssets') {
+    group = 'install'
+    description = 'Download all required assets: QEMU source + Debian nocloud image'
+    dependsOn 'downloadQemu', 'downloadDebianImage'
 }
 
 tasks.register('createAvd') {
