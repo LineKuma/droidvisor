@@ -41,11 +41,12 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
 ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
 
 # 接受Android SDK许可并安装平台工具 + emulator + system-images
+# 使用 API 34 避免 API 35 google_apis 的 PackageManagerInternal NPE bug
 RUN yes | sdkmanager --licenses || true && \
-    sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "emulator" "system-images;android-35;google_apis;x86_64"
+    sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "emulator" "system-images;android-34;default;x86_64"
 
 # 创建默认AVD配置
-RUN echo "no" | avdmanager create avd -n e2e_test_avd -k "system-images;android-35;google_apis;x86_64" --force
+RUN echo "no" | avdmanager create avd -n e2e_test_avd -k "system-images;android-34;default;x86_64" --force
 
 # 配置AVD为无头模式（追加到已有 config.ini，保留系统镜像路径等关键配置）
 RUN printf '%s\n' \

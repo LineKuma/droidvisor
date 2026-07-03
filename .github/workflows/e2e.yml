@@ -279,7 +279,7 @@ jobs:
           fi
           echo "检测到 $DEVICE_COUNT 个模拟器设备"
 
-          # 等待 PackageManager 服务就绪（API 35 模拟器启动后需要额外时间）
+          # 等待 PackageManager 服务就绪（API 34 模拟器启动后需要额外时间）
           echo "Waiting for PackageManager to be ready..."
           for i in $(seq 1 30); do
             if docker exec droidvisor-android-e2e adb shell pm list packages 2>/dev/null | grep -q android; then
@@ -290,17 +290,13 @@ jobs:
             sleep 3
           done
 
-          # 安装主 APK（使用 pm install 绕过 API 35 StorageManager bug）
+          # 安装主 APK
           echo "Installing main APK..."
           INSTALL_OK=false
-          for attempt in $(seq 1 5); do
-            echo "  Install attempt $attempt/5..."
+          for attempt in $(seq 1 3); do
+            echo "  Install attempt $attempt/3..."
             if docker exec droidvisor-android-e2e \
-              bash -c "
-                adb push /workspace/app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/app-debug.apk &&
-                adb shell pm install -r /data/local/tmp/app-debug.apk &&
-                adb shell rm /data/local/tmp/app-debug.apk
-              "; then
+              adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk 2>&1; then
               INSTALL_OK=true
               break
             fi
@@ -309,7 +305,7 @@ jobs:
           done
 
           if [ "$INSTALL_OK" != "true" ]; then
-            echo "::error::APK 安装失败，已重试 5 次"
+            echo "::error::APK 安装失败，已重试 3 次"
             exit 1
           fi
 
@@ -384,12 +380,10 @@ jobs:
           echo "QemuVmRuntime 作为项目内置的 QEMU 提供者后端"
           echo "=========================================="
 
-          # 安装测试APK（使用 pm install 绕过 API 35 StorageManager bug，失败则终止）
+          # 安装测试APK（失败则终止）
           docker exec droidvisor-android-e2e \
             bash -c "
-              adb push /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk /data/local/tmp/test.apk &&
-              adb shell pm install -r /data/local/tmp/test.apk &&
-              adb shell rm /data/local/tmp/test.apk
+              adb install -r /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             "
 
           # 运行所有E2E测试（失败则终止）
