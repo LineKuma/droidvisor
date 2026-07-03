@@ -39,10 +39,12 @@ jobs:
       # ========== 阶段2: Docker 镜像构建 ==========
       - name: Build E2E Docker image
         id: docker-build
-        continue-on-error: true
         run: |
           echo "Building E2E test environment..."
-          docker build -t droidvisor-e2e -f Dockerfile.e2e . 2>&1 | tee /tmp/docker-build.log
+          docker build \
+            --cache-from=droidvisor-e2e:latest \
+            -t droidvisor-e2e:latest \
+            -f Dockerfile.e2e . 2>&1 | tee /tmp/docker-build.log
           echo "BUILD_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
       - name: Upload Docker Build Log
@@ -121,7 +123,6 @@ jobs:
           echo "Xvfb started"
 
       - name: Start Android Emulator (Headless)
-        continue-on-error: true
         run: |
           echo "=========================================="
           echo "启动 Android 模拟器"
@@ -131,7 +132,7 @@ jobs:
           # 启动adb server
           docker exec droidvisor-android-e2e adb start-server || true
 
-          # 启动emulator（后台运行）
+          # 启动emulator（后台运行，优化参数）
           docker exec -d droidvisor-android-e2e \
             bash -c '
               export DISPLAY=:0
@@ -141,18 +142,17 @@ jobs:
                 -gpu off \
                 -noaudio \
                 -no-boot-anim \
-                -no-snapshot \
                 -no-snapshot-save \
                 -accel off \
-                -memory 2048 \
+                -memory 1536 \
                 -netdelay none \
                 -netspeed full \
                 -verbose 2>&1 | tee /tmp/emulator-launch.log
             '
 
-          # 等待模拟器设备可见（最长10分钟）
-          echo "Waiting for emulator to become visible via adb (max 10 minutes)..."
-          timeout 600 sh -c '
+          # 等待模拟器设备可见（最长5分钟）
+          echo "Waiting for emulator to become visible via adb (max 5 minutes)..."
+          timeout 300 sh -c '
             while ! docker exec droidvisor-android-e2e adb devices 2>/dev/null | grep -q emulator; do
               echo "  [$(date +%H:%M:%S)] Waiting for emulator device..."
               docker exec droidvisor-android-e2e adb devices 2>/dev/null || true
@@ -161,10 +161,9 @@ jobs:
           ' && echo "✅ Emulator device detected" || echo "⚠️ Emulator device detection timed out"
 
       - name: Wait for Emulator Boot
-        continue-on-error: true
         run: |
-          echo "Waiting for emulator to fully boot (max 480 seconds)..."
-          timeout 480 sh -c '
+          echo "Waiting for emulator to fully boot (max 360 seconds)..."
+          timeout 360 sh -c '
             while ! docker exec droidvisor-android-e2e adb shell getprop sys.boot_completed 2>/dev/null | grep -q "^1$"; do
               echo "  [$(date +%H:%M:%S)] Boot not completed yet..."
               sleep 10
@@ -177,8 +176,6 @@ jobs:
 
       # ========== 阶段6: 安装APK并运行E2E测试 ==========
       - name: Install APKs on Emulator
-        if: success() || failure()
-        continue-on-error: true
         run: |
           echo "=========================================="
           echo "安装应用到模拟器"
@@ -189,14 +186,12 @@ jobs:
             bash -c "
               adb uninstall com.droidvisor 2>/dev/null || true &&
               adb uninstall com.droidvisor.test 2>/dev/null || true &&
-              adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk 2>/dev/null || echo 'Install skipped - no emulator'
+              adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk
             "
 
           echo "APK installation completed"
 
       - name: Grant Permissions
-        if: success() || failure()
-        continue-on-error: true
         run: |
           echo "Granting necessary permissions..."
           docker exec droidvisor-android-e2e \
@@ -206,23 +201,8 @@ jobs:
             "
 
       - name: Push Debian VM Images and QEMU Bundle to Emulator
-        if: success() || failure()
-        continue-on-error: true
         run: |
-          echo "=== Downloading arm64 kernel ==="
-          KERNEL_URL="http://deb.debian.org/debian/pool/main/l/linux/linux-image-6.1.0-49-cloud-arm64-unsigned_6.1.174-1_arm64.deb"
-          docker exec droidvisor-android-e2e \
-            bash -c "
-              mkdir -p /tmp/kernel-extract && cd /tmp && \
-              wget --timeout=120 --tries=5 -q '${KERNEL_URL}' -O /tmp/kernel.deb && \
-              echo 'Kernel downloaded' && \
-              dpkg-deb -x /tmp/kernel.deb /tmp/kernel-extract && \
-              find /tmp/kernel-extract -name 'vmlinuz-*' -exec cp {} /opt/vm-images/debian/vmlinuz \; && \
-              find /tmp/kernel-extract -name 'initrd.img-*' -exec cp {} /opt/vm-images/debian/initrd.img \; && \
-              rm -rf /tmp/kernel.deb /tmp/kernel-extract && \
-              ls -la /opt/vm-images/debian/vmlinuz /opt/vm-images/debian/initrd.img && \
-              echo 'Kernel and initrd extracted'
-            " || echo "Kernel download skipped"
+          echo "Using pre-built kernel and QEMU from Docker image"
 
           echo "Pushing QEMU bundle to emulator for app's QemuVmRuntime..."
           docker exec droidvisor-android-e2e \
@@ -235,7 +215,7 @@ jobs:
               adb shell chmod 755 /data/local/tmp/qemu-bundle/bin/qemu-img && \
               adb shell ls -la /data/local/tmp/qemu-bundle/bin/ && \
               echo 'QEMU bundle pushed'
-            " || echo "QEMU push skipped"
+            "
 
           echo "Pushing Debian VM images to emulator for app's QemuVmRuntime..."
           docker exec droidvisor-android-e2e \
@@ -246,15 +226,13 @@ jobs:
               adb push /opt/vm-images/debian/initrd.img /data/local/tmp/vm-images/debian/ 2>/dev/null &&
               adb push /opt/vm-images/debian/seed.iso /data/local/tmp/vm-images/debian/ 2>/dev/null &&
               adb shell ls -la /data/local/tmp/vm-images/debian/ 2>/dev/null
-            " || echo "Push skipped - no emulator"
+            "
 
       - name: Start Logcat Capture
-        if: success() || failure()
-        continue-on-error: true
         run: |
           echo "Starting logcat capture for app runtime logs..."
           docker exec -d droidvisor-android-e2e \
-            bash -c "adb logcat -c 2>/dev/null; adb logcat -v time > /workspace/e2e-logcat.log 2>/dev/null" || echo "Logcat skipped"
+            bash -c "adb logcat -c 2>/dev/null; adb logcat -v time > /workspace/e2e-logcat.log 2>/dev/null"
 
       - name: Run E2E Tests (US001-US016)
         run: |

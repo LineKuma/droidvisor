@@ -66,7 +66,7 @@ jobs:
         with:
           sarif_file: app/build/reports/detekt/detekt.sarif
           category: detekt
-          wait-for-processing: true
+          wait-for-processing: false
 
   android-lint:
     name: Android Lint Analysis
@@ -105,11 +105,10 @@ jobs:
       - name: Upload Lint SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: success() || failure()
-        continue-on-error: true
         with:
           sarif_file: app/build/reports/lint-results-debug.sarif
           category: android-lint
-          wait-for-processing: true
+          wait-for-processing: false
 
   dependency-review:
     name: Dependency Vulnerability Review

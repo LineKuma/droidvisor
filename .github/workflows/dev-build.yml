@@ -55,7 +55,7 @@ jobs:
           echo "Set versionCode=${VERSION_CODE}, versionName=${VERSION}-dev"
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Rename APK with date version
         run: |

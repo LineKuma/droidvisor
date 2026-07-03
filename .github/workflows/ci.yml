@@ -74,7 +74,7 @@ jobs:
           restore-keys: |
             gradle-ci-test-${{ runner.os }}-
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests + Integration Tests
         run: |
           ./gradlew testDebugUnitTest \
             --tests "com.droidvisor.docker.*" \
@@ -86,55 +86,33 @@ jobs:
             --tests "com.droidvisor.vm.vsock.*" \
             --tests "com.droidvisor.datastore.*" \
             --tests "com.droidvisor.util.*" \
-            --no-daemon \
-            --stacktrace
-
-      - name: Upload Unit Test Results
-        uses: actions/upload-artifact@v4
-        if: success() || failure()
-        with:
-          name: unit-test-results
-          path: |
-            app/build/reports/tests/testDebugUnitTest/
-            app/build/test-results/testDebugUnitTest/
-          retention-days: 7
-
-      - name: Publish Unit Test Report
-        uses: mikepenz/action-junit-report@v4
-        if: success() || failure()
-        with:
-          report_paths: app/build/test-results/testDebugUnitTest/*.xml
-          check_name: Unit Test Results
-
-      - name: Run Integration Tests
-        run: |
-          ./gradlew testDebugUnitTest \
             --tests "com.droidvisor.integration.*" \
             --no-daemon \
-            --stacktrace
+            --stacktrace \
+            --continue
 
-      - name: Upload Integration Test Results
+      - name: Upload Test Results
         uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
-          name: integration-test-results
+          name: test-results
           path: |
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
           retention-days: 7
 
-      - name: Publish Integration Test Report
+      - name: Publish Test Report
         uses: mikepenz/action-junit-report@v4
         if: success() || failure()
         with:
           report_paths: app/build/test-results/testDebugUnitTest/*.xml
-          check_name: Integration Test Results
+          check_name: Test Results
 
       # ===== 测试覆盖率报告 =====
       - name: Generate Coverage Report
         if: always()
         run: |
-          ./gradlew jacocoTestDebugUnitTestReport --no-daemon || true
+          ./gradlew jacocoTestDebugUnitTestReport --no-daemon --continue || true
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
@@ -162,7 +140,7 @@ jobs:
         with:
           path: |
             ~/.gradle/caches
-            ~/.gradle/wapper
+            ~/.gradle/wrapper
           key: gradle-ci-build-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             gradle-ci-build-${{ runner.os }}-
