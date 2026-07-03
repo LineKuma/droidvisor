@@ -91,7 +91,13 @@ class US005_DockerWorkflow : E2ETestBase() {
     fun AC4_stopAndDeleteContainer() {
         step("确保测试容器存在")
         // 如果 AC3 的容器还在，复用它；否则创建新的
-        if (!StableComposeHelper.nodeExists(composeTestRule, "us005-test-container")) {
+        val containerExists = try {
+            composeTestRule.onNodeWithText("us005-test-container").assertExists()
+            true
+        } catch (_: AssertionError) {
+            false
+        }
+        if (!containerExists) {
             prepareAlpineImage()
             StableComposeHelper.navigateToTab(composeTestRule, "Docker")
             composeTestRule.onNodeWithText("容器").performScrollTo().performClick()

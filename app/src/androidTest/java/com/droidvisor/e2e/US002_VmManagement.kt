@@ -58,8 +58,8 @@ class US002_VmManagement : E2ETestBase() {
         composeTestRule.waitForIdle()
 
         step("Detail page should show action buttons")
-        StableComposeHelper.waitForText(composeTestRule, "停止")
-        StableComposeHelper.nodeExists(composeTestRule, "删除")
+        composeTestRule.onNodeWithText("停止").assertExists()
+        composeTestRule.onNodeWithText("删除").assertExists()
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us002-selectable-vm")
     }
@@ -68,6 +68,10 @@ class US002_VmManagement : E2ETestBase() {
     fun AC4_startVmToRunning() {
         step("Create and start VM")
         StableComposeHelper.fullVmLifecycleNoDelete(composeTestRule, "us002-start-vm")
+
+        step("系统级验证：VM 确实在运行")
+        VmSystemVerifier.verifyVmRunning(appFilesDir)
+
         StableComposeHelper.deleteVm(composeTestRule, "us002-start-vm")
     }
 
@@ -99,7 +103,7 @@ class US002_VmManagement : E2ETestBase() {
         StableComposeHelper.deleteVm(composeTestRule, "us002-delete-vm")
 
         step("Verify VM deleted")
-        assert(!StableComposeHelper.nodeExists(composeTestRule, "us002-delete-vm"))
+        composeTestRule.onNodeWithText("us002-delete-vm").assertDoesNotExist()
     }
 
     @Test

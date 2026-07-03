@@ -9,6 +9,7 @@ import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.droidvisor.MainActivity
 import org.junit.After
 import org.junit.Rule
+import java.io.File
 
 /**
  * E2E 测试 ComposeRule 类型别名（文件级定义，Kotlin 不支持类内 typealias）
@@ -52,6 +53,13 @@ abstract class E2ETestBase {
 
     /** 当前测试步骤描述，用于日志和失败定位 */
     protected var currentStep: String = ""
+
+    /**
+     * 获取应用内部文件目录（用于系统级 VM 验证）
+     * 延迟初始化，在测试方法中首次访问时获取
+     */
+    protected val appFilesDir: File
+        get() = composeTestRule.activity.filesDir
 
     /**
      * 记录测试步骤（输出到 Logcat 和标准输出）

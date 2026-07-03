@@ -256,10 +256,10 @@ jobs:
           docker exec -d droidvisor-android-e2e \
             bash -c "adb logcat -c 2>/dev/null; adb logcat -v time > /workspace/e2e-logcat.log 2>/dev/null" || echo "Logcat skipped"
 
-      - name: Run E2E Tests (US001-US015)
+      - name: Run E2E Tests (US001-US016)
         run: |
           echo "=========================================="
-          echo "运行 E2E Instrumentation 测试 (US001-US015)"
+          echo "运行 E2E Instrumentation 测试 (US001-US016)"
           echo ""
           echo "验证项目自身功能:"
           echo "  US001: 首次启动与导航"
@@ -277,6 +277,7 @@ jobs:
           echo "  US013: 备份高级工作流"
           echo "  US014: 保护模式切换"
           echo "  US015: 错误恢复与边界场景"
+          echo "  US016: VM 系统级真实验证（进程/文件/控制台）★"
           echo ""
           echo "QemuVmRuntime 作为项目内置的 QEMU 提供者后端"
           echo "=========================================="
@@ -455,7 +456,7 @@ jobs:
           echo "  [验证1] 项目编译: APK 编译成功"
           echo "  [验证2] 模拟器启动: Android 模拟器运行"
           echo "  [验证3] 应用安装: APK 安装到设备"
-          echo "  [验证4] E2E 测试: Instrumentation 测试 (US001-US015)"
+          echo "  [验证4] E2E 测试: Instrumentation 测试 (US001-US016)"
           echo "    ├─ US001: 首次启动与导航"
           echo "    ├─ US002: VM 管理（QemuVmRuntime）"
           echo "    ├─ US003: 网络配置"
@@ -470,7 +471,8 @@ jobs:
           echo "    ├─ US012: Docker 仪表盘"
           echo "    ├─ US013: 备份高级"
           echo "    ├─ US014: 保护模式"
-          echo "    └─ US015: 错误恢复"
+          echo "    ├─ US015: 错误恢复"
+          echo "    └─ US016: VM 系统级验证 ★ (进程/文件/控制台)"
           echo "  [验证5] QEMU Provider: QemuVmRuntime 运行日志"
           echo "  [验证6] ★ Debian VM SSH: 应用通过 QemuVmRuntime 创建 Debian VM"
           echo "          → 通过 adb forward 建立网络通道"
