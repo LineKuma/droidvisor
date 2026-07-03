@@ -290,13 +290,17 @@ jobs:
             sleep 3
           done
 
-          # 安装主 APK（带重试，处理 API 35 模拟器的 StorageManager 初始化竞争）
+          # 安装主 APK（使用 pm install 绕过 API 35 StorageManager bug）
           echo "Installing main APK..."
           INSTALL_OK=false
           for attempt in $(seq 1 5); do
             echo "  Install attempt $attempt/5..."
             if docker exec droidvisor-android-e2e \
-              adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk 2>&1; then
+              bash -c "
+                adb push /workspace/app/build/outputs/apk/debug/app-debug.apk /data/local/tmp/app-debug.apk &&
+                adb shell pm install -r /data/local/tmp/app-debug.apk &&
+                adb shell rm /data/local/tmp/app-debug.apk
+              "; then
               INSTALL_OK=true
               break
             fi
@@ -380,10 +384,12 @@ jobs:
           echo "QemuVmRuntime 作为项目内置的 QEMU 提供者后端"
           echo "=========================================="
 
-          # 安装测试APK（失败则终止）
+          # 安装测试APK（使用 pm install 绕过 API 35 StorageManager bug，失败则终止）
           docker exec droidvisor-android-e2e \
             bash -c "
-              adb install -r /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+              adb push /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk /data/local/tmp/test.apk &&
+              adb shell pm install -r /data/local/tmp/test.apk &&
+              adb shell rm /data/local/tmp/test.apk
             "
 
           # 运行所有E2E测试（失败则终止）
