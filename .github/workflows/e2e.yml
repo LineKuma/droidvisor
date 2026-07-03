@@ -160,6 +160,7 @@ jobs:
           echo "Xvfb started"
 
       - name: Start Android Emulator (Headless)
+        id: emulator_start
         run: |
           echo "=========================================="
           echo "启动 Android 模拟器"
@@ -169,7 +170,20 @@ jobs:
           # 启动adb server
           docker exec droidvisor-android-e2e adb start-server || true
 
+          # 检查 Xvfb 是否运行
+          echo "--- Xvfb 进程检查 ---"
+          docker exec droidvisor-android-e2e bash -c "ps aux | grep -i xvfb | grep -v grep || echo '(Xvfb not running)'"
+
+          # 检查 AVD 是否存在
+          echo "--- AVD 检查 ---"
+          docker exec droidvisor-android-e2e bash -c "ls -la /root/.android/avd/e2e_test_avd.avd/ 2>/dev/null || echo '(AVD not found)'"
+
+          # 检查 KVM 可用性
+          echo "--- KVM 检查 ---"
+          docker exec droidvisor-android-e2e bash -c "[ -e /dev/kvm ] && echo 'KVM available' || echo 'KVM not available'"
+
           # 启动emulator（后台运行，优化参数）
+          echo "--- 启动模拟器 ---"
           docker exec -d droidvisor-android-e2e \
             bash -c '
               export DISPLAY=:0
@@ -187,6 +201,28 @@ jobs:
                 -verbose 2>&1 | tee /tmp/emulator-launch.log
             '
 
+          # 等待模拟器进程出现
+          echo "--- 等待模拟器进程 ---"
+          for i in $(seq 1 12); do
+            sleep 5
+            EMU_PID=$(docker exec droidvisor-android-e2e bash -c "ps aux | grep '[e]mulator.*avd' | awk '{print \$2}' | head -1" 2>/dev/null || true)
+            if [ -n "$EMU_PID" ]; then
+              echo "  [$(date +%H:%M:%S)] Emulator process detected: PID=$EMU_PID"
+              break
+            fi
+            echo "  [$(date +%H:%M:%S)] Emulator process not found yet (attempt $i/12)..."
+          done
+
+          # 如果模拟器进程未启动，打印诊断信息
+          if [ -z "$EMU_PID" ]; then
+            echo "::error::模拟器进程未能启动"
+            echo "--- 模拟器启动日志 ---"
+            docker exec droidvisor-android-e2e cat /tmp/emulator-launch.log 2>/dev/null | tail -50 || echo "(no log)"
+            echo "--- 内存状态 ---"
+            docker exec droidvisor-android-e2e free -h 2>/dev/null || true
+            exit 1
+          fi
+
           # 等待模拟器设备可见（最长5分钟）
           echo "Waiting for emulator to become visible via adb (max 5 minutes)..."
           timeout 300 sh -c '
@@ -196,6 +232,20 @@ jobs:
               sleep 10
             done
           ' && echo "✅ Emulator device detected" || echo "⚠️ Emulator device detection timed out"
+
+      - name: Upload Emulator Launch Log
+        if: always()
+        run: |
+          docker exec droidvisor-android-e2e cat /tmp/emulator-launch.log 2>/dev/null > /tmp/emulator-launch.log || echo "(no log)" > /tmp/emulator-launch.log
+          echo "Emulator log collected ($(wc -l < /tmp/emulator-launch.log) lines)"
+
+      - name: Upload Emulator Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-launch-log
+          path: /tmp/emulator-launch.log
+          retention-days: 3
 
       - name: Wait for Emulator Boot
         run: |
@@ -218,6 +268,16 @@ jobs:
           echo "安装应用到模拟器"
           echo "验证: APK能否成功安装到 Android 设备"
           echo "=========================================="
+
+          # 先检查设备是否在线
+          DEVICE_COUNT=$(docker exec droidvisor-android-e2e adb devices 2>/dev/null | grep -c 'emulator' || true)
+          if [ "$DEVICE_COUNT" = "0" ]; then
+            echo "::error::没有检测到模拟器设备，无法安装 APK"
+            echo "当前 adb devices 输出:"
+            docker exec droidvisor-android-e2e adb devices 2>/dev/null || true
+            exit 1
+          fi
+          echo "检测到 $DEVICE_COUNT 个模拟器设备"
 
           docker exec droidvisor-android-e2e \
             bash -c "
