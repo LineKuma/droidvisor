@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     openjdk-17-jdk \
     ca-certificates \
     ca-certificates-java \
+    cmake \
     qemu-system-x86 \
     qemu-system-arm \
     qemu-utils \
