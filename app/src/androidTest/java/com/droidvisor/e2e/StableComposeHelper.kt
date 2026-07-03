@@ -7,7 +7,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.droidvisor.MainActivity
@@ -143,7 +142,7 @@ object StableComposeHelper {
      * 失败时直接抛异常，不再静默跳过。
      */
     fun navigateToTab(rule: E2EComposeRule, tabName: String) {
-        rule.onNodeWithText(tabName).performScrollTo().performClick()
+        rule.onNodeWithText(tabName).performClick()
         rule.waitForIdle()
         Thread.sleep(300)
     }
@@ -168,7 +167,7 @@ object StableComposeHelper {
     ) {
         Log.d(TAG, "创建VM: $vmName")
 
-        rule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("创建虚拟机").performClick()
         rule.waitForIdle()
 
         // 如果指定了模板名称，点击对应的模板卡片
@@ -227,7 +226,7 @@ object StableComposeHelper {
         }
 
         // 停止
-        rule.onNodeWithText("停止").performScrollTo().performClick()
+        rule.onNodeWithText("停止").performClick()
         rule.waitForIdle()
         Log.d(TAG, "VM已停止: $vmName")
     }
@@ -240,8 +239,8 @@ object StableComposeHelper {
         Log.d(TAG, "删除VM: $vmName")
         rule.onNodeWithText(vmName).performClick()
         rule.waitForIdle()
-        rule.onNodeWithText("删除").performScrollTo().performClick()
-        rule.onNodeWithText("确认").performScrollTo().performClick()
+        rule.onNodeWithText("删除").performClick()
+        rule.onNodeWithText("确认").performClick()
         rule.waitForIdle()
         // 从清理列表移除
         synchronized(E2ETestBase.createdVms) {
@@ -258,7 +257,7 @@ object StableComposeHelper {
         Log.d(TAG, "停止并删除VM: $vmName")
         rule.onNodeWithText(vmName).performClick()
         rule.waitForIdle()
-        rule.onNodeWithText("停止").performScrollTo().performClick()
+        rule.onNodeWithText("停止").performClick()
         rule.waitForIdle()
         Thread.sleep(300)
         deleteVm(rule, vmName)

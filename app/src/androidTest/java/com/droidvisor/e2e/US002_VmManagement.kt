@@ -88,7 +88,7 @@ class US002_VmManagement : E2ETestBase() {
         StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 10_000L)
 
         step("Stop VM")
-        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("停止").performClick()
         composeTestRule.waitForIdle()
         StableComposeHelper.waitForText(composeTestRule, "已停止")
 
@@ -144,7 +144,7 @@ class US002_VmManagement : E2ETestBase() {
             StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 10_000L)
 
             step("Cycle ${i + 1} stop")
-            composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+            composeTestRule.onNodeWithText("停止").performClick()
             composeTestRule.waitForIdle()
             StableComposeHelper.waitForText(composeTestRule, "已停止")
         }

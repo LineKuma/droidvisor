@@ -102,7 +102,7 @@ class US016_VmSystemVerification : E2ETestBase() {
         VmSystemVerifier.assertQemuProcessRunning()
 
         step("UI 操作：停止 VM")
-        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("停止").performClick()
         composeTestRule.waitForIdle()
         StableComposeHelper.waitForText(composeTestRule, "已停止")
 
@@ -140,7 +140,7 @@ class US016_VmSystemVerification : E2ETestBase() {
         VmSystemVerifier.assertConsoleOutputContainsKernelBoot(appFilesDir)
 
         step("=== 阶段 4：停止 VM ===")
-        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("停止").performClick()
         composeTestRule.waitForIdle()
         StableComposeHelper.waitForText(composeTestRule, "已停止")
 
@@ -170,7 +170,7 @@ class US016_VmSystemVerification : E2ETestBase() {
         VmSystemVerifier.assertQemuProcessRunning()
 
         step("UI 操作：停止 VM")
-        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("停止").performClick()
         composeTestRule.waitForIdle()
         StableComposeHelper.waitForText(composeTestRule, "已停止")
 
@@ -199,7 +199,7 @@ class US016_VmSystemVerification : E2ETestBase() {
             VmSystemVerifier.assertQemuProcessRunning()
 
             step("第 ${i + 1} 轮：停止")
-            composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+            composeTestRule.onNodeWithText("停止").performClick()
             composeTestRule.waitForIdle()
             StableComposeHelper.waitForText(composeTestRule, "已停止")
 

@@ -32,7 +32,7 @@ class US005_DockerWorkflow : E2ETestBase() {
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
 
         step("查看版本信息")
-        composeTestRule.onNodeWithText("版本信息").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("版本信息").performClick()
         composeTestRule.waitForIdle()
         // 版本对话框应显示
         StableComposeHelper.waitForText(composeTestRule, "版本", timeoutMs = 3000L)
@@ -42,13 +42,13 @@ class US005_DockerWorkflow : E2ETestBase() {
     fun AC2_pullDockerImage() {
         step("导航到Docker镜像页面")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
-        composeTestRule.onNodeWithText("镜像").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("镜像").performClick()
         composeTestRule.waitForIdle()
 
         step("拉取 alpine 镜像")
-        composeTestRule.onNodeWithText("拉取镜像").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("拉取镜像").performClick()
         composeTestRule.onNodeWithText("镜像名称").performTextInput("alpine")
-        composeTestRule.onNodeWithText("拉取").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("拉取").performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -59,24 +59,24 @@ class US005_DockerWorkflow : E2ETestBase() {
 
         step("创建容器")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
-        composeTestRule.onNodeWithText("容器").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("容器").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("创建容器").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("创建容器").performClick()
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithText("容器名称").performTextInput("us005-test-container")
         composeTestRule.onNodeWithText("镜像名称").performTextInput("alpine")
         composeTestRule.onNodeWithText("命令").performTextInput("sleep 30")
-        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("创建").performClick()
         composeTestRule.waitForIdle()
 
         step("验证容器创建成功")
         StableComposeHelper.waitForText(composeTestRule, "us005-test-container")
 
         step("启动容器")
-        composeTestRule.onNodeWithText("us005-test-container").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("us005-test-container").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("启动").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("启动").performClick()
         composeTestRule.waitForIdle()
         // 等待容器变为 running
         StableComposeHelper.waitForCondition(timeoutMs = 8000L, description = "容器running状态") {
@@ -100,23 +100,23 @@ class US005_DockerWorkflow : E2ETestBase() {
         if (!containerExists) {
             prepareAlpineImage()
             StableComposeHelper.navigateToTab(composeTestRule, "Docker")
-            composeTestRule.onNodeWithText("容器").performScrollTo().performClick()
-            composeTestRule.onNodeWithText("创建容器").performScrollTo().performClick()
+            composeTestRule.onNodeWithText("容器").performClick()
+            composeTestRule.onNodeWithText("创建容器").performClick()
             composeTestRule.onNodeWithText("容器名称").performTextInput("us005-test-container")
             composeTestRule.onNodeWithText("镜像名称").performTextInput("alpine")
-            composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
+            composeTestRule.onNodeWithText("创建").performClick()
             composeTestRule.waitForIdle()
         }
 
         step("停止容器")
-        composeTestRule.onNodeWithText("us005-test-container").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("us005-test-container").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("停止").performClick()
         composeTestRule.waitForIdle()
 
         step("删除容器")
-        composeTestRule.onNodeWithText("删除").performScrollTo().performClick()
-        composeTestRule.onNodeWithText("确认").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("删除").performClick()
+        composeTestRule.onNodeWithText("确认").performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -124,28 +124,28 @@ class US005_DockerWorkflow : E2ETestBase() {
     fun AC5_completeDockerWorkflow() {
         step("阶段1: 拉取 nginx 镜像")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
-        composeTestRule.onNodeWithText("镜像").performScrollTo().performClick()
-        composeTestRule.onNodeWithText("拉取镜像").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("镜像").performClick()
+        composeTestRule.onNodeWithText("拉取镜像").performClick()
         composeTestRule.onNodeWithText("镜像名称").performTextInput("nginx")
-        composeTestRule.onNodeWithText("拉取").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("拉取").performClick()
         composeTestRule.waitForIdle()
 
         step("阶段2: 从 nginx 镜像创建容器")
-        composeTestRule.onNodeWithText("容器").performScrollTo().performClick()
-        composeTestRule.onNodeWithText("创建容器").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("容器").performClick()
+        composeTestRule.onNodeWithText("创建容器").performClick()
         composeTestRule.onNodeWithText("容器名称").performTextInput("us005-nginx")
         composeTestRule.onNodeWithText("镜像名称").performTextInput("nginx")
-        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("创建").performClick()
         composeTestRule.waitForIdle()
 
         step("阶段3: 启动 → 停止 → 删除")
-        composeTestRule.onNodeWithText("us005-nginx").performScrollTo().performClick()
-        composeTestRule.onNodeWithText("启动").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("us005-nginx").performClick()
+        composeTestRule.onNodeWithText("启动").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("停止").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("删除").performScrollTo().performClick()
-        composeTestRule.onNodeWithText("确认").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("删除").performClick()
+        composeTestRule.onNodeWithText("确认").performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -153,8 +153,8 @@ class US005_DockerWorkflow : E2ETestBase() {
     fun AC6_dockerInputValidation() {
         step("空容器名称应禁用创建按钮")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
-        composeTestRule.onNodeWithText("容器").performScrollTo().performClick()
-        composeTestRule.onNodeWithText("创建容器").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("容器").performClick()
+        composeTestRule.onNodeWithText("创建容器").performClick()
         composeTestRule.onNodeWithText("容器名称").performTextInput("")
         composeTestRule.onNodeWithText("镜像名称").performTextInput("alpine")
         StableComposeHelper.assertButtonDisabled(composeTestRule, "创建")
@@ -167,12 +167,12 @@ class US005_DockerWorkflow : E2ETestBase() {
 
     private fun prepareAlpineImage() {
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
-        composeTestRule.onNodeWithText("镜像").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("镜像").performClick()
         composeTestRule.waitForIdle()
         // 先尝试拉取
-        composeTestRule.onNodeWithText("拉取镜像").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("拉取镜像").performClick()
         composeTestRule.onNodeWithText("镜像名称").performTextInput("alpine")
-        composeTestRule.onNodeWithText("拉取").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("拉取").performClick()
         composeTestRule.waitForIdle()
     }
 }

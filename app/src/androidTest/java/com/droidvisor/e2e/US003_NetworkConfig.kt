@@ -48,14 +48,14 @@ class US003_NetworkConfig : E2ETestBase() {
         composeTestRule.waitForIdle()
 
         step("添加端口转发规则 2222->22")
-        composeTestRule.onNodeWithText("添加端口转发").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("添加端口转发").performClick()
         composeTestRule.onNodeWithText("主机端口").performTextInput("2222")
         composeTestRule.onNodeWithText("guest").performTextInput("22") // guest port field
-        composeTestRule.onNodeWithText("添加").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("添加").performClick()
         composeTestRule.waitForIdle()
 
         step("保存配置")
-        composeTestRule.onNodeWithText("保存").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("保存").performClick()
         composeTestRule.waitForIdle()
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us003-port-vm")
@@ -71,7 +71,7 @@ class US003_NetworkConfig : E2ETestBase() {
         composeTestRule.onNodeWithText("网络配置").performClick()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("添加端口转发").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("添加端口转发").performClick()
         composeTestRule.onNodeWithText("主机端口").performTextInput("99999")
 
         step("验证超范围端口无法添加")

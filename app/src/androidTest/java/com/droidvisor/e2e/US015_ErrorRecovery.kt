@@ -34,10 +34,10 @@ class US015_ErrorRecovery : E2ETestBase() {
     fun AC1_cancelCreateDialogKeepsAppStable() {
         step("打开创建对话框后立即取消（3 次）")
         repeat(3) {
-            composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
+            composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(200)
-            composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
+            composeTestRule.onNodeWithText("取消").performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(200)
         }
@@ -105,21 +105,21 @@ class US015_ErrorRecovery : E2ETestBase() {
     @Test
     fun AC4_rapidConsecutiveClicks() {
         step("快速连续点击创建按钮")
-        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
         composeTestRule.waitForIdle()
         Thread.sleep(100)
 
         step("快速连续点击取消按钮")
-        composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("取消").performClick()
         composeTestRule.waitForIdle()
         Thread.sleep(100)
 
         step("重复 3 轮")
         repeat(2) {
-            composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
+            composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(100)
-            composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
+            composeTestRule.onNodeWithText("取消").performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(100)
         }

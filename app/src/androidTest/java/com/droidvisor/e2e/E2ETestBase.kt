@@ -122,13 +122,13 @@ abstract class E2ETestBase {
                     composeTestRule.waitForIdle()
 
                     // 尝试停止
-                    composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+                    composeTestRule.onNodeWithText("停止").performClick()
                     composeTestRule.waitForIdle()
                     Thread.sleep(300)
 
                     // 尝试删除
-                    composeTestRule.onNodeWithText("删除").performScrollTo().performClick()
-                    composeTestRule.onNodeWithText("确认").performScrollTo().performClick()
+                    composeTestRule.onNodeWithText("删除").performClick()
+                    composeTestRule.onNodeWithText("确认").performClick()
                     composeTestRule.waitForIdle()
                 } catch (e: Exception) {
                     Log.w(TAG, "E2E-CLEANUP: 清理 VM '$vmName' 失败: ${e.message} (继续清理其他 VM)")

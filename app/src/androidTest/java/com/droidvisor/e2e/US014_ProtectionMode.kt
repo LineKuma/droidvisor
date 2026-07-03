@@ -33,7 +33,7 @@ class US014_ProtectionMode : E2ETestBase() {
     @Test
     fun AC1_defaultProtectionModeIsProtected() {
         step("打开创建虚拟机对话框")
-        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
         composeTestRule.waitForIdle()
 
         step("验证安全模式区域存在")
@@ -48,14 +48,14 @@ class US014_ProtectionMode : E2ETestBase() {
         composeTestRule.onNodeWithText("无硬件级隔离，适合开发和测试").assertExists()
 
         step("关闭对话框")
-        composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("取消").performClick()
         composeTestRule.waitForIdle()
     }
 
     @Test
     fun AC2_switchToNonProtectedMode() {
         step("打开创建虚拟机对话框")
-        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
         composeTestRule.waitForIdle()
 
         step("点击切换到普通虚拟机模式")
@@ -67,7 +67,7 @@ class US014_ProtectionMode : E2ETestBase() {
         composeTestRule.onNodeWithText("选择模板").assertExists()
 
         step("关闭对话框")
-        composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("取消").performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -95,7 +95,7 @@ class US014_ProtectionMode : E2ETestBase() {
     @Test
     fun AC4_createNonProtectedVm() {
         step("打开创建对话框并切换为非保护模式")
-        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performClick()
         composeTestRule.waitForIdle()
 
         step("选择普通虚拟机模式")
