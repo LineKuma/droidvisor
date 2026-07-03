@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     ca-certificates-java \
     cmake \
+    ninja-build \
     qemu-system-x86 \
     qemu-system-arm \
     qemu-utils \

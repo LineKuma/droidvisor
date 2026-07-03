@@ -107,49 +107,33 @@ jobs:
             echo "Build tools:" && ls "$ANDROID_HOME/build-tools/" 2>/dev/null || echo "No build-tools"
           '
 
-      - name: Compile Main APK
+      - name: Compile APK
         run: |
           echo "=========================================="
-          echo "编译主 APK - assembleDebug"
+          echo "编译 APK - assembleDebug + assembleDebugAndroidTest"
           echo "=========================================="
           docker exec droidvisor-android-e2e \
-            /workspace/gradlew assembleDebug \
+            /workspace/gradlew assembleDebug assembleDebugAndroidTest \
             --no-daemon \
             --stacktrace \
-            2>&1 | tee /tmp/gradle-main.log
-          MAIN_EXIT=${PIPESTATUS[0]}
+            2>&1 | tee /tmp/gradle-build.log
+          BUILD_EXIT=${PIPESTATUS[0]}
 
-          if [ "$MAIN_EXIT" != "0" ]; then
-            echo "::error::主 APK 编译失败，最后 100 行输出："
-            tail -100 /tmp/gradle-main.log
+          if [ "$BUILD_EXIT" != "0" ]; then
+            echo "::error::APK 编译失败"
+            echo "=========================================="
+            echo "最后 50 行输出："
+            tail -50 /tmp/gradle-build.log
+            echo "=========================================="
+            echo "错误和警告："
+            grep -iE "error|FAILED|BUILD FAILED|unresolved|cannot find symbol|unknown" /tmp/gradle-build.log | tail -20 || true
+            echo "=========================================="
             exit 1
           fi
-          echo "✅ 主 APK 编译成功"
+          echo "✅ APK 编译成功"
 
           docker exec droidvisor-android-e2e \
             bash -c "test -f /workspace/app/build/outputs/apk/debug/app-debug.apk && echo '✅ Debug APK ready' || echo '❌ Debug APK missing'"
-
-      - name: Compile Test APK
-        run: |
-          echo "=========================================="
-          echo "编译测试 APK - assembleDebugAndroidTest"
-          echo "=========================================="
-          docker exec droidvisor-android-e2e \
-            /workspace/gradlew assembleDebugAndroidTest \
-            --no-daemon \
-            --stacktrace \
-            2>&1 | tee /tmp/gradle-test.log
-          TEST_EXIT=${PIPESTATUS[0]}
-
-          if [ "$TEST_EXIT" != "0" ]; then
-            echo "::error::测试 APK 编译失败，最后 100 行输出："
-            tail -100 /tmp/gradle-test.log
-            echo ""
-            echo "::error::搜索编译错误："
-            grep -iE "error|failed|unresolved|cannot find" /tmp/gradle-test.log | tail -30 || true
-            exit 1
-          fi
-          echo "✅ 测试 APK 编译成功"
 
           docker exec droidvisor-android-e2e \
             bash -c "test -f /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk && echo '✅ Test APK ready' || echo '❌ Test APK missing'"
@@ -157,6 +141,14 @@ jobs:
           echo "=========================================="
           echo "✅ 项目编译验证完成"
           echo "=========================================="
+
+      - name: Upload Gradle Build Log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: /tmp/gradle-build.log
+          retention-days: 3
 
       # ========== 阶段5: 启动 Android 模拟器 ==========
       - name: Start Xvfb Virtual Display
