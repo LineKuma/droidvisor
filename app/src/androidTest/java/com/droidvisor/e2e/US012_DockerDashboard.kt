@@ -54,11 +54,9 @@ class US012_DockerDashboard : E2ETestBase() {
 
         step("验证概览标签已选中并显示内容")
         // 概览页面应显示 Docker 信息或连接状态
-        runSafely("查看 Docker 概览内容") {
-            StableComposeHelper.waitForCondition(timeoutMs = 3000L, description = "Docker 概览加载") {
+        StableComposeHelper.waitForCondition(timeoutMs = 3000L, description = "Docker 概览加载") {
                 true
             }
-        }
     }
 
     @Test
@@ -69,15 +67,15 @@ class US012_DockerDashboard : E2ETestBase() {
         Thread.sleep(300)
 
         step("切换到镜像子标签")
-        StableComposeHelper.safeClick(composeTestRule, "镜像")
+        composeTestRule.onNodeWithText("镜像").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         Thread.sleep(300)
 
         step("拉取 busybox 镜像")
-        StableComposeHelper.safeClick(composeTestRule, "拉取镜像")
+        composeTestRule.onNodeWithText("拉取镜像").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("镜像名称").performTextInput("busybox")
-        StableComposeHelper.safeClick(composeTestRule, "拉取")
+        composeTestRule.onNodeWithText("拉取").performScrollTo().performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -87,35 +85,35 @@ class US012_DockerDashboard : E2ETestBase() {
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")
         composeTestRule.waitForIdle()
         Thread.sleep(300)
-        StableComposeHelper.safeClick(composeTestRule, "镜像")
+        composeTestRule.onNodeWithText("镜像").performScrollTo().performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "拉取镜像")
+        composeTestRule.onNodeWithText("拉取镜像").performScrollTo().performClick()
         composeTestRule.onNodeWithText("镜像名称").performTextInput("busybox")
-        StableComposeHelper.safeClick(composeTestRule, "拉取")
+        composeTestRule.onNodeWithText("拉取").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("切换到容器子标签")
-        StableComposeHelper.safeClick(composeTestRule, "容器")
+        composeTestRule.onNodeWithText("容器").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         Thread.sleep(300)
 
         step("创建容器")
-        StableComposeHelper.safeClick(composeTestRule, "创建容器")
+        composeTestRule.onNodeWithText("创建容器").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("容器名称").performTextInput("us012-busybox")
         composeTestRule.onNodeWithText("镜像名称").performTextInput("busybox")
         composeTestRule.onNodeWithText("命令").performTextInput("echo hello")
-        StableComposeHelper.safeClick(composeTestRule, "创建")
+        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("验证容器创建成功")
         StableComposeHelper.waitForText(composeTestRule, "us012-busybox")
 
         step("清理：删除容器")
-        StableComposeHelper.safeClick(composeTestRule, "us012-busybox")
+        composeTestRule.onNodeWithText("us012-busybox").performScrollTo().performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "删除")
-        StableComposeHelper.safeClick(composeTestRule, "确认")
+        composeTestRule.onNodeWithText("删除").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("确认").performScrollTo().performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -131,7 +129,7 @@ class US012_DockerDashboard : E2ETestBase() {
         repeat(2) { round ->
             subTabs.forEach { tab ->
                 step("第 ${round + 1} 轮切换 $tab")
-                StableComposeHelper.safeClick(composeTestRule, tab)
+                composeTestRule.onNodeWithText(tab).performScrollTo().performClick()
                 composeTestRule.waitForIdle()
                 Thread.sleep(200)
             }

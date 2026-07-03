@@ -39,24 +39,22 @@ class US013_BackupAdvanced : E2ETestBase() {
         step("进入备份管理")
         composeTestRule.onNodeWithText("us013-full-vm").performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "备份管理")
+        composeTestRule.onNodeWithText("备份管理").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("创建完整备份（带描述）")
-        StableComposeHelper.safeClick(composeTestRule, "创建备份")
+        composeTestRule.onNodeWithText("创建备份").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("备份名称").performTextInput("us013-full-backup")
         composeTestRule.onNodeWithText("描述（可选）").performTextInput("生产环境完整备份")
-        StableComposeHelper.safeClick(composeTestRule, "创建")
+        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("验证备份已创建并显示")
         StableComposeHelper.waitForText(composeTestRule, "us013-full-backup")
 
         // 验证描述可见
-        runSafely("验证备份描述") {
-            composeTestRule.onNodeWithText("生产环境完整备份").assertExists()
-        }
+        composeTestRule.onNodeWithText("生产环境完整备份").assertExists()
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us013-full-vm")
     }
@@ -67,22 +65,22 @@ class US013_BackupAdvanced : E2ETestBase() {
         StableComposeHelper.createVm(composeTestRule, "us013-incr-vm")
         composeTestRule.onNodeWithText("us013-incr-vm").performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "备份管理")
+        composeTestRule.onNodeWithText("备份管理").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         // 先创建完整备份
-        StableComposeHelper.safeClick(composeTestRule, "创建备份")
+        composeTestRule.onNodeWithText("创建备份").performScrollTo().performClick()
         composeTestRule.onNodeWithText("备份名称").performTextInput("us013-base")
-        StableComposeHelper.safeClick(composeTestRule, "创建")
+        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("切换到增量模式创建增量备份")
-        StableComposeHelper.safeClick(composeTestRule, "创建备份")
+        composeTestRule.onNodeWithText("创建备份").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         // 选择增量备份类型
-        StableComposeHelper.safeClick(composeTestRule, "增量备份")
+        composeTestRule.onNodeWithText("增量备份").performScrollTo().performClick()
         composeTestRule.onNodeWithText("备份名称").performTextInput("us013-delta")
-        StableComposeHelper.safeClick(composeTestRule, "创建")
+        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("验证增量备份存在")
@@ -97,15 +95,15 @@ class US013_BackupAdvanced : E2ETestBase() {
         StableComposeHelper.createVm(composeTestRule, "us013-sort-vm")
         composeTestRule.onNodeWithText("us013-sort-vm").performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "备份管理")
+        composeTestRule.onNodeWithText("备份管理").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("依次创建 3 个备份")
         listOf("us013-bak-1", "us013-bak-2", "us013-bak-3").forEach { name ->
-            StableComposeHelper.safeClick(composeTestRule, "创建备份")
+            composeTestRule.onNodeWithText("创建备份").performScrollTo().performClick()
             composeTestRule.waitForIdle()
             composeTestRule.onNodeWithText("备份名称").performTextInput(name)
-            StableComposeHelper.safeClick(composeTestRule, "创建")
+            composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(200)
         }
@@ -124,25 +122,21 @@ class US013_BackupAdvanced : E2ETestBase() {
         StableComposeHelper.createVm(composeTestRule, "us013-meta-vm")
         composeTestRule.onNodeWithText("us013-meta-vm").performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "备份管理")
+        composeTestRule.onNodeWithText("备份管理").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
-        StableComposeHelper.safeClick(composeTestRule, "创建备份")
+        composeTestRule.onNodeWithText("创建备份").performScrollTo().performClick()
         composeTestRule.onNodeWithText("备份名称").performTextInput("us013-meta-bak")
         composeTestRule.onNodeWithText("描述（可选）").performTextInput("元数据验证备份")
-        StableComposeHelper.safeClick(composeTestRule, "创建")
+        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("验证备份类型标签显示")
         // 完整备份应显示"完整备份"标签
-        runSafely("验证完整备份标签") {
-            composeTestRule.onNodeWithText("完整备份").assertExists()
-        }
+        composeTestRule.onNodeWithText("完整备份").assertExists()
 
         step("验证备份大小显示")
-        runSafely("验证备份大小") {
-            composeTestRule.onNodeWithText("MB", substring = true).assertExists()
-        }
+        composeTestRule.onNodeWithText("MB", substring = true).assertExists()
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us013-meta-vm")
     }
@@ -153,29 +147,27 @@ class US013_BackupAdvanced : E2ETestBase() {
         StableComposeHelper.createVm(composeTestRule, "us013-restore-vm")
         composeTestRule.onNodeWithText("us013-restore-vm").performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "备份管理")
+        composeTestRule.onNodeWithText("备份管理").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
-        StableComposeHelper.safeClick(composeTestRule, "创建备份")
+        composeTestRule.onNodeWithText("创建备份").performScrollTo().performClick()
         composeTestRule.onNodeWithText("备份名称").performTextInput("us013-restore-bak")
-        StableComposeHelper.safeClick(composeTestRule, "创建")
+        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("点击备份进入详情")
-        StableComposeHelper.safeClick(composeTestRule, "us013-restore-bak")
+        composeTestRule.onNodeWithText("us013-restore-bak").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("点击恢复按钮")
-        StableComposeHelper.safeClick(composeTestRule, "恢复")
+        composeTestRule.onNodeWithText("恢复").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("确认恢复对话框出现")
-        runSafely("验证确认恢复对话框") {
-            composeTestRule.onNodeWithText("确认恢复").assertExists()
-        }
+        composeTestRule.onNodeWithText("确认恢复").assertExists()
 
         step("点击确认恢复")
-        StableComposeHelper.safeClick(composeTestRule, "确认恢复")
+        composeTestRule.onNodeWithText("确认恢复").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us013-restore-vm")
@@ -187,26 +179,24 @@ class US013_BackupAdvanced : E2ETestBase() {
         StableComposeHelper.createVm(composeTestRule, "us013-del-vm")
         composeTestRule.onNodeWithText("us013-del-vm").performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "备份管理")
+        composeTestRule.onNodeWithText("备份管理").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
-        StableComposeHelper.safeClick(composeTestRule, "创建备份")
+        composeTestRule.onNodeWithText("创建备份").performScrollTo().performClick()
         composeTestRule.onNodeWithText("备份名称").performTextInput("us013-del-bak")
-        StableComposeHelper.safeClick(composeTestRule, "创建")
+        composeTestRule.onNodeWithText("创建").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("点击备份进入详情")
-        StableComposeHelper.safeClick(composeTestRule, "us013-del-bak")
+        composeTestRule.onNodeWithText("us013-del-bak").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("点击删除备份")
-        StableComposeHelper.safeClick(composeTestRule, "删除")
+        composeTestRule.onNodeWithText("删除").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("验证备份已删除")
-        runSafely("验证备份已删除") {
-            composeTestRule.onNodeWithText("us013-del-bak").assertDoesNotExist()
-        }
+        composeTestRule.onNodeWithText("us013-del-bak").assertDoesNotExist()
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us013-del-vm")
     }

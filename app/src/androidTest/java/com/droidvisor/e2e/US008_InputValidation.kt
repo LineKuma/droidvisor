@@ -28,12 +28,12 @@ class US008_InputValidation : E2ETestBase() {
     }
 
     private fun openCreateDialog() {
-        StableComposeHelper.safeClickContentDescription(composeTestRule, "创建虚拟机")
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
         composeTestRule.waitForIdle()
     }
 
     private fun dismissCreateDialog() {
-        StableComposeHelper.safeClick(composeTestRule, "取消")
+        composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -110,15 +110,15 @@ class US008_InputValidation : E2ETestBase() {
         StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 10_000L)
 
         step("尝试删除运行中的VM")
-        StableComposeHelper.safeClick(composeTestRule, "删除")
-        StableComposeHelper.safeClick(composeTestRule, "确认")
+        composeTestRule.onNodeWithText("删除").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("确认").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("VM应仍在列表中（未被删除）")
         StableComposeHelper.waitForText(composeTestRule, "us008-running-del-vm")
 
         // 清理
-        StableComposeHelper.safeClick(composeTestRule, "停止")
+        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         StableComposeHelper.deleteVm(composeTestRule, "us008-running-del-vm")
     }

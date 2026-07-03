@@ -94,21 +94,6 @@ abstract class E2ETestBase {
     }
 
     /**
-     * 安全执行操作：失败时记录但不抛异常
-     *
-     * @return 操作是否成功
-     */
-    protected fun runSafely(operation: String, block: () -> Unit): Boolean {
-        return try {
-            block()
-            true
-        } catch (e: Exception) {
-            Log.w(TAG, "E2E-SAFE-FAIL: '$operation' 忽略异常: ${e.message}")
-            false
-        }
-    }
-
-    /**
      * 测试后清理：尽力删除测试期间创建的所有 VM
      * 使用 best-effort 策略，清理失败不影响测试结果
      */
@@ -122,22 +107,23 @@ abstract class E2ETestBase {
             createdVms.clear()
 
             vmList.reversed().forEach { vmName ->
-                runSafely("清理VM-$vmName") {
-                    // 先停止再删除
-                    if (StableComposeHelper.nodeExists(composeTestRule, vmName)) {
-                        composeTestRule.onNodeWithText(vmName).performClick()
-                        composeTestRule.waitForIdle()
+                try {
+                    // 先检查 VM 是否存在
+                    composeTestRule.onNodeWithText(vmName).assertExists()
+                    composeTestRule.onNodeWithText(vmName).performClick()
+                    composeTestRule.waitForIdle()
 
-                        // 尝试停止
-                        StableComposeHelper.safeClick(composeTestRule, "停止")
-                        composeTestRule.waitForIdle()
-                        Thread.sleep(300)
+                    // 尝试停止
+                    composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
+                    composeTestRule.waitForIdle()
+                    Thread.sleep(300)
 
-                        // 尝试删除
-                        StableComposeHelper.safeClick(composeTestRule, "删除")
-                        StableComposeHelper.safeClick(composeTestRule, "确认")
-                        composeTestRule.waitForIdle()
-                    }
+                    // 尝试删除
+                    composeTestRule.onNodeWithText("删除").performScrollTo().performClick()
+                    composeTestRule.onNodeWithText("确认").performScrollTo().performClick()
+                    composeTestRule.waitForIdle()
+                } catch (e: Exception) {
+                    Log.w(TAG, "E2E-CLEANUP: 清理 VM '$vmName' 失败: ${e.message} (继续清理其他 VM)")
                 }
             }
         }

@@ -34,10 +34,10 @@ class US015_ErrorRecovery : E2ETestBase() {
     fun AC1_cancelCreateDialogKeepsAppStable() {
         step("打开创建对话框后立即取消（3 次）")
         repeat(3) {
-            StableComposeHelper.safeClickContentDescription(composeTestRule, "创建虚拟机")
+            composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(200)
-            StableComposeHelper.safeClick(composeTestRule, "取消")
+            composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(200)
         }
@@ -105,21 +105,21 @@ class US015_ErrorRecovery : E2ETestBase() {
     @Test
     fun AC4_rapidConsecutiveClicks() {
         step("快速连续点击创建按钮")
-        StableComposeHelper.safeClickContentDescription(composeTestRule, "创建虚拟机")
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         Thread.sleep(100)
 
         step("快速连续点击取消按钮")
-        StableComposeHelper.safeClick(composeTestRule, "取消")
+        composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         Thread.sleep(100)
 
         step("重复 3 轮")
         repeat(2) {
-            StableComposeHelper.safeClickContentDescription(composeTestRule, "创建虚拟机")
+            composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(100)
-            StableComposeHelper.safeClick(composeTestRule, "取消")
+            composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
             composeTestRule.waitForIdle()
             Thread.sleep(100)
         }
@@ -134,10 +134,7 @@ class US015_ErrorRecovery : E2ETestBase() {
         step("确保 VM 列表为空（通过 @After 清理）")
 
         step("验证空状态显示")
-        runSafely("验证空状态提示") {
-            // 如果列表为空，应显示"暂无虚拟机"提示
-            composeTestRule.onNodeWithText("暂无虚拟机").assertExists()
-        }
+        composeTestRule.onNodeWithText("暂无虚拟机").assertExists()
 
         step("切换到其他标签验证不崩溃")
         StableComposeHelper.navigateToTab(composeTestRule, "Docker")

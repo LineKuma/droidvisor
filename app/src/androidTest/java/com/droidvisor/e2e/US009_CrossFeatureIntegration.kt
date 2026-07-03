@@ -45,21 +45,21 @@ class US009_CrossFeatureIntegration : E2ETestBase() {
 
         step("4. 回到虚拟机并停止")
         StableComposeHelper.navigateToTab(composeTestRule, "虚拟机")
-        StableComposeHelper.safeClick(composeTestRule, "停止")
+        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("5. 创建备份")
-        StableComposeHelper.safeClick(composeTestRule, "备份管理")
+        composeTestRule.onNodeWithText("备份管理").performScrollTo().performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "创建备份")
+        composeTestRule.onNodeWithText("创建备份").performScrollTo().performClick()
         composeTestRule.onNodeWithText("备份名称").performTextInput("integration-backup")
-        StableComposeHelper.safeClick(composeTestRule, "确认")
+        composeTestRule.onNodeWithText("确认").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("6. 清理备份和VM")
-        StableComposeHelper.safeClick(composeTestRule, "integration-backup")
-        StableComposeHelper.safeClick(composeTestRule, "删除")
-        StableComposeHelper.safeClick(composeTestRule, "确认")
+        composeTestRule.onNodeWithText("integration-backup").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("删除").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("确认").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         StableComposeHelper.deleteVm(composeTestRule, "us009-integration-vm")
@@ -106,7 +106,7 @@ class US009_CrossFeatureIntegration : E2ETestBase() {
 
         step("快速依次选择每个VM")
         (1..3).forEach { i ->
-            StableComposeHelper.safeClick(composeTestRule, "us009-rapid-$i")
+            composeTestRule.onNodeWithText("us009-rapid-$i").performScrollTo().performClick()
             composeTestRule.waitForIdle()
         }
 

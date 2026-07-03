@@ -85,7 +85,7 @@ class US004_TerminalVsock : E2ETestBase() {
         StableComposeHelper.navigateToTab(composeTestRule, "虚拟机")
         composeTestRule.onNodeWithText("us004-disconnect-vm").performClick()
         composeTestRule.waitForIdle()
-        StableComposeHelper.safeClick(composeTestRule, "停止")
+        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("再次进入终端验证断连处理")

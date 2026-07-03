@@ -31,10 +31,8 @@ class US003_NetworkConfig : E2ETestBase() {
         composeTestRule.waitForIdle()
 
         step("打开网络配置")
-        runSafely("进入网络配置") {
-            composeTestRule.onNodeWithText("网络配置").performClick()
-            composeTestRule.waitForIdle()
-        }
+        composeTestRule.onNodeWithText("网络配置").performClick()
+        composeTestRule.waitForIdle()
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us003-net-vm")
     }
@@ -46,21 +44,19 @@ class US003_NetworkConfig : E2ETestBase() {
         composeTestRule.onNodeWithText("us003-port-vm").performClick()
         composeTestRule.waitForIdle()
 
-        runSafely("配置端口转发") {
-            composeTestRule.onNodeWithText("网络配置").performClick()
-            composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("网络配置").performClick()
+        composeTestRule.waitForIdle()
 
-            step("添加端口转发规则 2222->22")
-            StableComposeHelper.safeClick(composeTestRule, "添加端口转发")
-            composeTestRule.onNodeWithText("主机端口").performTextInput("2222")
-            composeTestRule.onNodeWithText("guest").performTextInput("22") // guest port field
-            StableComposeHelper.safeClick(composeTestRule, "添加")
-            composeTestRule.waitForIdle()
+        step("添加端口转发规则 2222->22")
+        composeTestRule.onNodeWithText("添加端口转发").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("主机端口").performTextInput("2222")
+        composeTestRule.onNodeWithText("guest").performTextInput("22") // guest port field
+        composeTestRule.onNodeWithText("添加").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
 
-            step("保存配置")
-            StableComposeHelper.safeClick(composeTestRule, "保存")
-            composeTestRule.waitForIdle()
-        }
+        step("保存配置")
+        composeTestRule.onNodeWithText("保存").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us003-port-vm")
     }
@@ -72,16 +68,14 @@ class US003_NetworkConfig : E2ETestBase() {
         composeTestRule.onNodeWithText("us003-invalid-port-vm").performClick()
         composeTestRule.waitForIdle()
 
-        runSafely("无效端口校验") {
-            composeTestRule.onNodeWithText("网络配置").performClick()
-            composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("网络配置").performClick()
+        composeTestRule.waitForIdle()
 
-            StableComposeHelper.safeClick(composeTestRule, "添加端口转发")
-            composeTestRule.onNodeWithText("主机端口").performTextInput("99999")
+        composeTestRule.onNodeWithText("添加端口转发").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("主机端口").performTextInput("99999")
 
-            step("验证超范围端口无法添加")
-            StableComposeHelper.assertButtonDisabled(composeTestRule, "添加")
-        }
+        step("验证超范围端口无法添加")
+        StableComposeHelper.assertButtonDisabled(composeTestRule, "添加")
 
         StableComposeHelper.stopAndDeleteVm(composeTestRule, "us003-invalid-port-vm")
     }

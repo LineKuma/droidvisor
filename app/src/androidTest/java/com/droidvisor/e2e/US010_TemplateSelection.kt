@@ -34,7 +34,7 @@ class US010_TemplateSelection : E2ETestBase() {
     @Test
     fun AC1_allThreeTemplatesDisplayed() {
         step("打开创建虚拟机对话框")
-        StableComposeHelper.safeClickContentDescription(composeTestRule, "创建虚拟机")
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("验证三个模板都存在")
@@ -46,14 +46,14 @@ class US010_TemplateSelection : E2ETestBase() {
         composeTestRule.onNodeWithText("推荐").assertExists()
 
         step("关闭对话框")
-        StableComposeHelper.safeClick(composeTestRule, "取消")
+        composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
         composeTestRule.waitForIdle()
     }
 
     @Test
     fun AC2_templateSelectionVisualFeedback() {
         step("打开创建虚拟机对话框")
-        StableComposeHelper.safeClickContentDescription(composeTestRule, "创建虚拟机")
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("点击选中 Debian Standard 模板")
@@ -67,14 +67,14 @@ class US010_TemplateSelection : E2ETestBase() {
         composeTestRule.onNodeWithText("2 核").assertExists()
 
         step("关闭对话框")
-        StableComposeHelper.safeClick(composeTestRule, "取消")
+        composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
         composeTestRule.waitForIdle()
     }
 
     @Test
     fun AC3_templateSwitchUpdatesSpecsCard() {
         step("打开创建虚拟机对话框")
-        StableComposeHelper.safeClickContentDescription(composeTestRule, "创建虚拟机")
+        composeTestRule.onNodeWithContentDescription("创建虚拟机").performScrollTo().performClick()
         composeTestRule.waitForIdle()
 
         step("选中 Docker Host 模板并验证规格")
@@ -93,7 +93,7 @@ class US010_TemplateSelection : E2ETestBase() {
         composeTestRule.onNodeWithText("1 核").assertExists()
 
         step("关闭对话框")
-        StableComposeHelper.safeClick(composeTestRule, "取消")
+        composeTestRule.onNodeWithText("取消").performScrollTo().performClick()
         composeTestRule.waitForIdle()
     }
 
@@ -131,9 +131,7 @@ class US010_TemplateSelection : E2ETestBase() {
         composeTestRule.onNodeWithText("us010-debian-vm").performClick()
         composeTestRule.waitForIdle()
         // 不应显示 Docker 标识
-        runSafely("验证无 Docker 标识") {
-            composeTestRule.onNodeWithText("Docker").assertDoesNotExist()
-        }
+        composeTestRule.onNodeWithText("Docker").assertDoesNotExist()
 
         StableComposeHelper.deleteVm(composeTestRule, "us010-debian-vm")
     }

@@ -257,8 +257,6 @@ jobs:
             bash -c "adb logcat -c 2>/dev/null; adb logcat -v time > /workspace/e2e-logcat.log 2>/dev/null" || echo "Logcat skipped"
 
       - name: Run E2E Tests (US001-US015)
-        if: success() || failure()
-        continue-on-error: true
         run: |
           echo "=========================================="
           echo "运行 E2E Instrumentation 测试 (US001-US015)"
@@ -283,20 +281,13 @@ jobs:
           echo "QemuVmRuntime 作为项目内置的 QEMU 提供者后端"
           echo "=========================================="
 
-          # 先检查设备是否可用，如果不可用则跳过测试
-          DEVICE_READY=$(docker exec droidvisor-android-e2e adb shell getprop sys.boot_completed 2>/dev/null || echo "")
-          if [ "$DEVICE_READY" != "1" ]; then
-            echo "⚠️ Emulator not ready - skipping E2E test execution"
-            exit 0
-          fi
-
-          # 安装测试APK
+          # 安装测试APK（失败则终止）
           docker exec droidvisor-android-e2e \
             bash -c "
-              adb install -r /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk 2>/dev/null
-            " || echo "Test APK install skipped"
+              adb install -r /workspace/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            "
 
-          # 运行所有E2E测试
+          # 运行所有E2E测试（失败则终止）
           docker exec droidvisor-android-e2e \
             bash -c "
               adb shell am instrument -w \

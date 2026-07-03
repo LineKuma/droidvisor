@@ -52,9 +52,7 @@ class US011_SettingsConfig : E2ETestBase() {
         step("验证内存配置显示")
         composeTestRule.onNodeWithText("Memory Size").assertExists()
         // 验证显示包含 MB 单位
-        runSafely("验证内存值显示") {
-            composeTestRule.onNodeWithText("MB", substring = true).assertExists()
-        }
+        composeTestRule.onNodeWithText("MB", substring = true).assertExists()
 
         step("验证 CPU 配置显示")
         composeTestRule.onNodeWithText("CPU Cores").assertExists()
@@ -77,9 +75,7 @@ class US011_SettingsConfig : E2ETestBase() {
         composeTestRule.onNodeWithText("Image Registry").assertExists()
 
         step("验证默认提示文本")
-        runSafely("验证默认仓库提示") {
-            composeTestRule.onNodeWithText("e.g., https://registry.example.com").assertExists()
-        }
+        composeTestRule.onNodeWithText("e.g., https://registry.example.com").assertExists()
     }
 
     @Test
@@ -125,16 +121,12 @@ class US011_SettingsConfig : E2ETestBase() {
             StableComposeHelper.navigateToTab(composeTestRule, "设置")
             composeTestRule.waitForIdle()
             // 快速验证核心元素存在
-            runSafely("验证设置内容") {
-                composeTestRule.onNodeWithText("VM Configuration").assertExists()
-            }
+            composeTestRule.onNodeWithText("VM Configuration").assertExists()
 
             step("第 ${i + 1} 次返回虚拟机")
             StableComposeHelper.navigateToTab(composeTestRule, "虚拟机")
             composeTestRule.waitForIdle()
-            runSafely("验证主页面") {
-                composeTestRule.onNodeWithContentDescription("创建虚拟机").assertExists()
-            }
+            composeTestRule.onNodeWithContentDescription("创建虚拟机").assertExists()
         }
 
         step("最终验证设置页面仍可正常访问")

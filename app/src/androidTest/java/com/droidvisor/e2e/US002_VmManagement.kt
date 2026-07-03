@@ -84,7 +84,7 @@ class US002_VmManagement : E2ETestBase() {
         StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 10_000L)
 
         step("Stop VM")
-        StableComposeHelper.safeClick(composeTestRule, "停止")
+        composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
         composeTestRule.waitForIdle()
         StableComposeHelper.waitForText(composeTestRule, "已停止")
 
@@ -123,9 +123,7 @@ class US002_VmManagement : E2ETestBase() {
         composeTestRule.onNodeWithText("us002-multi-b").performClick()
         composeTestRule.waitForIdle()
         // Second VM should not be in running state
-        runSafely("Check second VM not running") {
-            StableComposeHelper.waitForText(composeTestRule, "启动", timeoutMs = 2000L)
-        }
+        StableComposeHelper.waitForText(composeTestRule, "启动", timeoutMs = 2000L)
     }
 
     @Test
@@ -142,7 +140,7 @@ class US002_VmManagement : E2ETestBase() {
             StableComposeHelper.waitForText(composeTestRule, "运行中", timeoutMs = 10_000L)
 
             step("Cycle ${i + 1} stop")
-            StableComposeHelper.safeClick(composeTestRule, "停止")
+            composeTestRule.onNodeWithText("停止").performScrollTo().performClick()
             composeTestRule.waitForIdle()
             StableComposeHelper.waitForText(composeTestRule, "已停止")
         }
