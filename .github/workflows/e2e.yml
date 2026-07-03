@@ -279,12 +279,35 @@ jobs:
           fi
           echo "检测到 $DEVICE_COUNT 个模拟器设备"
 
-          docker exec droidvisor-android-e2e \
-            bash -c "
-              adb uninstall com.droidvisor 2>/dev/null || true &&
-              adb uninstall com.droidvisor.test 2>/dev/null || true &&
-              adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk
-            "
+          # 等待 PackageManager 服务就绪（API 35 模拟器启动后需要额外时间）
+          echo "Waiting for PackageManager to be ready..."
+          for i in $(seq 1 30); do
+            if docker exec droidvisor-android-e2e adb shell pm list packages 2>/dev/null | grep -q android; then
+              echo "  PackageManager ready (attempt $i)"
+              break
+            fi
+            echo "  [$(date +%H:%M:%S)] Waiting for PackageManager (attempt $i/30)..."
+            sleep 3
+          done
+
+          # 安装主 APK（带重试，处理 API 35 模拟器的 StorageManager 初始化竞争）
+          echo "Installing main APK..."
+          INSTALL_OK=false
+          for attempt in $(seq 1 5); do
+            echo "  Install attempt $attempt/5..."
+            if docker exec droidvisor-android-e2e \
+              adb install -r /workspace/app/build/outputs/apk/debug/app-debug.apk 2>&1; then
+              INSTALL_OK=true
+              break
+            fi
+            echo "  Install failed, retrying in 10s..."
+            sleep 10
+          done
+
+          if [ "$INSTALL_OK" != "true" ]; then
+            echo "::error::APK 安装失败，已重试 5 次"
+            exit 1
+          fi
 
           echo "APK installation completed"
 
