@@ -121,6 +121,7 @@ detekt {
     buildUponDefaultConfig = true
     allRules = false
     config = files("$rootDir/detekt-config.yml")
+    baseline = file("$rootDir/detekt-baseline.xml")
     ignoreFailures = false
 }
 

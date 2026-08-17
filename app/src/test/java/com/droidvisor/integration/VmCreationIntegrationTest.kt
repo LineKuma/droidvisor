@@ -228,7 +228,7 @@ class VmCreationIntegrationTest {
     fun testVmWithCustomConfiguration() {
         val customMemory = 8192L
         val customCpu = 8
-        val customDisk = 16384L
+        val customDisk = 16_384L
 
         val vmId = vmManager.createVmWithConfig(
             name = "custom-config-vm",
@@ -341,7 +341,7 @@ class VmCreationIntegrationTest {
                 vmName = "Test VM",
                 name = backupName,
                 createdTime = System.currentTimeMillis(),
-                sizeBytes = 1024000L,
+                sizeBytes = 1_024_000L,
                 status = com.droidvisor.vm.model.BackupStatus.AVAILABLE
             )
             backupListFlow.value = backupListFlow.value + backup

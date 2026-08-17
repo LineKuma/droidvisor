@@ -1,0 +1,39 @@
+name: Detekt Baseline Generation (temporary)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    name: Generate Detekt Baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Android Project
+        uses: ./.github/actions/setup-android
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-quality-detekt-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-quality-detekt-${{ runner.os }}-
+
+      - name: Generate Detekt Baseline
+        run: ./gradlew detektBaseline --stacktrace --no-daemon
+
+      - name: Upload Detekt Baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: detekt-baseline
+          path: detekt-baseline.xml
+          retention-days: 7
