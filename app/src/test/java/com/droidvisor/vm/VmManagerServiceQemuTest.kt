@@ -53,15 +53,15 @@ class VmManagerServiceQemuTest {
     // ========== 1. activeRuntime 默认值测试 ==========
 
     @Test
-    fun activeRuntime_初始值应为SIMULATION() {
-        assertEquals(VmRuntime.RuntimeType.SIMULATION, service.getActiveRuntimeType())
+    fun activeRuntime_初始值应为QEMU() {
+        assertEquals(VmRuntime.RuntimeType.QEMU, service.getActiveRuntimeType())
     }
 
     @Test
     fun getActiveRuntimeType_应返回初始值() {
         val runtimeType = service.getActiveRuntimeType()
         assertNotNull(runtimeType)
-        assertEquals(VmRuntime.RuntimeType.SIMULATION, runtimeType)
+        assertEquals(VmRuntime.RuntimeType.QEMU, runtimeType)
     }
 
     // ========== 2. hasRealRuntime 逻辑测试 ==========
@@ -132,7 +132,7 @@ class VmManagerServiceQemuTest {
     }
 
     @Test
-    fun startVm_AVF和QEMU都不可用_应选择SIMULATION运行时() = kotlinx.coroutines.runBlocking {
+    fun startVm_AVF和QEMU都不可用_应标记为错误且不切换运行时() = kotlinx.coroutines.runBlocking {
         service.setAvfBound(false)
         service.setQemuAvailable(false)
         service.setQemuRuntime(null)
@@ -142,7 +142,9 @@ class VmManagerServiceQemuTest {
 
         delay(200) // 等待协程执行
 
-        assertEquals(VmRuntime.RuntimeType.SIMULATION, service.getActiveRuntimeType())
+        // 无可用真实运行时：与生产实现一致，VM 进入错误状态，活跃运行时保持不变
+        assertEquals(VmStatus.ERROR, service.vmInstances.value.find { it.id == vm.id }?.status)
+        assertEquals(VmRuntime.RuntimeType.QEMU, service.getActiveRuntimeType())
     }
 
     @Test
@@ -178,7 +180,7 @@ class VmManagerServiceQemuTest {
     }
 
     @Test
-    fun stopVm_SIMULATION运行时不调用qemuRuntimeStop() = kotlinx.coroutines.runBlocking {
+    fun stopVm_无可用运行时不调用qemuRuntimeStop() = kotlinx.coroutines.runBlocking {
         service.setAvfBound(false)
         service.setQemuAvailable(false)
         service.setQemuRuntime(null)
@@ -323,8 +325,8 @@ class VmManagerServiceQemuTest {
     }
 
     @Test
-    fun runtimePriority_SIMULATION最低() = kotlinx.coroutines.runBlocking {
-        // 都不可用时，应选择 SIMULATION
+    fun runtimePriority_无任何可用运行时_标记为错误() = kotlinx.coroutines.runBlocking {
+        // 都不可用时，VM 进入错误状态而非进入模拟模式
         service.setAvfBound(false)
         service.setQemuAvailable(false)
         service.setQemuRuntime(null)
@@ -333,21 +335,21 @@ class VmManagerServiceQemuTest {
         service.startVm(vm.id)
         delay(200)
 
-        assertEquals(VmRuntime.RuntimeType.SIMULATION, service.getActiveRuntimeType())
+        assertEquals(VmStatus.ERROR, service.vmInstances.value.find { it.id == vm.id }?.status)
     }
 
     @Test
-    fun runtimePriority_完整优先级链AVF_QEMU_SIMULATION() = kotlinx.coroutines.runBlocking {
-        // 测试完整的优先级链：AVF > QEMU > SIMULATION
+    fun runtimePriority_完整优先级链AVF_QEMU() = kotlinx.coroutines.runBlocking {
+        // 测试完整的优先级链：AVF > QEMU
 
-        // 场景1：只有 SIMULATION 可用
+        // 场景1：无可用运行时，VM 进入错误状态
         service.setAvfBound(false)
         service.setQemuAvailable(false)
         service.setQemuRuntime(null)
         val vm1 = service.createVm("VM 1", testVmTemplate)
         service.startVm(vm1.id)
         delay(500)
-        assertEquals(VmRuntime.RuntimeType.SIMULATION, service.getActiveRuntimeType())
+        assertEquals(VmStatus.ERROR, service.vmInstances.value.find { it.id == vm1.id }?.status)
 
         // 场景2：添加 QEMU 可用
         service.setQemuAvailable(true)
@@ -386,7 +388,7 @@ class TestableQemuVmManagerService {
     private val activeVms = mutableMapOf<String, ActiveVmContext>()
 
     /** 当前使用的运行时后端 */
-    var activeRuntime: VmRuntime.RuntimeType = VmRuntime.RuntimeType.SIMULATION
+    var activeRuntime: VmRuntime.RuntimeType = VmRuntime.RuntimeType.QEMU
         private set
 
     /** QEMU 运行时实例 */
@@ -458,9 +460,8 @@ class TestableQemuVmManagerService {
                 } else if (qemuRuntime != null && _isQemuAvailable.value) {
                     activeRuntime = VmRuntime.RuntimeType.QEMU
                 } else {
-                    activeRuntime = VmRuntime.RuntimeType.SIMULATION
-                    delay(100)
-                    updateVmStatus(vmId, VmStatus.RUNNING)
+                    // 无可用真实运行时：与生产实现一致，标记为错误而不是进入模拟模式
+                    updateVmStatus(vmId, VmStatus.ERROR)
                 }
 
             } catch (e: Exception) {
@@ -483,9 +484,6 @@ class TestableQemuVmManagerService {
                     }
                     VmRuntime.RuntimeType.QEMU -> {
                         qemuRuntime?.stopVm()
-                    }
-                    VmRuntime.RuntimeType.SIMULATION -> {
-                        delay(50)
                     }
                 }
 

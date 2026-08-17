@@ -89,6 +89,10 @@ class AvfCapabilityChecker(
         val hasAnyRuntime: Boolean
             get() = canRunRealVm || isQemuSupported
 
+        /** 是否没有任何真实运行时，只能处于模拟模式 */
+        val isSimulationOnly: Boolean
+            get() = !canRunRealVm && !isQemuSupported
+
         val unavailableReasonTexts: List<String>
             get() = avfUnavailableReasons.map { it.displayText }
 

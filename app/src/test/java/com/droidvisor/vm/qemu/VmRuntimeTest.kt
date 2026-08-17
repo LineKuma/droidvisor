@@ -15,17 +15,15 @@ class VmRuntimeTest {
     fun `runtime type enum contains all expected types`() {
         val types = VmRuntime.RuntimeType.values()
 
-        assertEquals(3, types.size)
+        assertEquals(2, types.size)
         assertTrue(types.contains(VmRuntime.RuntimeType.AVF))
         assertTrue(types.contains(VmRuntime.RuntimeType.QEMU))
-        assertTrue(types.contains(VmRuntime.RuntimeType.SIMULATION))
     }
 
     @Test
     fun `runtime type names are descriptive`() {
         assertEquals("AVF", VmRuntime.RuntimeType.AVF.name)
         assertEquals("QEMU", VmRuntime.RuntimeType.QEMU.name)
-        assertEquals("SIMULATION", VmRuntime.RuntimeType.SIMULATION.name)
     }
 
     @Test

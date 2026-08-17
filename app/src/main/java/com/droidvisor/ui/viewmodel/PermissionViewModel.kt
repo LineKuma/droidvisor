@@ -33,6 +33,10 @@ data class PermissionState(
     val hasNoRuntime: Boolean
         get() = !isAvfFullyAvailable && !qemuSupported
 
+    /** 是否没有任何真实运行时，只能处于模拟模式 */
+    val isSimulationOnly: Boolean
+        get() = hasNoRuntime
+
     val missingPermissions: List<String>
         get() = buildList {
             if (!hasInternetPermission) add("网络访问")
