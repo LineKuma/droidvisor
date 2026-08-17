@@ -1,0 +1,30 @@
+# Droidvisor E2E Testing Docker Compose Configuration
+# 单一容器架构：所有测试在 android-e2e-test 容器内完成
+# 验证项目自身功能（QEMU Provider、VM管理、网络配置等）
+version: '3.8'
+
+services:
+  android-e2e-test:
+    image: droidvisor-e2e:latest
+    container_name: droidvisor-android-e2e
+    privileged: true  # 需要特权模式以运行KVM/QEMU
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      - JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+      - ANDROID_HOME=/opt/android-sdk
+      - ANDROID_SDK_ROOT=/opt/android-sdk
+      - GRADLE_USER_HOME=/workspace/.gradle
+      - DISPLAY=:0
+    devices:
+      - /dev/kvm:/dev/kvm  # KVM设备映射（如果可用）
+    networks:
+      - droidvisor-e2e-network
+
+networks:
+  droidvisor-e2e-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16

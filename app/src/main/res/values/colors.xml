@@ -2,10 +2,7 @@
     <color name="purple_500">#6200EE</color>
     <color name="purple_700">#3700B3</color>
     <color name="teal_200">#03DAC5</color>
-    <color name="teal_700">#018786</color>
     <color name="white">#FFFFFF</color>
-    <color name="black">#000000</color>
-    <color name="red_500">#FF5252</color>
     <color name="surface_dark">#121212</color>
     <color name="surface_dark_elevated">#1E1E1E</color>
     <color name="surface_light">#FAFAFA</color>

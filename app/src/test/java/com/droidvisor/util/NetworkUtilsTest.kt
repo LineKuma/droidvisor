@@ -62,7 +62,7 @@ class NetworkUtilsTest {
         assertTrue(NetworkUtils.validatePort(443))
         assertTrue(NetworkUtils.validatePort(8080))
         assertTrue(NetworkUtils.validatePort(3000))
-        assertTrue(NetworkUtils.validatePort(65535))
+        assertTrue(NetworkUtils.validatePort(65_535))
         assertTrue(NetworkUtils.validatePort(1))
     }
 
@@ -70,32 +70,32 @@ class NetworkUtilsTest {
     fun validatePort_withInvalidPort_shouldReturnFalse() {
         assertFalse(NetworkUtils.validatePort(0))
         assertFalse(NetworkUtils.validatePort(-1))
-        assertFalse(NetworkUtils.validatePort(65536))
-        assertFalse(NetworkUtils.validatePort(100000))
+        assertFalse(NetworkUtils.validatePort(65_536))
+        assertFalse(NetworkUtils.validatePort(100_000))
         assertFalse(NetworkUtils.validatePort(-100))
     }
 
     @Test
     fun validatePort_withBoundaryValues_shouldReturnExpected() {
         assertTrue(NetworkUtils.validatePort(1))
-        assertTrue(NetworkUtils.validatePort(65535))
+        assertTrue(NetworkUtils.validatePort(65_535))
         assertFalse(NetworkUtils.validatePort(0))
-        assertFalse(NetworkUtils.validatePort(65536))
+        assertFalse(NetworkUtils.validatePort(65_536))
     }
 
     @Test
     fun validatePortRange_withValidRange_shouldReturnTrue() {
         assertTrue(NetworkUtils.validatePortRange(80, 443))
         assertTrue(NetworkUtils.validatePortRange(3000, 4000))
-        assertTrue(NetworkUtils.validatePortRange(1, 65535))
-        assertTrue(NetworkUtils.validatePortRange(1024, 65535))
+        assertTrue(NetworkUtils.validatePortRange(1, 65_535))
+        assertTrue(NetworkUtils.validatePortRange(1024, 65_535))
     }
 
     @Test
     fun validatePortRange_withInvalidRange_shouldReturnFalse() {
         assertFalse(NetworkUtils.validatePortRange(443, 80))
         assertFalse(NetworkUtils.validatePortRange(4000, 3000))
-        assertFalse(NetworkUtils.validatePortRange(65535, 1024))
+        assertFalse(NetworkUtils.validatePortRange(65_535, 1024))
     }
 
     @Test
@@ -115,8 +115,8 @@ class NetworkUtilsTest {
 
     @Test
     fun validatePortRange_withEphemeralPorts_shouldReturnTrue() {
-        assertTrue(NetworkUtils.validatePortRange(32768, 65535))
-        assertTrue(NetworkUtils.validatePortRange(49152, 65535))
+        assertTrue(NetworkUtils.validatePortRange(32_768, 65_535))
+        assertTrue(NetworkUtils.validatePortRange(49_152, 65_535))
     }
 
     @Test
@@ -299,7 +299,7 @@ object NetworkUtils {
     }
 
     fun validatePort(port: Int): Boolean {
-        return port in 1..65535
+        return port in 1..65_535
     }
 
     fun validatePortRange(startPort: Int, endPort: Int): Boolean {

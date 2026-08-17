@@ -9,14 +9,13 @@ concurrency:
   group: devbuild-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # 日期编码版本号格式: YYYYMMDD.BUILD_NUMBER
   # 例如: 20260604.57
   DATE_VERSION: ${{ github.run_number }}
-
-permissions:
-  contents: read
 
 jobs:
   build-dev:
@@ -45,11 +44,8 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           DATE="${{ steps.version.outputs.date }}"
-          BUILD="${{ github.run_number }}"
-          # versionCode 使用 YYYYMMDDNN 格式的整数
-          # 前8位是日期，后2位是当日构建序号(取run_number后两位)
-          BUILD_SUFFIX=$(printf "%02d" $((BUILD % 100)))
-          VERSION_CODE="${DATE}${BUILD_SUFFIX}"
+          # versionCode 使用 YYYYMMDDNN 格式的整数 (例如 2026060401)
+          VERSION_CODE="${DATE}01"
           # 去掉前导零避免被当作八进制
           VERSION_CODE=$((10#$VERSION_CODE))
 
@@ -59,7 +55,7 @@ jobs:
           echo "Set versionCode=${VERSION_CODE}, versionName=${VERSION}-dev"
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Rename APK with date version
         run: |

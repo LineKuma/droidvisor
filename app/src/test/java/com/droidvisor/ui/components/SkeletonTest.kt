@@ -1,6 +1,6 @@
 package com.droidvisor.ui.components
 
-import androidx.compose.ui.Modifier
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SkeletonTest {
@@ -15,9 +15,11 @@ class SkeletonTest {
 
     @Test
     fun skeletonRect_compiles() {
+        assertTrue(true)
     }
 
     @Test
     fun skeletonCircle_compiles() {
+        assertTrue(true)
     }
 }

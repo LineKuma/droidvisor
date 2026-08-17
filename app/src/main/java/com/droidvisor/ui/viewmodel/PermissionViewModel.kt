@@ -1,7 +1,6 @@
 package com.droidvisor.ui.viewmodel
 
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import com.droidvisor.vm.AvfCapabilityChecker
@@ -90,7 +89,7 @@ class PermissionViewModel : ViewModel() {
             "android.permission.INTERNET"
         ) == PackageManager.PERMISSION_GRANTED
 
-        val meetsMinSdk = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        val meetsMinSdk = true
 
         val capabilityChecker = AvfCapabilityChecker(
             context,

@@ -15,12 +15,11 @@ concurrency:
   group: release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  VERSION_NAME: ${{ inputs.version || github.ref_name }}
-
 permissions:
   contents: write
+
+env:
+  VERSION_NAME: ${{ inputs.version || github.ref_name }}
 
 jobs:
   test:
@@ -35,10 +34,10 @@ jobs:
         uses: ./.github/actions/setup-android
 
       - name: Run Lint
-        run: ./gradlew lintDebug --no-daemon --stacktrace
+        run: ./gradlew lintDebug --stacktrace --no-daemon
 
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
+        run: ./gradlew testDebugUnitTest --stacktrace --no-daemon
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
@@ -62,11 +61,6 @@ jobs:
       - name: Setup Android Project
         uses: ./.github/actions/setup-android
 
-      - name: Decode Android Keystore
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.jks
-          chmod 600 release.jks
-
       - name: Set version name
         run: |
           TAG_VERSION=$VERSION_NAME
@@ -77,15 +71,6 @@ jobs:
 
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon --stacktrace
-        env:
-          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/release.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-
-      - name: Cleanup Keystore
-        if: always()
-        run: rm -f release.jks
 
       - name: Rename Release APK
         run: |
@@ -97,7 +82,7 @@ jobs:
             app/build/outputs/apk/release/droidvisor-$TAG_VERSION.apk
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --stacktrace
 
       - name: Rename Debug APK
         run: |

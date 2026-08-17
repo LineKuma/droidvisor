@@ -50,11 +50,7 @@ class DockerProxyService : Service(), IDockerProxyService {
     val images: StateFlow<List<Image>> = _images.asStateFlow()
 
     private var healthCheckJob: kotlinx.coroutines.Job? = null
-    private val HEALTH_CHECK_INTERVAL = 30_000L
-
-    inner class LocalBinder : Binder() {
-        fun getService(): DockerProxyService = this@DockerProxyService
-    }
+    private val healthCheckInterval = 30_000L
 
     override fun onBind(intent: Intent): IBinder {
         return binder
@@ -84,7 +80,7 @@ class DockerProxyService : Service(), IDockerProxyService {
         healthCheckJob = coroutineScope.launch {
             while (true) {
                 checkDockerDaemonHealth()
-                delay(HEALTH_CHECK_INTERVAL)
+                delay(healthCheckInterval)
             }
         }
     }
@@ -361,5 +357,9 @@ class DockerProxyService : Service(), IDockerProxyService {
         disconnectDocker()
         coroutineScope.cancel()
         super.onDestroy()
+    }
+
+    inner class LocalBinder : Binder() {
+        fun getService(): DockerProxyService = this@DockerProxyService
     }
 }
