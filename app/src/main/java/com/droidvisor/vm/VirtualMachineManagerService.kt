@@ -45,6 +45,7 @@ class VirtualMachineManagerService : Service() {
 
     private var vmInstance: Any? = null
     private var consoleOutputService: ConsoleOutputService? = null
+    private var serialConsoleService: SerialConsoleService? = null
 
     private var avfVmManager: Any? = null
     private var isAvfAvailable = false
@@ -237,6 +238,7 @@ class VirtualMachineManagerService : Service() {
 
                 _status.value = VmStatus.STOPPING
                 consoleOutputService?.appendOutput("Stopping VM...")
+                stopAvfSerialConsole()
 
                 stopAvfVm()
 
@@ -286,6 +288,43 @@ class VirtualMachineManagerService : Service() {
 
     fun attachConsoleOutputService(service: ConsoleOutputService) {
         this.consoleOutputService = service
+    }
+
+    /**
+     * 获取串口控制台桥接服务（AVF 后端）
+     */
+    fun getSerialConsoleService(): SerialConsoleService? = serialConsoleService
+
+    /**
+     * 启动 AVF 串口控制台桥接
+     *
+     * 通过 vsock 连接虚拟机串口，并启动中继服务器供外部客户端接入。
+     */
+    private fun startAvfSerialConsole() {
+        try {
+            serialConsoleService?.destroy()
+
+            val provider = AvfSerialConsoleProvider(
+                avfService = this,
+                vsockPort = AvfSerialConsoleProvider.DEFAULT_AVF_CONSOLE_PORT
+            )
+            serialConsoleService = SerialConsoleService(provider).also { service ->
+                service.connect()
+                service.startRelayServer(port = SerialConsoleService.DEFAULT_RELAY_PORT)
+            }
+            Logger.d(TAG, "AVF serial console service started")
+        } catch (e: Exception) {
+            Logger.e(TAG, "Failed to start AVF serial console", e)
+        }
+    }
+
+    /**
+     * 停止 AVF 串口控制台
+     */
+    private fun stopAvfSerialConsole() {
+        serialConsoleService?.destroy()
+        serialConsoleService = null
+        Logger.d(TAG, "AVF serial console service stopped")
     }
 
     private fun startAvfVm() {
@@ -350,6 +389,9 @@ class VirtualMachineManagerService : Service() {
                     _status.value = VmStatus.RUNNING
                     consoleOutputService?.appendOutput("Payload started")
                     Logger.d(TAG, "AVF VM payload started")
+
+                    // 启动 AVF 串口控制台桥接服务
+                    startAvfSerialConsole()
                 }
                 "onPayloadReady" -> {
                     Logger.d(TAG, "AVF VM payload ready")
@@ -364,6 +406,7 @@ class VirtualMachineManagerService : Service() {
                     val reason = args?.getOrNull(1) as? Int ?: -1
                     consoleOutputService?.appendOutput("VM stopped")
                     Logger.d(TAG, "AVF VM stopped, reason: $reason")
+                    stopAvfSerialConsole()
                 }
                 "onError" -> {
                     _status.value = VmStatus.ERROR
@@ -462,6 +505,7 @@ class VirtualMachineManagerService : Service() {
     }
 
     override fun onDestroy() {
+        stopAvfSerialConsole()
         vmInstance = null
         coroutineScope.cancel()
         super.onDestroy()

@@ -103,6 +103,9 @@ data class QemuVmConfig(
         /** 输出到文件 */
         data class FileOutput(val path: String) : ConsoleMode()
 
+        /** TCP 串口，暴露给外部客户端和内置终端 */
+        data class TcpSocket(val port: Int = 5555, val host: String = "127.0.0.1") : ConsoleMode()
+
         /** 输出到 stdio */
         object Stdio : ConsoleMode()
 

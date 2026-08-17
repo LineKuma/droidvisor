@@ -1,6 +1,7 @@
 package com.droidvisor.vm.qemu
 
 import android.os.ParcelFileDescriptor
+import com.droidvisor.vm.SerialConsoleService
 import com.droidvisor.vm.VmConfig
 import com.droidvisor.vm.VmError
 import com.droidvisor.vm.VmStatus
@@ -55,6 +56,12 @@ interface VmRuntime {
      * 检查此运行时是否可用
      */
     fun isAvailable(): Boolean
+
+    /**
+     * 获取串口控制台服务（如果支持）
+     * @return SerialConsoleService 实例，不支持时返回 null
+     */
+    fun getSerialConsoleService(): SerialConsoleService? = null
 
     enum class RuntimeType {
         /** Android Virtualization Framework (AVF / microdroid) */

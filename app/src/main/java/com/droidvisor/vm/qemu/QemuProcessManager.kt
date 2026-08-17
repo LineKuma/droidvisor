@@ -54,9 +54,66 @@ class QemuProcessManager(
     val processState: StateFlow<ProcessState> = _processState.asStateFlow()
 
     /**
+     * 验证配置参数安全性，防止命令行注入
+     *
+     * ProcessBuilder 使用数组参数可防止 shell 注入，
+     * 但仍需验证 QEMU 参数不会引入恶意行为（如加载恶意固件等）。
+     */
+    private fun validateConfig() {
+        // 验证 extraArgs 不包含危险参数
+        val dangerousPrefixes = listOf(
+            "-bios", "-kernel", "-initrd", "-drive", "-cdrom",
+            "-chardev", "-netdev", "-net", "-display", "-spice",
+            "-vnc", "-qmp", "-mon", "-monitor", "-serial", "-parallel",
+            "-usbdevice", "-device", "-fsdev", "-virtfs"
+        )
+
+        for (arg in config.extraArgs) {
+            for (dangerous in dangerousPrefixes) {
+                if (arg == dangerous || arg.startsWith("$dangerous ")) {
+                    throw VmError.StartError(
+                        "Dangerous QEMU argument detected: $arg. " +
+                        "Use dedicated config fields instead."
+                    )
+                }
+            }
+        }
+
+        // 验证路径参数不包含路径遍历
+        val pathsToValidate = listOfNotNull(
+            config.diskPath, config.firmwarePath,
+            config.kernelImagePath, config.initrdPath
+        )
+        for (path in pathsToValidate) {
+            if (path.contains("..")) {
+                throw VmError.StartError("Path traversal detected: $path")
+            }
+        }
+
+        // 验证网络配置中的路径
+        if (config.networkBackend is QemuVmConfig.NetworkBackend.Tap) {
+            val tap = config.networkBackend as QemuVmConfig.NetworkBackend.Tap
+            listOfNotNull(tap.script, tap.downscript).forEach {
+                if (it.contains("..") || it.contains(";") || it.contains("|")) {
+                    throw VmError.StartError("Invalid network script path: $it")
+                }
+            }
+        }
+
+        if (config.networkBackend is QemuVmConfig.NetworkBackend.Socket) {
+            val sock = config.networkBackend as QemuVmConfig.NetworkBackend.Socket
+            if (sock.socketPath.contains("..")) {
+                throw VmError.StartError("Invalid socket path: ${sock.socketPath}")
+            }
+        }
+    }
+
+    /**
      * 构建完整的 QEMU 命令行参数列表
      */
     fun buildCommandLine(): List<String> {
+        validateConfig()
+
         val args = mutableListOf<String>()
 
         // QEMU 可执行文件
@@ -128,6 +185,11 @@ class QemuProcessManager(
                 args.add("-nographic")
                 args.add("-serial")
                 args.add("file:${mode.path}")
+            }
+            is QemuVmConfig.ConsoleMode.TcpSocket -> {
+                args.add("-nographic")
+                args.add("-serial")
+                args.add("tcp:${mode.host}:${mode.port},server=on,wait=off")
             }
             is QemuVmConfig.ConsoleMode.Stdio -> {
                 args.add("-nographic")
