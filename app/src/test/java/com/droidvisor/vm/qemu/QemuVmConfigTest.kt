@@ -1,9 +1,8 @@
 package com.droidvisor.vm.qemu
 
+import com.droidvisor.vm.DiskFormat
 import org.junit.Assert.*
 import org.junit.Test
-import org.junit.Before
-import org.junit.After
 import java.io.File
 
 /**
@@ -17,6 +16,7 @@ class QemuVmConfigTest {
 
         assertEquals(512 * 1024 * 1024L, config.baseConfig.memoryBytes)
         assertEquals(2, config.baseConfig.cpuCores)
+        assertEquals(DiskFormat.QCOW2, config.diskFormat)
         assertEquals("virt", config.machineType)
         assertEquals("cortex-a72", config.cpuType)
         assertTrue(config.qemuBinaryPath.isEmpty())
@@ -33,12 +33,14 @@ class QemuVmConfigTest {
             memoryBytes = 1024 * 1024 * 1024L,
             cpuCores = 4,
             diskSizeBytes = 8L * 1024 * 1024 * 1024,
+            diskFormat = DiskFormat.RAW,
             payloadBinaryName = "test_payload.so"
         )
 
         val qemuConfig = QemuVmConfig.fromVmConfig(vmConfig)
 
         assertEquals(vmConfig, qemuConfig.baseConfig)
+        assertEquals(DiskFormat.RAW, qemuConfig.diskFormat)
         assertEquals("virt", qemuConfig.machineType)
         assertEquals(1024 * 1024 * 1024L, qemuConfig.baseConfig.memoryBytes)
         assertEquals(4, qemuConfig.baseConfig.cpuCores)
@@ -65,6 +67,7 @@ class QemuVmConfigTest {
         // 验证磁盘配置
         assertEquals(1, qemuConfig.extraDisks.size)
         assertEquals(16, qemuConfig.extraDisks[0].sizeGb)
+        assertEquals(DiskFormat.QCOW2, qemuConfig.extraDisks[0].format)
     }
 
     @Test
@@ -105,8 +108,19 @@ class QemuVmConfigTest {
     fun `qemu disk defaults are sensible`() {
         val disk = QemuDisk(path = "/tmp/test.qcow2")
         assertEquals(4, disk.sizeGb)
-        assertEquals("qcow2", disk.format)
+        assertEquals(DiskFormat.QCOW2, disk.format)
         assertFalse(disk.readOnly)
         assertEquals("virtio", disk.interfaceName)
+    }
+
+    @Test
+    fun `diskFormat derives from baseConfig correctly`() {
+        val vmConfigQcow2 = com.droidvisor.vm.VmConfig(diskFormat = DiskFormat.QCOW2)
+        val qemuConfig1 = QemuVmConfig(baseConfig = vmConfigQcow2)
+        assertEquals(DiskFormat.QCOW2, qemuConfig1.diskFormat)
+
+        val vmConfigRaw = com.droidvisor.vm.VmConfig(diskFormat = DiskFormat.RAW)
+        val qemuConfig2 = QemuVmConfig(baseConfig = vmConfigRaw)
+        assertEquals(DiskFormat.RAW, qemuConfig2.diskFormat)
     }
 }

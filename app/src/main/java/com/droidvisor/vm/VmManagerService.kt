@@ -174,19 +174,21 @@ class VmManagerService : Service() {
         }
     }
 
-    fun createVm(
+fun createVm(
         name: String,
         template: VmTemplate,
         customMemoryBytes: Long? = null,
         customCpuCores: Int? = null,
-        customDiskSizeBytes: Long? = null
+        customDiskSizeBytes: Long? = null,
+        diskFormat: DiskFormat? = null
     ): VmInstance {
         val vm = VmInstance(
             name = name,
             template = template,
             customMemoryBytes = customMemoryBytes,
             customCpuCores = customCpuCores,
-            customDiskSizeBytes = customDiskSizeBytes
+            customDiskSizeBytes = customDiskSizeBytes,
+            customDiskFormat = if (diskFormat != null && diskFormat != template.diskFormat) diskFormat else null
         )
         _vmInstances.value = _vmInstances.value + vm
         saveState()
@@ -251,6 +253,7 @@ class VmManagerService : Service() {
             memoryBytes = vm.effectiveMemoryBytes,
             cpuCores = vm.effectiveCpuCores,
             diskSizeBytes = vm.effectiveDiskSizeBytes,
+            diskFormat = vm.effectiveDiskFormat,
             payloadBinaryName = vm.template.payloadBinaryName,
             protectedVm = vm.template.protectedVm
         )
@@ -272,6 +275,7 @@ class VmManagerService : Service() {
             memoryBytes = vm.effectiveMemoryBytes,
             cpuCores = vm.effectiveCpuCores,
             diskSizeBytes = vm.effectiveDiskSizeBytes,
+            diskFormat = vm.effectiveDiskFormat,
             payloadBinaryName = vm.template.payloadBinaryName,
             protectedVm = false
         )

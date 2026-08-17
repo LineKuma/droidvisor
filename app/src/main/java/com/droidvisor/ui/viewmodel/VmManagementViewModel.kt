@@ -3,6 +3,7 @@ package com.droidvisor.ui.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.droidvisor.vm.DiskFormat
 import com.droidvisor.vm.VmManagerService
 import com.droidvisor.vm.VmStatus
 import com.droidvisor.vm.model.VmInstance
@@ -92,7 +93,8 @@ class VmManagementViewModel(
         protectedVm: Boolean = true,
         customMemoryBytes: Long? = null,
         customCpuCores: Int? = null,
-        customDiskSizeBytes: Long? = null
+        customDiskSizeBytes: Long? = null,
+        diskFormat: DiskFormat? = null
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, errorMessage = null)
@@ -102,7 +104,8 @@ class VmManagementViewModel(
                     template.copy(protectedVm = protectedVm),
                     customMemoryBytes,
                     customCpuCores,
-                    customDiskSizeBytes
+                    customDiskSizeBytes,
+                    diskFormat
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
