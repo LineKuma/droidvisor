@@ -328,6 +328,9 @@ fun DroidvisorApp(
                         )
                     }
                     composable("vm/create") {
+                        val avfCaps = remember(vmManagerService) { vmManagerService?.avfCapabilities }
+                            ?.collectAsState()
+                            ?.value
                         CreateVmScreen(
                             onNavigateBack = { navController.popBackStack() },
                             onCreateVm = { name, template, protectedVm, customMem, customCpu, customDisk ->
@@ -337,7 +340,7 @@ fun DroidvisorApp(
                                 )
                                 navController.popBackStack()
                             },
-                            avfCapabilities = vmManagerService?.avfCapabilities?.value
+                            avfCapabilities = avfCaps
                         )
                     }
                     composable("docker") {
