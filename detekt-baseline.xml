@@ -1,0 +1,788 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>BracesOnIfStatements:BackupManagerService.kt$BackupManagerService$else</ID>
+    <ID>BracesOnIfStatements:BackupManagerService.kt$BackupManagerService$if</ID>
+    <ID>BracesOnIfStatements:BackupManagerServiceTest.kt$TestableBackupManagerService$else</ID>
+    <ID>BracesOnIfStatements:BackupManagerServiceTest.kt$TestableBackupManagerService$if</ID>
+    <ID>BracesOnIfStatements:BackupRestoreIntegrationTest.kt$TestBackupService$else</ID>
+    <ID>BracesOnIfStatements:CreateVmScreen.kt$else</ID>
+    <ID>BracesOnIfStatements:CreateVmScreen.kt$if</ID>
+    <ID>BracesOnIfStatements:DebugActivity.kt$else</ID>
+    <ID>BracesOnIfStatements:DebugActivity.kt$if</ID>
+    <ID>BracesOnIfStatements:DockerDashboardScreen.kt$else</ID>
+    <ID>BracesOnIfStatements:DockerDashboardScreen.kt$if</ID>
+    <ID>BracesOnIfStatements:PermissionScreen.kt$else</ID>
+    <ID>BracesOnIfStatements:PermissionScreen.kt$if</ID>
+    <ID>BracesOnIfStatements:QemuDiskManager.kt$QemuDiskManager$else</ID>
+    <ID>BracesOnIfStatements:QemuSerialConsole.kt$QemuSerialConsole$else</ID>
+    <ID>BracesOnIfStatements:QemuSerialConsole.kt$QemuSerialConsole$if</ID>
+    <ID>BracesOnIfStatements:QemuVmRuntime.kt$QemuVmRuntime$else</ID>
+    <ID>BracesOnIfStatements:SerialConsoleScreen.kt$else</ID>
+    <ID>BracesOnIfStatements:SerialConsoleScreen.kt$if</ID>
+    <ID>BracesOnIfStatements:SetupViewModel.kt$SetupViewModel$else</ID>
+    <ID>BracesOnIfStatements:SetupViewModel.kt$SetupViewModel$if</ID>
+    <ID>BracesOnIfStatements:TerminalScreen.kt$else</ID>
+    <ID>BracesOnIfStatements:TerminalScreen.kt$if</ID>
+    <ID>BracesOnIfStatements:VmInstance.kt$VmInstance$else</ID>
+    <ID>BracesOnIfStatements:VmManagementScreen.kt$else</ID>
+    <ID>BracesOnIfStatements:VmManagementScreen.kt$if</ID>
+    <ID>BracesOnWhenStatements:CreateVmScreen.kt$when</ID>
+    <ID>BracesOnWhenStatements:DockerHttpClient.kt$DockerHttpClient$when</ID>
+    <ID>BracesOnWhenStatements:VirtualMachineManagerService.kt$VirtualMachineManagerService$when</ID>
+    <ID>BracesOnWhenStatements:VmManagementScreen.kt$when</ID>
+    <ID>ClassOrdering:AvfSerialConsoleProvider.kt$AvfSerialConsoleProvider$Companion</ID>
+    <ID>ClassOrdering:DockerDashboardViewModel.kt$DockerDashboardViewModel$init { loadMockData() loadMockVolumes() loadMockNetworks() }</ID>
+    <ID>ClassOrdering:QemuDiskManager.kt$QemuDiskManager$Companion</ID>
+    <ID>ClassOrdering:QemuProcessManager.kt$QemuProcessManager$private val baseDir: File get() = config.workingDirectory ?: File(System.getProperty("java.io.tmpdir"), "droidvisor_qemu")</ID>
+    <ID>ClassOrdering:QemuVsockChannel.kt$QemuVsockChannel$/** * 通过已存在的 ParcelFileDescriptor 创建通道 */ constructor(pfd: ParcelFileDescriptor) : this("") { this.pfd = pfd this.inputStream = FileInputStream(pfd.fileDescriptor) this.outputStream = FileOutputStream(pfd.fileDescriptor) this.open = true Logger.d(TAG, "QemuVsockChannel created from PFD") }</ID>
+    <ID>ClassOrdering:SerialConsoleProvider.kt$SerialConsoleProvider$/** 中继服务器端口（供外部客户端连接），-1 表示不支持 */ val relayPort: Int get() = -1</ID>
+    <ID>ClassOrdering:SerialConsoleService.kt$SerialConsoleService$Companion</ID>
+    <ID>ClassOrdering:SettingsViewModelTest.kt$SettingsViewModelTest.TestDataStore$override val data: Flow&lt;Preferences&gt; = _data</ID>
+    <ID>ClassOrdering:VmConfigValidator.kt$VmConfigValidator$fun validate(config: VmConfig): ValidationResult</ID>
+    <ID>ClassOrdering:VmManagementViewModel.kt$VmManagementViewModel$Companion</ID>
+    <ID>ClassOrdering:VmStateDataStore.kt$VmStateDataStore$Companion</ID>
+    <ID>CognitiveComplexMethod:BackupManagementScreen.kt$@Composable fun BackupCard( backup: Backup, onRestore: () -&gt; Unit, onDelete: () -&gt; Unit )</ID>
+    <ID>CognitiveComplexMethod:BackupManagementScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BackupManagementScreen( vmId: String, vmName: String, backupManagerService: BackupManagerService? )</ID>
+    <ID>CognitiveComplexMethod:BackupManagerService.kt$BackupManagerService$fun createBackup( vmId: String, vmName: String, backupName: String, description: String? = null, type: BackupType = BackupType.FULL ): BackupResult</ID>
+    <ID>CognitiveComplexMethod:BackupManagerService.kt$BackupManagerService$fun deleteBackup(backupId: String): BackupResult</ID>
+    <ID>CognitiveComplexMethod:BackupManagerService.kt$BackupManagerService$fun restoreBackup(backupId: String): BackupResult</ID>
+    <ID>CognitiveComplexMethod:BackupManagerService.kt$BackupManagerService$private fun extractBackupArchive(backupFile: File, targetDir: File)</ID>
+    <ID>CognitiveComplexMethod:BackupManagerService.kt$BackupManagerService$private suspend fun verifyBackup(backupId: String)</ID>
+    <ID>CognitiveComplexMethod:BackupManagerServiceTest.kt$TestableBackupManagerService$fun createBackup( vmId: String, vmName: String, backupName: String, description: String? = null, type: BackupType = BackupType.FULL ): BackupResult</ID>
+    <ID>CognitiveComplexMethod:BackupManagerServiceTest.kt$TestableBackupManagerService$fun deleteBackup(backupId: String): BackupResult</ID>
+    <ID>CognitiveComplexMethod:BackupManagerServiceTest.kt$TestableBackupManagerService$fun restoreBackup(backupId: String): BackupResult</ID>
+    <ID>CognitiveComplexMethod:BackupManagerServiceTest.kt$TestableBackupManagerService$private suspend fun verifyBackup(backupId: String)</ID>
+    <ID>CognitiveComplexMethod:CreateVmScreen.kt$@Composable private fun ConfigSummaryCard( template: VmTemplate, effectiveMemoryBytes: Long, effectiveCpuCores: Int, effectiveDiskBytes: Long, canUseAvf: Boolean, canUseKvmQemu: Boolean, canUsePlainQemu: Boolean )</ID>
+    <ID>CognitiveComplexMethod:CreateVmScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun CreateVmScreen( onNavigateBack: () -&gt; Unit, onCreateVm: (String, VmTemplate, Boolean, Long?, Int?, Long?) -&gt; Unit, avfCapabilities: AvfCapabilityChecker.AvfCapabilities? = null )</ID>
+    <ID>CognitiveComplexMethod:DebugActivity.kt$@Composable fun DebugScreen(onBack: () -&gt; Unit)</ID>
+    <ID>CognitiveComplexMethod:DockerDashboardScreen.kt$@Composable fun ContainerCard( container: Container, isSelected: Boolean, isExpanded: Boolean, onSelect: () -&gt; Unit, onToggleExpand: () -&gt; Unit, onStart: () -&gt; Unit, onStop: () -&gt; Unit, onPause: () -&gt; Unit, onUnpause: () -&gt; Unit, onRemove: () -&gt; Unit, onViewLogs: () -&gt; Unit, viewModel: DockerDashboardViewModel )</ID>
+    <ID>CognitiveComplexMethod:DockerDashboardScreen.kt$@Composable fun ContainerLogsDialog(containerId: String, viewModel: DockerDashboardViewModel, onDismiss: () -&gt; Unit)</ID>
+    <ID>CognitiveComplexMethod:DockerHttpClient.kt$DockerHttpClient$private fun readVsockResponse(inputStream: InputStream): HttpResponse</ID>
+    <ID>CognitiveComplexMethod:DownloadManager.kt$DownloadManager$suspend fun download( url: String, destFile: File, expectedSha256: String = "", onProgress: (Float) -&gt; Unit = {} ): DownloadResult</ID>
+    <ID>CognitiveComplexMethod:NetworkConfigScreen.kt$@Composable fun AddPortForwardingDialog(onDismiss: () -&gt; Unit, onAdd: (PortForwarding) -&gt; Unit)</ID>
+    <ID>CognitiveComplexMethod:NetworkConfigScreen.kt$@Composable fun DnsConfigSection( dnsServers: List&lt;String&gt;, onDnsServersChange: (List&lt;String&gt;) -&gt; Unit, dnsError: String? = null, onDnsErrorChange: ((String?) -&gt; Unit)? = null )</ID>
+    <ID>CognitiveComplexMethod:NetworkConfigScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun NetworkConfigScreen( vmId: String, vmName: String, initialConfig: NetworkConfig = NetworkConfig(vmId = ""), onSave: (NetworkConfig) -&gt; Unit )</ID>
+    <ID>CognitiveComplexMethod:PermissionScreen.kt$@Composable fun PermissionCard( icon: ImageVector, title: String, description: String, isGranted: Boolean, isCritical: Boolean = false, isInfoOnly: Boolean = false, statusLabel: String? = null )</ID>
+    <ID>CognitiveComplexMethod:PermissionScreen.kt$@Composable fun PermissionScreen( viewModel: PermissionViewModel, onAllPermissionsGranted: () -&gt; Unit )</ID>
+    <ID>CognitiveComplexMethod:QemuProcessManager.kt$QemuProcessManager$private fun validateConfig()</ID>
+    <ID>CognitiveComplexMethod:SerialConsoleScreen.kt$@Composable private fun ConsoleInputBar( value: TextFieldValue, onValueChange: (TextFieldValue) -&gt; Unit, onSend: () -&gt; Unit, enabled: Boolean, onClear: () -&gt; Unit )</ID>
+    <ID>CognitiveComplexMethod:SerialConsoleScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SerialConsoleScreen( vmName: String, serialService: SerialConsoleService, onBack: () -&gt; Unit )</ID>
+    <ID>CognitiveComplexMethod:SetupScreen.kt$@Composable private fun SetupStepIndicator(currentStep: SetupStep)</ID>
+    <ID>CognitiveComplexMethod:SetupViewModel.kt$SetupViewModel$fun startDownloads(context: Context)</ID>
+    <ID>CognitiveComplexMethod:TerminalScreen.kt$@Suppress("OPT_IN_MARKER") @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class) @Composable fun TerminalScreen( consoleOutputService: ConsoleOutputService?, vsockService: VsockService? = null )</ID>
+    <ID>CognitiveComplexMethod:TerminalViewModel.kt$TerminalViewModel$fun sendCommand(command: String)</ID>
+    <ID>CognitiveComplexMethod:TerminalViewModel.kt$TerminalViewModel$fun startReceivingOutput()</ID>
+    <ID>CognitiveComplexMethod:VmManagementScreen.kt$@Composable fun TemplateCard(template: com.droidvisor.vm.model.VmTemplate, isSelected: Boolean, onSelect: () -&gt; Unit)</ID>
+    <ID>CognitiveComplexMethod:VmManagementScreen.kt$@Composable fun VmCard( vm: VmInstance, isSelected: Boolean, onSelect: () -&gt; Unit, onStart: () -&gt; Unit, onStop: () -&gt; Unit, onRestart: () -&gt; Unit, onDelete: () -&gt; Unit, onBackup: () -&gt; Unit, onNetwork: () -&gt; Unit )</ID>
+    <ID>CognitiveComplexMethod:VmManagementScreen.kt$@Composable private fun AvfRuntimeModeBanner(capabilities: AvfCapabilityChecker.AvfCapabilities?)</ID>
+    <ID>CollapsibleIfStatements:BackupManagerService.kt$BackupManagerService$if (backupFile.exists()) { if (!backupFile.delete()) { throw IOException("Failed to delete backup file: ${backupFile.absolutePath}") } }</ID>
+    <ID>CollapsibleIfStatements:BackupManagerServiceTest.kt$TestableBackupManagerService$if (backupFile.exists()) { if (!backupFile.delete()) { throw IOException("Failed to delete backup file: ${backupFile.absolutePath}") } }</ID>
+    <ID>ComplexCondition:DockerHttpClient.kt$DockerHttpClient$prev3[0] == '\r'.code.toByte() &amp;&amp; prev3[1] == '\n'.code.toByte() &amp;&amp; prev3[2] == '\r'.code.toByte() &amp;&amp; prev3[3] == '\n'.code.toByte()</ID>
+    <ID>ComplexInterface:IDockerProxyService.kt$IDockerProxyService</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Command: String</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Created: Long</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val HostConfig: HostConfig? = null</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Id: String</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Image: String</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val ImageID: String</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Labels: Map&lt;String, String&gt; = emptyMap()</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Mounts: List&lt;Mount&gt; = emptyList()</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Names: List&lt;String&gt;</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val NetworkSettings: NetworkSettings? = null</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Ports: List&lt;PortBinding&gt; = emptyList()</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val SizeRootFs: Long = 0</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val SizeRw: Long = 0</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val State: String</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Container$val Status: String</ID>
+    <ID>ConstructorParameterNaming:Container.kt$HostConfig$val NetworkMode: String = "default"</ID>
+    <ID>ConstructorParameterNaming:Container.kt$HostConfig$val RestartPolicy: RestartPolicy = RestartPolicy()</ID>
+    <ID>ConstructorParameterNaming:Container.kt$IPAMConfig$val Gateway: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$IPAMConfig$val IPPrefixLen: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Container.kt$IPAMConfig$val IPv4Address: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$IPAMConfig$val IPv6Address: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$IPAMConfig$val IPv6Gateway: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$IPAMConfig$val LinkLocalIPv6Address: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$IPAMConfig$val LinkLocalIPv6PrefixLen: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Mount$val Destination: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Mount$val Driver: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Mount$val Mode: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Mount$val Name: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Mount$val Propagation: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Mount$val RW: Boolean = false</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Mount$val Source: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Mount$val Type: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val Aliases: List&lt;String&gt;? = null</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val DriverOpts: Map&lt;String, String&gt;? = null</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val EndpointID: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val Gateway: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val GlobalIPv6Address: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val GlobalIPv6PrefixLen: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val IPAMConfig: IPAMConfig? = null</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val IPAddress: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val IPPrefixLen: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val IPv6Gateway: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val Links: List&lt;String&gt;? = null</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val MacAddress: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$Network$val NetworkID: String = ""</ID>
+    <ID>ConstructorParameterNaming:Container.kt$NetworkSettings$val Networks: Map&lt;String, Network&gt; = emptyMap()</ID>
+    <ID>ConstructorParameterNaming:Container.kt$PortBinding$val IP: String? = null</ID>
+    <ID>ConstructorParameterNaming:Container.kt$PortBinding$val PrivatePort: Int</ID>
+    <ID>ConstructorParameterNaming:Container.kt$PortBinding$val PublicPort: Int? = null</ID>
+    <ID>ConstructorParameterNaming:Container.kt$PortBinding$val Type: String = "tcp"</ID>
+    <ID>ConstructorParameterNaming:Container.kt$RestartPolicy$val MaximumRetryCount: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Container.kt$RestartPolicy$val Name: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$CreateContainerRequest$val Cmd: List&lt;String&gt;? = null</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$CreateContainerRequest$val HostConfig: HostConfigRequest? = null</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$CreateContainerRequest$val Image: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$CreateContainerResponse$val Id: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$CreateContainerResponse$val Warnings: List&lt;String&gt;</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$HostConfigRequest$val PortBindings: Map&lt;String, List&lt;PortBindingRequest&gt;&gt;? = null</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$NetworkCreateRequest$val Driver: String = "bridge"</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$NetworkCreateRequest$val Name: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$PortBindingRequest$val HostPort: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VersionResponse$val ApiVersion: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VersionResponse$val Arch: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VersionResponse$val BuildTime: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VersionResponse$val GitCommit: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VersionResponse$val GoVersion: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VersionResponse$val KernelVersion: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VersionResponse$val Os: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VersionResponse$val Version: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VolumeCreateRequest$val Driver: String = "local"</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VolumeCreateRequest$val Name: String</ID>
+    <ID>ConstructorParameterNaming:DockerApiClient.kt$VolumeListResponse$val Volumes: List&lt;com.droidvisor.docker.model.DockerVolume&gt;</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerNetwork$@kotlinx.serialization.SerialName("IPAM") val IPAM: NetworkIPAM? = null</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerNetwork$val Driver: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerNetwork$val Id: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerNetwork$val Name: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerNetwork$val Scope: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerVolume$val CreatedAt: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerVolume$val Driver: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerVolume$val Mountpoint: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerVolume$val Name: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$DockerVolume$val Scope: String = "local"</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$NetworkIPAM$val Config: List&lt;NetworkIPAMConfig&gt; = emptyList()</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$NetworkIPAM$val Driver: String = "default"</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$NetworkIPAMConfig$@kotlinx.serialization.SerialName("IPRange") val IPRange: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$NetworkIPAMConfig$val Gateway: String = ""</ID>
+    <ID>ConstructorParameterNaming:DockerModels.kt$NetworkIPAMConfig$val Subnet: String = ""</ID>
+    <ID>ConstructorParameterNaming:Image.kt$Image$val Containers: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Image.kt$Image$val Created: Long</ID>
+    <ID>ConstructorParameterNaming:Image.kt$Image$val Id: String</ID>
+    <ID>ConstructorParameterNaming:Image.kt$Image$val Labels: Map&lt;String, String&gt; = emptyMap()</ID>
+    <ID>ConstructorParameterNaming:Image.kt$Image$val RepoDigests: List&lt;String&gt; = emptyList()</ID>
+    <ID>ConstructorParameterNaming:Image.kt$Image$val RepoTags: List&lt;String&gt; = emptyList()</ID>
+    <ID>ConstructorParameterNaming:Image.kt$Image$val Size: Long</ID>
+    <ID>ConstructorParameterNaming:Image.kt$Image$val VirtualSize: Long = 0</ID>
+    <ID>CyclomaticComplexMethod:DockerDashboardScreen.kt$@Composable fun ContainerCard( container: Container, isSelected: Boolean, isExpanded: Boolean, onSelect: () -&gt; Unit, onToggleExpand: () -&gt; Unit, onStart: () -&gt; Unit, onStop: () -&gt; Unit, onPause: () -&gt; Unit, onUnpause: () -&gt; Unit, onRemove: () -&gt; Unit, onViewLogs: () -&gt; Unit, viewModel: DockerDashboardViewModel )</ID>
+    <ID>CyclomaticComplexMethod:DockerHttpClient.kt$DockerHttpClient$private fun readVsockResponse(inputStream: InputStream): HttpResponse</ID>
+    <ID>CyclomaticComplexMethod:DownloadManager.kt$DownloadManager$suspend fun download( url: String, destFile: File, expectedSha256: String = "", onProgress: (Float) -&gt; Unit = {} ): DownloadResult</ID>
+    <ID>CyclomaticComplexMethod:NetworkConfigScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun NetworkConfigScreen( vmId: String, vmName: String, initialConfig: NetworkConfig = NetworkConfig(vmId = ""), onSave: (NetworkConfig) -&gt; Unit )</ID>
+    <ID>CyclomaticComplexMethod:QemuProcessManager.kt$QemuProcessManager$fun buildCommandLine(): List&lt;String&gt;</ID>
+    <ID>CyclomaticComplexMethod:TerminalScreen.kt$@Suppress("OPT_IN_MARKER") @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class) @Composable fun TerminalScreen( consoleOutputService: ConsoleOutputService?, vsockService: VsockService? = null )</ID>
+    <ID>DataClassShouldBeImmutable:VmManagerService.kt$ActiveVmContext$var cpuUsage: Float = 0f</ID>
+    <ID>DataClassShouldBeImmutable:VmManagerService.kt$ActiveVmContext$var memoryUsage: Long = 0L</ID>
+    <ID>DestructuringDeclarationWithTooManyEntries:PermissionScreen.kt$val (title, color, icon, description, showStartButton) = when { permissionState.canFallbackToQemu -&gt; arrayOf( "将使用 QEMU 模式运行", Color(0xFF00BCD4), Icons.Default.Bolt, if (permissionState.plainKvmAccessible) "QEMU + KVM 硬件加速已就绪，性能接近原生。" else "QEMU 以软件模拟运行，性能低于 AVF 模式。", true ) permissionState.hasNoRuntime -&gt; arrayOf( "无可用的虚拟化运行时", Color(0xFFE53935), Icons.Default.Cancel, "设备不支持 AVF 且未检测到 QEMU，无法启动虚拟机。" + "请确认系统环境是否满足要求。", false ) else -&gt; arrayOf( "AVF 不可用", Color(0xFFFF9800), Icons.Default.Warning, "检测结果未确定，请重新检测。", false ) }</ID>
+    <ID>EmptyFunctionBlock:AnimatedStatusIndicatorTest.kt$AnimatedStatusIndicatorTest${ }</ID>
+    <ID>EmptyFunctionBlock:SimulationModeBannerTest.kt$SimulationModeBannerTest${ }</ID>
+    <ID>EmptyFunctionBlock:SkeletonTest.kt$SkeletonTest${ }</ID>
+    <ID>EmptyFunctionBlock:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService${ }</ID>
+    <ID>EmptyFunctionBlock:VmCreationIntegrationTest.kt$VmCreationIntegrationTest.TestVmManager${ }</ID>
+    <ID>EmptyIfBlock:VmManagerServiceTest.kt$TestableVmManagerService${ }</ID>
+    <ID>FunctionOnlyReturningConstant:BackupRestoreIntegrationTest.kt$TestRestoreService$fun verifyBackup(backupId: String): Boolean</ID>
+    <ID>InstanceOfCheckForException:QemuSerialConsole.kt$QemuSerialConsole$e is java.net.SocketTimeoutException</ID>
+    <ID>LargeClass:BackupManagerServiceTest.kt$BackupManagerServiceTest</ID>
+    <ID>LargeClass:DockerDashboardViewModel.kt$DockerDashboardViewModel : ViewModel</ID>
+    <ID>LargeClass:DockerDashboardViewModelTest.kt$DockerDashboardViewModelTest</ID>
+    <ID>LongMethod:BackupManagementScreen.kt$@Composable fun BackupCard( backup: Backup, onRestore: () -&gt; Unit, onDelete: () -&gt; Unit )</ID>
+    <ID>LongMethod:BackupManagementScreen.kt$@Composable fun CreateBackupDialog( onDismiss: () -&gt; Unit, onCreate: (String, String?, BackupType) -&gt; Unit )</ID>
+    <ID>LongMethod:BackupManagementScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun BackupManagementScreen( vmId: String, vmName: String, backupManagerService: BackupManagerService? )</ID>
+    <ID>LongMethod:BackupManagerService.kt$BackupManagerService$fun createBackup( vmId: String, vmName: String, backupName: String, description: String? = null, type: BackupType = BackupType.FULL ): BackupResult</ID>
+    <ID>LongMethod:BackupManagerServiceTest.kt$TestableBackupManagerService$fun createBackup( vmId: String, vmName: String, backupName: String, description: String? = null, type: BackupType = BackupType.FULL ): BackupResult</ID>
+    <ID>LongMethod:CreateVmScreen.kt$@Composable private fun ConfigSummaryCard( template: VmTemplate, effectiveMemoryBytes: Long, effectiveCpuCores: Int, effectiveDiskBytes: Long, canUseAvf: Boolean, canUseKvmQemu: Boolean, canUsePlainQemu: Boolean )</ID>
+    <ID>LongMethod:CreateVmScreen.kt$@Composable private fun ResourceConfigSection( template: VmTemplate, useCustomResources: Boolean, onToggleCustom: (Boolean) -&gt; Unit, memoryGb: Float, onMemoryChange: (Float) -&gt; Unit, cpuCores: Int, onCpuCoresChange: (Int) -&gt; Unit, diskGb: Float, onDiskChange: (Float) -&gt; Unit )</ID>
+    <ID>LongMethod:CreateVmScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun CreateVmScreen( onNavigateBack: () -&gt; Unit, onCreateVm: (String, VmTemplate, Boolean, Long?, Int?, Long?) -&gt; Unit, avfCapabilities: AvfCapabilityChecker.AvfCapabilities? = null )</ID>
+    <ID>LongMethod:DebugActivity.kt$@Composable fun DebugScreen(onBack: () -&gt; Unit)</ID>
+    <ID>LongMethod:DockerDashboardScreen.kt$@Composable fun ContainerCard( container: Container, isSelected: Boolean, isExpanded: Boolean, onSelect: () -&gt; Unit, onToggleExpand: () -&gt; Unit, onStart: () -&gt; Unit, onStop: () -&gt; Unit, onPause: () -&gt; Unit, onUnpause: () -&gt; Unit, onRemove: () -&gt; Unit, onViewLogs: () -&gt; Unit, viewModel: DockerDashboardViewModel )</ID>
+    <ID>LongMethod:DockerDashboardScreen.kt$@Composable fun ContainerLogsDialog(containerId: String, viewModel: DockerDashboardViewModel, onDismiss: () -&gt; Unit)</ID>
+    <ID>LongMethod:DockerDashboardScreen.kt$@Composable fun DockerContainersTab(viewModel: DockerDashboardViewModel, onNavigateToImages: () -&gt; Unit = {})</ID>
+    <ID>LongMethod:DockerDashboardScreen.kt$@Composable fun DockerImagesTab(viewModel: DockerDashboardViewModel)</ID>
+    <ID>LongMethod:DockerDashboardScreen.kt$@Composable fun DockerNetworksTab(viewModel: DockerDashboardViewModel)</ID>
+    <ID>LongMethod:DockerDashboardScreen.kt$@Composable fun DockerOverviewTab(viewModel: DockerDashboardViewModel, onNavigateToContainers: () -&gt; Unit = {})</ID>
+    <ID>LongMethod:DockerDashboardScreen.kt$@Composable fun DockerVolumesTab(viewModel: DockerDashboardViewModel)</ID>
+    <ID>LongMethod:DockerDashboardViewModel.kt$DockerDashboardViewModel$private fun loadMockData()</ID>
+    <ID>LongMethod:DownloadManager.kt$DownloadManager$suspend fun download( url: String, destFile: File, expectedSha256: String = "", onProgress: (Float) -&gt; Unit = {} ): DownloadResult</ID>
+    <ID>LongMethod:MainActivity.kt$@Composable fun DroidvisorApp( vmManagerServiceFlow: StateFlow&lt;VmManagerService?&gt;, consoleOutputServiceFlow: StateFlow&lt;ConsoleOutputService?&gt;, backupManagerServiceFlow: StateFlow&lt;BackupManagerService?&gt;, vsockServiceFlow: StateFlow&lt;VsockService?&gt;, dockerProxyServiceFlow: StateFlow&lt;DockerProxyService?&gt;, allServicesReadyFlow: StateFlow&lt;Boolean&gt; )</ID>
+    <ID>LongMethod:NetworkConfigScreen.kt$@Composable fun AddPortForwardingDialog(onDismiss: () -&gt; Unit, onAdd: (PortForwarding) -&gt; Unit)</ID>
+    <ID>LongMethod:NetworkConfigScreen.kt$@Composable fun DnsConfigSection( dnsServers: List&lt;String&gt;, onDnsServersChange: (List&lt;String&gt;) -&gt; Unit, dnsError: String? = null, onDnsErrorChange: ((String?) -&gt; Unit)? = null )</ID>
+    <ID>LongMethod:NetworkConfigScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun NetworkConfigScreen( vmId: String, vmName: String, initialConfig: NetworkConfig = NetworkConfig(vmId = ""), onSave: (NetworkConfig) -&gt; Unit )</ID>
+    <ID>LongMethod:PermissionScreen.kt$@Composable fun PermissionCard( icon: ImageVector, title: String, description: String, isGranted: Boolean, isCritical: Boolean = false, isInfoOnly: Boolean = false, statusLabel: String? = null )</ID>
+    <ID>LongMethod:PermissionScreen.kt$@Composable fun PermissionScreen( viewModel: PermissionViewModel, onAllPermissionsGranted: () -&gt; Unit )</ID>
+    <ID>LongMethod:PermissionScreen.kt$@Composable private fun AvfPermissionGuideCard( permissionReasons: List&lt;AvfCapabilityChecker.AvfUnavailableReason&gt;, packageName: String, context: Context )</ID>
+    <ID>LongMethod:QemuProcessManager.kt$QemuProcessManager$fun buildCommandLine(): List&lt;String&gt;</ID>
+    <ID>LongMethod:SerialConsoleScreen.kt$@Composable private fun ConsoleInputBar( value: TextFieldValue, onValueChange: (TextFieldValue) -&gt; Unit, onSend: () -&gt; Unit, enabled: Boolean, onClear: () -&gt; Unit )</ID>
+    <ID>LongMethod:SerialConsoleScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SerialConsoleScreen( vmName: String, serialService: SerialConsoleService, onBack: () -&gt; Unit )</ID>
+    <ID>LongMethod:SetupScreen.kt$@Composable fun SetupScreen( viewModel: SetupViewModel, onSetupComplete: () -&gt; Unit )</ID>
+    <ID>LongMethod:SetupScreen.kt$@Composable private fun DownloadContent( state: com.droidvisor.setup.SetupState, onStartDownloads: () -&gt; Unit, onRetry: () -&gt; Unit, onSkipTask: (String) -&gt; Unit )</ID>
+    <ID>LongMethod:SetupScreen.kt$@Composable private fun DownloadTaskCard( task: DownloadTask, onSkip: () -&gt; Unit )</ID>
+    <ID>LongMethod:SetupScreen.kt$@Composable private fun EnvironmentCheckContent( state: com.droidvisor.setup.SetupState, onRetry: () -&gt; Unit )</ID>
+    <ID>LongMethod:SetupScreen.kt$@Composable private fun SetupCheckCard( icon: ImageVector, title: String, description: String, passed: Boolean, isCritical: Boolean = false, isInfoOnly: Boolean = false )</ID>
+    <ID>LongMethod:SetupScreen.kt$@Composable private fun SetupStepIndicator(currentStep: SetupStep)</ID>
+    <ID>LongMethod:TerminalScreen.kt$@Suppress("OPT_IN_MARKER") @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class) @Composable fun TerminalScreen( consoleOutputService: ConsoleOutputService?, vsockService: VsockService? = null )</ID>
+    <ID>LongMethod:VmManagementScreen.kt$@Composable fun VmCard( vm: VmInstance, isSelected: Boolean, onSelect: () -&gt; Unit, onStart: () -&gt; Unit, onStop: () -&gt; Unit, onRestart: () -&gt; Unit, onDelete: () -&gt; Unit, onBackup: () -&gt; Unit, onNetwork: () -&gt; Unit )</ID>
+    <ID>LongMethod:VmManagementScreen.kt$@Composable private fun AvfRuntimeModeBanner(capabilities: AvfCapabilityChecker.AvfCapabilities?)</ID>
+    <ID>LongMethod:VmManagementScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun VmManagementScreen( vmManagerService: VmManagerService?, backupManagerService: BackupManagerService?, viewModel: VmManagementViewModel? = null, onNavigateToCreate: () -&gt; Unit = {} )</ID>
+    <ID>LongParameterList:CreateVmScreen.kt$( icon: ImageVector, label: String, value: Float, onValueChange: (Float) -&gt; Unit, valueRange: ClosedFloatingPointRange&lt;Float&gt;, displayValue: String, color: Color )</ID>
+    <ID>LongParameterList:CreateVmScreen.kt$( template: VmTemplate, effectiveMemoryBytes: Long, effectiveCpuCores: Int, effectiveDiskBytes: Long, canUseAvf: Boolean, canUseKvmQemu: Boolean, canUsePlainQemu: Boolean )</ID>
+    <ID>LongParameterList:CreateVmScreen.kt$( template: VmTemplate, useCustomResources: Boolean, onToggleCustom: (Boolean) -&gt; Unit, memoryGb: Float, onMemoryChange: (Float) -&gt; Unit, cpuCores: Int, onCpuCoresChange: (Int) -&gt; Unit, diskGb: Float, onDiskChange: (Float) -&gt; Unit )</ID>
+    <ID>LongParameterList:DockerDashboardScreen.kt$( container: Container, isSelected: Boolean, isExpanded: Boolean, onSelect: () -&gt; Unit, onToggleExpand: () -&gt; Unit, onStart: () -&gt; Unit, onStop: () -&gt; Unit, onPause: () -&gt; Unit, onUnpause: () -&gt; Unit, onRemove: () -&gt; Unit, onViewLogs: () -&gt; Unit, viewModel: DockerDashboardViewModel )</ID>
+    <ID>LongParameterList:MainActivity.kt$( vmManagerServiceFlow: StateFlow&lt;VmManagerService?&gt;, consoleOutputServiceFlow: StateFlow&lt;ConsoleOutputService?&gt;, backupManagerServiceFlow: StateFlow&lt;BackupManagerService?&gt;, vsockServiceFlow: StateFlow&lt;VsockService?&gt;, dockerProxyServiceFlow: StateFlow&lt;DockerProxyService?&gt;, allServicesReadyFlow: StateFlow&lt;Boolean&gt; )</ID>
+    <ID>LongParameterList:NetworkConfigScreen.kt$( ipv4Address: String, ipv4Gateway: String, ipv4Netmask: String, onAddressChange: (String) -&gt; Unit, onGatewayChange: (String) -&gt; Unit, onNetmaskChange: (String) -&gt; Unit, addressError: String? = null, gatewayError: String? = null )</ID>
+    <ID>LongParameterList:VmManagementScreen.kt$( selectedVm: VmInstance?, backupManagerService: BackupManagerService?, showBackupScreen: Boolean, showNetworkScreen: Boolean, onDismissBackup: () -&gt; Unit, onDismissNetwork: () -&gt; Unit )</ID>
+    <ID>LongParameterList:VmManagementScreen.kt$( vm: VmInstance, isSelected: Boolean, onSelect: () -&gt; Unit, onStart: () -&gt; Unit, onStop: () -&gt; Unit, onRestart: () -&gt; Unit, onDelete: () -&gt; Unit, onBackup: () -&gt; Unit, onNetwork: () -&gt; Unit )</ID>
+    <ID>LoopWithTooManyJumpStatements:QemuSerialConsole.kt$QemuSerialConsole$while</ID>
+    <ID>MagicNumber:AnimatedStatusIndicator.kt$0.5f</ID>
+    <ID>MagicNumber:AnimatedStatusIndicator.kt$0xFFFF9800</ID>
+    <ID>MagicNumber:AnimatedStatusIndicator.kt$1000</ID>
+    <ID>MagicNumber:BackupManagementScreen.kt$100</ID>
+    <ID>MagicNumber:BackupManagementScreen.kt$1024</ID>
+    <ID>MagicNumber:BackupManagerService.kt$BackupManagerService$64</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$0xFF00BCD4</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$0xFF2196F3</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$0xFF448AFF</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$0xFF4CAF50</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$0xFF7C4DFF</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$0xFFFF9800</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$1024</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$1024L</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$1024f</ID>
+    <ID>MagicNumber:CreateVmScreen.kt$16</ID>
+    <ID>MagicNumber:DockerApiClient.kt$DockerApiClient$256</ID>
+    <ID>MagicNumber:DockerApiClient.kt$DockerApiClient$300</ID>
+    <ID>MagicNumber:DockerApiClient.kt$DockerApiClient$512</ID>
+    <ID>MagicNumber:DockerApiClient.kt$DockerApiClient$64</ID>
+    <ID>MagicNumber:DockerDashboardScreen.kt$1024</ID>
+    <ID>MagicNumber:DockerDashboardScreen.kt$1024.0</ID>
+    <ID>MagicNumber:DockerDashboardScreen.kt$3</ID>
+    <ID>MagicNumber:DockerDashboardScreen.kt$4</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$10</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$1024</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$1024.0</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$16</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$20</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$2000</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$300</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$400</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$5</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$50</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$500</ID>
+    <ID>MagicNumber:DockerDashboardViewModel.kt$DockerDashboardViewModel$60000L</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$10000</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$16</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$200</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$299</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$3</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$30000</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$4</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$404</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$409</ID>
+    <ID>MagicNumber:DockerHttpClient.kt$DockerHttpClient$8192</ID>
+    <ID>MagicNumber:DockerModels.kt$ContainerStats$1024</ID>
+    <ID>MagicNumber:DockerModels.kt$ContainerStats$1024.0</ID>
+    <ID>MagicNumber:DockerModels.kt$DockerInfo$1024</ID>
+    <ID>MagicNumber:DockerModels.kt$DockerInfo$1024.0</ID>
+    <ID>MagicNumber:DockerProxyService.kt$DockerProxyService$2000</ID>
+    <ID>MagicNumber:DockerProxyService.kt$DockerProxyService$32</ID>
+    <ID>MagicNumber:DownloadManager.kt$DownloadManager$15_000</ID>
+    <ID>MagicNumber:DownloadManager.kt$DownloadManager$30_000</ID>
+    <ID>MagicNumber:DownloadManager.kt$DownloadManager$65536</ID>
+    <ID>MagicNumber:DownloadManager.kt$DownloadManager$8192</ID>
+    <ID>MagicNumber:Image.kt$Image$1000</ID>
+    <ID>MagicNumber:Image.kt$Image$1024</ID>
+    <ID>MagicNumber:Image.kt$Image$1024.0</ID>
+    <ID>MagicNumber:Image.kt$Image$2592000</ID>
+    <ID>MagicNumber:Image.kt$Image$31536000</ID>
+    <ID>MagicNumber:Image.kt$Image$3600</ID>
+    <ID>MagicNumber:Image.kt$Image$60</ID>
+    <ID>MagicNumber:Image.kt$Image$86400</ID>
+    <ID>MagicNumber:NetworkConfigScreen.kt$1280</ID>
+    <ID>MagicNumber:NetworkConfigScreen.kt$1500</ID>
+    <ID>MagicNumber:NetworkConfigScreen.kt$255</ID>
+    <ID>MagicNumber:NetworkConfigScreen.kt$4</ID>
+    <ID>MagicNumber:NetworkConfigViewModel.kt$NetworkConfigViewModel$65535</ID>
+    <ID>MagicNumber:NetworkConfigViewModel.kt$NetworkConfigViewModel$68</ID>
+    <ID>MagicNumber:NetworkConfigViewModel.kt$NetworkConfigViewModel$9000</ID>
+    <ID>MagicNumber:PermissionScreen.kt$0xFF00BCD4</ID>
+    <ID>MagicNumber:PermissionScreen.kt$0xFF1E1E1E</ID>
+    <ID>MagicNumber:PermissionScreen.kt$0xFF2196F3</ID>
+    <ID>MagicNumber:PermissionScreen.kt$0xFF4CAF50</ID>
+    <ID>MagicNumber:PermissionScreen.kt$0xFF90CAF9</ID>
+    <ID>MagicNumber:PermissionScreen.kt$0xFFE53935</ID>
+    <ID>MagicNumber:PermissionScreen.kt$0xFFFF9800</ID>
+    <ID>MagicNumber:QemuProcessManager.kt$QemuProcessManager$1024</ID>
+    <ID>MagicNumber:QemuProcessManager.kt$QemuProcessManager$2000</ID>
+    <ID>MagicNumber:QemuProcessManager.kt$QemuProcessManager$30</ID>
+    <ID>MagicNumber:QemuProcessManager.kt$QemuProcessManager$3000</ID>
+    <ID>MagicNumber:QemuSerialConsole.kt$QemuSerialConsole$1000</ID>
+    <ID>MagicNumber:QemuSerialConsole.kt$QemuSerialConsole$3000</ID>
+    <ID>MagicNumber:QemuSerialConsole.kt$QemuSerialConsole$30000</ID>
+    <ID>MagicNumber:QemuVmRuntime.kt$QemuVmRuntime$1024</ID>
+    <ID>MagicNumber:QemuVsockChannel.kt$QemuVsockChannel$65536</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF0D0D0D</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF1E1E1E</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF2D2D2D</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF333333</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF444444</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF4D96FF</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF555555</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF666666</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF6BCB77</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFF888888</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFFCCCCCC</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFFE0E0E0</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFFFF6B6B</ID>
+    <ID>MagicNumber:SerialConsoleScreen.kt$0xFFFFD93D</ID>
+    <ID>MagicNumber:SerialConsoleService.kt$SerialConsoleService$4096</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$2375</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$512L</ID>
+    <ID>MagicNumber:SetupScreen.kt$0xFF4CAF50</ID>
+    <ID>MagicNumber:SetupScreen.kt$0xFFFF9800</ID>
+    <ID>MagicNumber:Skeleton.kt$0xFF2A2A2A</ID>
+    <ID>MagicNumber:Skeleton.kt$0xFF3A3A3A</ID>
+    <ID>MagicNumber:Skeleton.kt$1000</ID>
+    <ID>MagicNumber:Skeleton.kt$3</ID>
+    <ID>MagicNumber:Skeleton.kt$50</ID>
+    <ID>MagicNumber:TerminalScreen.kt$0xFF69DB7C</ID>
+    <ID>MagicNumber:TerminalScreen.kt$0xFF74C0FC</ID>
+    <ID>MagicNumber:TerminalScreen.kt$0xFF81ECEC</ID>
+    <ID>MagicNumber:TerminalScreen.kt$0xFFDA77F2</ID>
+    <ID>MagicNumber:TerminalScreen.kt$0xFFFF6B6B</ID>
+    <ID>MagicNumber:TerminalScreen.kt$0xFFFF9800</ID>
+    <ID>MagicNumber:TerminalScreen.kt$0xFFFFE066</ID>
+    <ID>MagicNumber:TerminalViewModel.kt$TerminalViewModel$100</ID>
+    <ID>MagicNumber:TerminalViewModel.kt$TerminalViewModel$4096</ID>
+    <ID>MagicNumber:VmConfig.kt$VmConfig$1024</ID>
+    <ID>MagicNumber:VmConfig.kt$VmConfig$1024L</ID>
+    <ID>MagicNumber:VmConfig.kt$VmConfig$512</ID>
+    <ID>MagicNumber:VmConfigValidator.kt$VmConfigValidator$1024</ID>
+    <ID>MagicNumber:VmManagementScreen.kt$0xFF4CAF50</ID>
+    <ID>MagicNumber:VmManagementScreen.kt$0xFFFF9800</ID>
+    <ID>MagicNumber:VmManagerService.kt$VmManagerService$10000L</ID>
+    <ID>MagicNumber:VmManagerService.kt$VmManagerService$5000L</ID>
+    <ID>MagicNumber:VmTemplate.kt$VmTemplate$1024</ID>
+    <ID>MagicNumber:VmTemplate.kt$VmTemplate$1024L</ID>
+    <ID>MagicNumber:VmTemplate.kt$VmTemplate$4L</ID>
+    <ID>MagicNumber:VmTemplate.kt$VmTemplate$512</ID>
+    <ID>MagicNumber:VsockService.kt$RealVsockChannel$65536</ID>
+    <ID>MaxLineLength:AvfCapabilityCheckerTest.kt$AvfCapabilityCheckerTest$assertEquals("First reason should be SDK_TOO_LOW", AvfCapabilityChecker.AvfUnavailableReason.SDK_TOO_LOW.displayText, texts[0])</ID>
+    <ID>MaxLineLength:BackupManagementScreen.kt$Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Red)</ID>
+    <ID>MaxLineLength:BackupManagementScreen.kt$SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(backup.createdTime))</ID>
+    <ID>MaxLineLength:BackupManagementScreen.kt$Text("创建时间: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(backup.createdTime))}")</ID>
+    <ID>MaxLineLength:BackupManagementScreen.kt$backupName.ifBlank { "备份 ${SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date())}" }</ID>
+    <ID>MaxLineLength:BackupManagementScreen.kt$leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp)) }</ID>
+    <ID>MaxLineLength:BackupManagementScreen.kt$leadingIcon = { Icon(Icons.Default.Done, contentDescription = null, modifier = Modifier.size(18.dp)) }</ID>
+    <ID>MaxLineLength:BackupManagementScreen.kt$val isCreatingBackup by backupManagerService?.isCreatingBackup?.collectAsState() ?: remember { mutableStateOf(false) }</ID>
+    <ID>MaxLineLength:BackupManagerService.kt$BackupManagerService$_backups.value.filter { it.vmId == vmId &amp;&amp; it.type == BackupType.FULL &amp;&amp; it.status == BackupStatus.AVAILABLE }</ID>
+    <ID>MaxLineLength:BackupManagerService.kt$BackupManagerService$private</ID>
+    <ID>MaxLineLength:BackupManagerService.kt$BackupManagerService$verificationStatus = if (isValid) VerificationStatus.VERIFIED else VerificationStatus.VERIFICATION_FAILED</ID>
+    <ID>MaxLineLength:BackupManagerServiceTest.kt$TestableBackupManagerService$verificationStatus = if (isValid) VerificationStatus.VERIFIED else VerificationStatus.VERIFICATION_FAILED</ID>
+    <ID>MaxLineLength:DockerApiClient.kt$DockerApiClient$val path = "/containers/$sanitizedId/logs?stdout=${if (stdout) "1" else "0"}&amp;stderr=${if (stderr) "1" else "0"}&amp;timestamps=1&amp;tail=100"</ID>
+    <ID>MaxLineLength:DockerApiClientTest.kt$DockerApiClientTest$val jsonResponse = """[{"Id":"abc123","Names":["/test"],"Image":"nginx","ImageID":"sha256:test","Command":"test","Created":1609459200,"State":"running","Status":"Up"}]"""</ID>
+    <ID>MaxLineLength:DockerApiClientTest.kt$DockerApiClientTest$val jsonResponse = """[{"Id":"sha256:abc123","RepoTags":["nginx:latest"],"Size":142000000,"Created":1609459200}]"""</ID>
+    <ID>MaxLineLength:DockerApiClientTest.kt$DockerApiClientTest$val jsonResponse = """{"Version":"20.10.0","ApiVersion":"1.41","GitCommit":"abc123","GoVersion":"go1.16","Os":"linux","Arch":"amd64","KernelVersion":"5.4.0","BuildTime":"2021-01-01T00:00:00Z"}"""</ID>
+    <ID>MaxLineLength:DockerDashboardScreen.kt$text = "${formatBytes(pullProgress.downloadedBytes)} / ${formatBytes(pullProgress.totalBytes)}"</ID>
+    <ID>MaxLineLength:DockerDashboardViewModel.kt$DockerDashboardViewModel$Image(Id = "sha256:a1b2c3d4e5f6", RepoTags = listOf("nginx:latest"), Created = System.currentTimeMillis() / 1000 - 172800, Size = 187 * 1024 * 1024L)</ID>
+    <ID>MaxLineLength:DockerDashboardViewModel.kt$DockerDashboardViewModel$Image(Id = "sha256:b2c3d4e5f6a7", RepoTags = listOf("redis:alpine"), Created = System.currentTimeMillis() / 1000 - 604800, Size = 30 * 1024 * 1024L)</ID>
+    <ID>MaxLineLength:DockerDashboardViewModel.kt$DockerDashboardViewModel$Image(Id = "sha256:c3d4e5f6a7b8", RepoTags = listOf("postgres:15"), Created = System.currentTimeMillis() / 1000 - 1814400, Size = 378 * 1024 * 1024L)</ID>
+    <ID>MaxLineLength:DockerDashboardViewModel.kt$DockerDashboardViewModel$Image(Id = "sha256:d4e5f6a7b8c9", RepoTags = listOf("node:18"), Created = System.currentTimeMillis() / 1000 - 2592000, Size = 1100 * 1024 * 1024L)</ID>
+    <ID>MaxLineLength:DockerDashboardViewModel.kt$DockerDashboardViewModel$Image(Id = "sha256:e5f6a7b8c9d0", RepoTags = listOf("python:3.12"), Created = System.currentTimeMillis() / 1000 - 5184000, Size = 1300 * 1024 * 1024L)</ID>
+    <ID>MaxLineLength:DockerDashboardViewModel.kt$DockerDashboardViewModel$Image(Id = "sha256:f6a7b8c9d0e1", RepoTags = listOf("hello-world:latest"), Created = System.currentTimeMillis() / 1000 - 7776000, Size = 13300L)</ID>
+    <ID>MaxLineLength:DockerDashboardViewModelTest.kt$DockerDashboardViewModelTest$coEvery { mockDockerProxyService.getContainerLogs("container-1") } throws DockerError.ConnectionError("Connection failed")</ID>
+    <ID>MaxLineLength:DockerDashboardViewModelTest.kt$DockerDashboardViewModelTest$coEvery { mockDockerProxyService.pullImage("alpine:latest") } throws DockerError.ConnectionError("Connection failed")</ID>
+    <ID>MaxLineLength:DockerDashboardViewModelTest.kt$DockerDashboardViewModelTest$val containerId = viewModel.containers.value.find { it.Ports.isNotEmpty() &amp;&amp; it.Ports.any { p -&gt; p.PublicPort != null } }?.Id ?: return</ID>
+    <ID>MaxLineLength:Logger.kt$Logger$Regex("""(password|secret|key|token|api_?key|auth_?token)[:=]\s*["']?[^\s"']+["']?""", RegexOption.IGNORE_CASE) to "$1=[REDACTED]"</ID>
+    <ID>MaxLineLength:Logger.kt$Logger$Regex("""(user|username|email|login)[:=]\s*["']?[^\s"']+["']?""", RegexOption.IGNORE_CASE) to "$1=[REDACTED]"</ID>
+    <ID>MaxLineLength:NetworkConfigScreen.kt$Icon(Icons.Default.Close, contentDescription = "删除", tint = Color.Red, modifier = Modifier.size(18.dp))</ID>
+    <ID>MaxLineLength:NetworkConfigScreen.kt$Icon(Icons.Default.Delete, contentDescription = "删除", tint = Color.Red, modifier = Modifier.size(18.dp))</ID>
+    <ID>MaxLineLength:NetworkConfigScreen.kt$Icon(Icons.Default.Dns, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))</ID>
+    <ID>MaxLineLength:NetworkConfigScreen.kt$Text("${forwarding.protocol.name}:${forwarding.hostPort} -&gt; ${forwarding.guestPort}", fontWeight = FontWeight.Medium)</ID>
+    <ID>MaxLineLength:NetworkConfigScreen.kt$Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))</ID>
+    <ID>MaxLineLength:PermissionViewModel.kt$PermissionState$AvfCapabilityChecker.AvfUnavailableReason.AVF_SERVICE_NOT_ACTIVE -&gt; "AVF APEX 已安装但虚拟化服务未运行，请使用支持 AVF 的系统镜像或真机"</ID>
+    <ID>MaxLineLength:PermissionViewModel.kt$PermissionState$AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -&gt; "此设备不支持 AVF 非保护模式，将使用 pKVM 模式"</ID>
+    <ID>MaxLineLength:QemuVmRuntime.kt$QemuVmRuntime$activeVsockChannels.values.forEach { try { it.close() } catch (e: Exception) { Logger.d(TAG, "Error closing vsock channel", e) } }</ID>
+    <ID>MaxLineLength:SettingsViewModel.kt$SettingsViewModel$class</ID>
+    <ID>MaxLineLength:TerminalScreen.kt$outputLines.add("\u001B[32mDocuments\u001B[0m \u001B[34mDownloads\u001B[0m \u001B[36mPictures\u001B[0m \u001B[35mProjects\u001B[0m")</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService$consoleOutputService?.appendOutput("VM start failed after $vmStartRetryCount attempts: ${e.message}")</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService$consoleOutputService?.appendOutput("VM start failed, retry ${vmStartRetryCount}/${maxRetries} in ${delayMs}ms...")</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService.ReflectCache$try { Class.forName("android.system.virtualmachine.VirtualMachineConfig\$Builder") } catch (_: Exception) { null }</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService.ReflectCache$try { vmClass?.getMethod("setCallback", Executor::class.java, vmCallbackClass) } catch (_: Exception) { null }</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService.ReflectCache$try { vmConfigBuilderClass?.getMethod("setMemoryBytes", Long::class.javaPrimitiveType) } catch (_: Exception) { null }</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService.ReflectCache$try { vmConfigBuilderClass?.getMethod("setNumCpus", Int::class.javaPrimitiveType) } catch (_: Exception) { null }</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService.ReflectCache$try { vmConfigBuilderClass?.getMethod("setPayloadBinaryName", String::class.java) } catch (_: Exception) { null }</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService.ReflectCache$try { vmConfigBuilderClass?.getMethod("setProtectedVm", Boolean::class.javaPrimitiveType) } catch (_: Exception) { null }</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService.ReflectCache$try { vmmClass?.getDeclaredField("CAPABILITY_NON_PROTECTED_VM")?.getInt(null) ?: 0 } catch (_: Exception) { 0 }</ID>
+    <ID>MaxLineLength:VirtualMachineManagerService.kt$VirtualMachineManagerService.ReflectCache$val field = android.content.pm.PackageManager::class.java.getDeclaredField("FEATURE_VIRTUALIZATION_FRAMEWORK")</ID>
+    <ID>MaxLineLength:VmManagementScreen.kt$AvfCapabilityChecker.AvfUnavailableReason.NON_PROTECTED_VM_NOT_SUPPORTED -&gt; "设备不支持 AVF 非保护虚拟机"</ID>
+    <ID>MaxLineLength:VmManagementScreen.kt$AvfCapabilityChecker.AvfUnavailableReason.PROTECTED_VM_NOT_SUPPORTED -&gt; "设备不支持 AVF 受保护虚拟机 (pKVM)"</ID>
+    <ID>MaxLineLength:VmManagementScreen.kt$imageVector = if (vm.template.includesDocker) Icons.Default.Cloud else Icons.Default.Terminal</ID>
+    <ID>MaxLineLength:VmManagementScreen.kt$text = "${template.memoryBytes / (1024 * 1024)} MB / ${template.cpuCores} 核 / ${template.diskSizeBytes / (1024 * 1024)} MB"</ID>
+    <ID>MaxLineLength:VmManagerService.kt$VmManagerService$Logger.d(TAG, "AVF capabilities re-checked: available=${capabilities.isAvfSupported}, canRunRealVm=${capabilities.canRunRealVm}, reasons=${capabilities.avfUnavailableReasons}")</ID>
+    <ID>MaxLineLength:VsockService.kt$VsockService$if</ID>
+    <ID>NestedBlockDepth:AvfCapabilityChecker.kt$AvfCapabilityChecker$private fun checkAvfSupport(reasons: MutableList&lt;AvfUnavailableReason&gt;): Boolean</ID>
+    <ID>NestedBlockDepth:BackupManagerService.kt$BackupManagerService$private fun extractBackupArchive(backupFile: File, targetDir: File)</ID>
+    <ID>NestedBlockDepth:BackupManagerServiceTest.kt$TestableBackupManagerService$private fun extractBackupArchive(backupFile: File, targetDir: File)</ID>
+    <ID>NestedBlockDepth:QemuProcessManager.kt$QemuProcessManager$fun buildCommandLine(): List&lt;String&gt;</ID>
+    <ID>NewLineAtEndOfFile:AnimatedStatusIndicator.kt$com.droidvisor.ui.components.AnimatedStatusIndicator.kt</ID>
+    <ID>NewLineAtEndOfFile:AnimatedStatusIndicatorTest.kt$com.droidvisor.ui.components.AnimatedStatusIndicatorTest.kt</ID>
+    <ID>NewLineAtEndOfFile:AvfCapabilityCheckerTest.kt$com.droidvisor.vm.AvfCapabilityCheckerTest.kt</ID>
+    <ID>NewLineAtEndOfFile:AvfSerialConsoleProvider.kt$com.droidvisor.vm.AvfSerialConsoleProvider.kt</ID>
+    <ID>NewLineAtEndOfFile:BackupRestoreIntegrationTest.kt$com.droidvisor.integration.BackupRestoreIntegrationTest.kt</ID>
+    <ID>NewLineAtEndOfFile:BackupTest.kt$com.droidvisor.vm.model.BackupTest.kt</ID>
+    <ID>NewLineAtEndOfFile:BackupViewModel.kt$com.droidvisor.ui.viewmodel.BackupViewModel.kt</ID>
+    <ID>NewLineAtEndOfFile:BackupViewModelTest.kt$com.droidvisor.ui.viewmodel.BackupViewModelTest.kt</ID>
+    <ID>NewLineAtEndOfFile:ConsoleOutputService.kt$com.droidvisor.vm.ConsoleOutputService.kt</ID>
+    <ID>NewLineAtEndOfFile:ConsoleOutputServiceTest.kt$com.droidvisor.vm.ConsoleOutputServiceTest.kt</ID>
+    <ID>NewLineAtEndOfFile:Container.kt$com.droidvisor.docker.model.Container.kt</ID>
+    <ID>NewLineAtEndOfFile:ContainerTest.kt$com.droidvisor.docker.model.ContainerTest.kt</ID>
+    <ID>NewLineAtEndOfFile:DataStoreFactory.kt$com.droidvisor.datastore.DataStoreFactory.kt</ID>
+    <ID>NewLineAtEndOfFile:DebugActivity.kt$com.droidvisor.debug.DebugActivity.kt</ID>
+    <ID>NewLineAtEndOfFile:DockerApiClient.kt$com.droidvisor.docker.DockerApiClient.kt</ID>
+    <ID>NewLineAtEndOfFile:DockerClientTest.kt$com.droidvisor.docker.DockerClientTest.kt</ID>
+    <ID>NewLineAtEndOfFile:DockerContainerIntegrationTest.kt$com.droidvisor.integration.DockerContainerIntegrationTest.kt</ID>
+    <ID>NewLineAtEndOfFile:DockerDashboardScreen.kt$com.droidvisor.ui.screen.DockerDashboardScreen.kt</ID>
+    <ID>NewLineAtEndOfFile:DockerError.kt$com.droidvisor.docker.DockerError.kt</ID>
+    <ID>NewLineAtEndOfFile:DockerErrorTest.kt$com.droidvisor.docker.DockerErrorTest.kt</ID>
+    <ID>NewLineAtEndOfFile:DockerProxyService.kt$com.droidvisor.docker.DockerProxyService.kt</ID>
+    <ID>NewLineAtEndOfFile:DockerProxyServiceTest.kt$com.droidvisor.docker.DockerProxyServiceTest.kt</ID>
+    <ID>NewLineAtEndOfFile:Image.kt$com.droidvisor.docker.model.Image.kt</ID>
+    <ID>NewLineAtEndOfFile:ImageTest.kt$com.droidvisor.docker.model.ImageTest.kt</ID>
+    <ID>NewLineAtEndOfFile:Logger.kt$com.droidvisor.util.Logger.kt</ID>
+    <ID>NewLineAtEndOfFile:NetworkConfigTest.kt$com.droidvisor.vm.model.NetworkConfigTest.kt</ID>
+    <ID>NewLineAtEndOfFile:NetworkConfigViewModel.kt$com.droidvisor.ui.viewmodel.NetworkConfigViewModel.kt</ID>
+    <ID>NewLineAtEndOfFile:NetworkConfigViewModelTest.kt$com.droidvisor.ui.viewmodel.NetworkConfigViewModelTest.kt</ID>
+    <ID>NewLineAtEndOfFile:QemuSerialConsoleProvider.kt$com.droidvisor.vm.qemu.QemuSerialConsoleProvider.kt</ID>
+    <ID>NewLineAtEndOfFile:QemuVmRuntimeTest.kt$com.droidvisor.vm.qemu.QemuVmRuntimeTest.kt</ID>
+    <ID>NewLineAtEndOfFile:SerialConsoleProvider.kt$com.droidvisor.vm.SerialConsoleProvider.kt</ID>
+    <ID>NewLineAtEndOfFile:SerialConsoleScreen.kt$com.droidvisor.ui.screen.SerialConsoleScreen.kt</ID>
+    <ID>NewLineAtEndOfFile:SerialConsoleService.kt$com.droidvisor.vm.SerialConsoleService.kt</ID>
+    <ID>NewLineAtEndOfFile:SettingsScreen.kt$com.droidvisor.ui.screen.SettingsScreen.kt</ID>
+    <ID>NewLineAtEndOfFile:SettingsViewModel.kt$com.droidvisor.ui.viewmodel.SettingsViewModel.kt</ID>
+    <ID>NewLineAtEndOfFile:SettingsViewModelTest.kt$com.droidvisor.ui.viewmodel.SettingsViewModelTest.kt</ID>
+    <ID>NewLineAtEndOfFile:SimulationModeBannerTest.kt$com.droidvisor.ui.components.SimulationModeBannerTest.kt</ID>
+    <ID>NewLineAtEndOfFile:Skeleton.kt$com.droidvisor.ui.components.Skeleton.kt</ID>
+    <ID>NewLineAtEndOfFile:TerminalViewModel.kt$com.droidvisor.ui.viewmodel.TerminalViewModel.kt</ID>
+    <ID>NewLineAtEndOfFile:TerminalViewModelTest.kt$com.droidvisor.ui.viewmodel.TerminalViewModelTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VirtualMachineManagerServiceTest.kt$com.droidvisor.vm.VirtualMachineManagerServiceTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmConfig.kt$com.droidvisor.vm.VmConfig.kt</ID>
+    <ID>NewLineAtEndOfFile:VmConfigTest.kt$com.droidvisor.vm.VmConfigTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmConfigValidator.kt$com.droidvisor.vm.VmConfigValidator.kt</ID>
+    <ID>NewLineAtEndOfFile:VmCreationIntegrationTest.kt$com.droidvisor.integration.VmCreationIntegrationTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmError.kt$com.droidvisor.vm.VmError.kt</ID>
+    <ID>NewLineAtEndOfFile:VmErrorTest.kt$com.droidvisor.vm.VmErrorTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmInstanceTest.kt$com.droidvisor.vm.model.VmInstanceTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmManagementScreen.kt$com.droidvisor.ui.screen.VmManagementScreen.kt</ID>
+    <ID>NewLineAtEndOfFile:VmManagementViewModel.kt$com.droidvisor.ui.viewmodel.VmManagementViewModel.kt</ID>
+    <ID>NewLineAtEndOfFile:VmManagementViewModelErrorHandlingTest.kt$com.droidvisor.ui.viewmodel.VmManagementViewModelErrorHandlingTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmManagerServiceTest.kt$com.droidvisor.vm.VmManagerServiceTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmNetworkIntegrationTest.kt$com.droidvisor.integration.VmNetworkIntegrationTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmStateDataStore.kt$com.droidvisor.datastore.VmStateDataStore.kt</ID>
+    <ID>NewLineAtEndOfFile:VmStatusTest.kt$com.droidvisor.vm.VmStatusTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VmTemplateTest.kt$com.droidvisor.vm.model.VmTemplateTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VsockChannel.kt$com.droidvisor.vm.vsock.VsockChannel.kt</ID>
+    <ID>NewLineAtEndOfFile:VsockChannelTest.kt$com.droidvisor.vm.vsock.VsockChannelTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VsockConnectionState.kt$com.droidvisor.vm.vsock.VsockConnectionState.kt</ID>
+    <ID>NewLineAtEndOfFile:VsockConnectionStateTest.kt$com.droidvisor.vm.vsock.VsockConnectionStateTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VsockError.kt$com.droidvisor.vm.vsock.VsockError.kt</ID>
+    <ID>NewLineAtEndOfFile:VsockErrorTest.kt$com.droidvisor.vm.vsock.VsockErrorTest.kt</ID>
+    <ID>NewLineAtEndOfFile:VsockServiceTest.kt$com.droidvisor.vm.vsock.VsockServiceTest.kt</ID>
+    <ID>OutdatedDocumentation:QemuVmRuntime.kt$QemuVmRuntime.Companion$fun createDefaultConfig(context: Context, enableKvm: Boolean = false): QemuVmConfig</ID>
+    <ID>ReturnCount:BackupManagerService.kt$BackupManagerService$fun restoreBackup(backupId: String): BackupResult</ID>
+    <ID>ReturnCount:BackupManagerServiceTest.kt$TestableBackupManagerService$fun restoreBackup(backupId: String): BackupResult</ID>
+    <ID>ReturnCount:NetworkConfigViewModel.kt$NetworkConfigViewModel$private fun validateConfig(): Boolean</ID>
+    <ID>ReturnCount:NetworkUtilsTest.kt$NetworkUtils$fun validateIpAddress(ip: String): Boolean</ID>
+    <ID>SpreadOperator:QemuDiskManager.kt$QemuDiskManager$(*args.toTypedArray())</ID>
+    <ID>SpreadOperator:QemuProcessManager.kt$QemuProcessManager$(*commandLine.toTypedArray())</ID>
+    <ID>SwallowedException:AvfCapabilityChecker.kt$AvfCapabilityChecker$e: ClassNotFoundException</ID>
+    <ID>SwallowedException:BackupManagerServiceTest.kt$TestableBackupManagerService$e: Exception</ID>
+    <ID>SwallowedException:DockerApiClient.kt$DockerApiClient$e: DockerError</ID>
+    <ID>SwallowedException:DockerDashboardViewModel.kt$DockerDashboardViewModel$e: Exception</ID>
+    <ID>SwallowedException:DockerHttpClient.kt$DockerHttpClient$e: SerializationException</ID>
+    <ID>SwallowedException:QemuProcessManager.kt$QemuProcessManager$e: IOException</ID>
+    <ID>SwallowedException:QemuVmRuntime.kt$QemuVmRuntime$e: Exception</ID>
+    <ID>SwallowedException:QemuVmRuntimeTest.kt$QemuVmRuntimeTest$e: VmError.StartError</ID>
+    <ID>SwallowedException:QemuVmRuntimeTest.kt$QemuVmRuntimeTest$e: VmError.StopError</ID>
+    <ID>SwallowedException:QemuVsockChannel.kt$QemuVsockChannel$e: Exception</ID>
+    <ID>SwallowedException:QemuVsockChannelTest.kt$QemuVsockChannelTest$e: VsockError.ReceiveError</ID>
+    <ID>SwallowedException:QemuVsockChannelTest.kt$QemuVsockChannelTest$e: VsockError.SendError</ID>
+    <ID>SwallowedException:VirtualMachineManagerService.kt$VirtualMachineManagerService$e: Exception</ID>
+    <ID>SwallowedException:VirtualMachineManagerServiceTest.kt$VirtualMachineManagerServiceTest$e: VmError.ConfigurationError</ID>
+    <ID>SwallowedException:VirtualMachineManagerServiceTest.kt$VirtualMachineManagerServiceTest$e: VmError.StartError</ID>
+    <ID>SwallowedException:VmManagerServiceQemuTest.kt$TestableQemuVmManagerService$e: Exception</ID>
+    <ID>SwallowedException:VmManagerServiceTest.kt$TestableVmManagerService$e: Exception</ID>
+    <ID>SwallowedException:VsockChannelTest.kt$VsockChannelTest$e: VsockError.ReceiveError</ID>
+    <ID>SwallowedException:VsockChannelTest.kt$VsockChannelTest$e: VsockError.SendError</ID>
+    <ID>SwallowedException:VsockService.kt$RealVsockChannel$e: java.io.IOException</ID>
+    <ID>ThrowsCount:DockerHttpClient.kt$DockerHttpClient$private fun readVsockResponse(inputStream: InputStream): HttpResponse</ID>
+    <ID>ThrowsCount:DockerHttpClient.kt$DockerHttpClient$private suspend fun executeHttpUrlRequest(method: String, path: String, body: String): String</ID>
+    <ID>ThrowsCount:DockerHttpClient.kt$DockerHttpClient$private suspend fun executeVsockRequest(method: String, path: String, body: String): String</ID>
+    <ID>ThrowsCount:QemuProcessManager.kt$QemuProcessManager$private fun startDaemonized(commandLine: List&lt;String&gt;)</ID>
+    <ID>ThrowsCount:QemuProcessManager.kt$QemuProcessManager$private fun validateConfig()</ID>
+    <ID>ThrowsCount:QemuVsockChannel.kt$QemuVsockChannel$fun connect()</ID>
+    <ID>ThrowsCount:VirtualMachineManagerService.kt$VirtualMachineManagerService$private fun buildAvfVmConfig(): Any</ID>
+    <ID>ThrowsCount:VirtualMachineManagerService.kt$VirtualMachineManagerService$private fun startAvfVm()</ID>
+    <ID>ThrowsCount:VirtualMachineManagerService.kt$VirtualMachineManagerService$private fun stopAvfVm()</ID>
+    <ID>TooGenericExceptionCaught:AvfCapabilityChecker.kt$AvfCapabilityChecker$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AvfSerialConsoleProvider.kt$AvfSerialConsoleProvider$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:BackupManagerService.kt$BackupManagerService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:BackupViewModel.kt$BackupViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:DockerDashboardViewModel.kt$DockerDashboardViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:DockerHttpClient.kt$DockerHttpClient$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:DockerProxyService.kt$DockerProxyService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:DownloadManager.kt$DownloadManager$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QemuDiskManager.kt$QemuDiskManager$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QemuProcessManager.kt$QemuProcessManager$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QemuProcessManager.kt$QemuProcessManager.Companion$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QemuSerialConsole.kt$QemuSerialConsole$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QemuSerialConsoleProvider.kt$QemuSerialConsoleProvider$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QemuVmRuntime.kt$QemuVmRuntime$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QemuVsockChannel.kt$QemuVsockChannel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:QemuVsockChannel.kt$QemuVsockServer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SerialConsoleService.kt$SerialConsoleService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SerialConsoleService.kt$SerialConsoleService.RelayClient$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TerminalScreen.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TerminalViewModel.kt$TerminalViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:VirtualMachineManagerService.kt$VirtualMachineManagerService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:VmManagementViewModel.kt$VmManagementViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:VmManagerService.kt$VmManagerService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:VmStateDataStore.kt$VmStateDataStore$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:VsockService.kt$RealVsockChannel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:VsockService.kt$VsockService$e: Exception</ID>
+    <ID>TooManyFunctions:DockerApiClient.kt$DockerApiClient</ID>
+    <ID>TooManyFunctions:DockerDashboardScreen.kt$com.droidvisor.ui.screen.DockerDashboardScreen.kt</ID>
+    <ID>TooManyFunctions:DockerDashboardViewModel.kt$DockerDashboardViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:DockerProxyService.kt$DockerProxyService : ServiceIDockerProxyService</ID>
+    <ID>TooManyFunctions:IDockerProxyService.kt$IDockerProxyService</ID>
+    <ID>TooManyFunctions:Logger.kt$Logger</ID>
+    <ID>TooManyFunctions:VmManagerService.kt$VmManagerService : Service</ID>
+    <ID>TrailingWhitespace:DockerApiClient.kt$com.droidvisor.docker.DockerApiClient.kt</ID>
+    <ID>UnderscoresInNumericLiterals:BackupTest.kt$BackupTest$1024000L</ID>
+    <ID>UnderscoresInNumericLiterals:BackupTest.kt$BackupTest$1715000000L</ID>
+    <ID>UnderscoresInNumericLiterals:BackupTest.kt$BackupTest$2048000L</ID>
+    <ID>UnderscoresInNumericLiterals:BackupTest.kt$BackupTest$4096000L</ID>
+    <ID>UnderscoresInNumericLiterals:BackupTest.kt$BackupTest$512000L</ID>
+    <ID>UnderscoresInNumericLiterals:ContainerTest.kt$ContainerTest$1024000L</ID>
+    <ID>UnderscoresInNumericLiterals:ContainerTest.kt$ContainerTest$15432</ID>
+    <ID>UnderscoresInNumericLiterals:ContainerTest.kt$ContainerTest$1715000000L</ID>
+    <ID>UnderscoresInNumericLiterals:ContainerTest.kt$ContainerTest$2048000L</ID>
+    <ID>UnderscoresInNumericLiterals:DockerContainerIntegrationTest.kt$DockerContainerIntegrationTest$104000000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerContainerIntegrationTest.kt$DockerContainerIntegrationTest$142000000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerContainerIntegrationTest.kt$DockerContainerIntegrationTest$332000000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$13300L</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$172800</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$1814400</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$2592000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$5184000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$60000L</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$604800</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$7776000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModel.kt$DockerDashboardViewModel$86400</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModelTest.kt$DockerDashboardViewModelTest$1700000000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerDashboardViewModelTest.kt$DockerDashboardViewModelTest$1700001000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerHttpClient.kt$DockerHttpClient$10000</ID>
+    <ID>UnderscoresInNumericLiterals:DockerHttpClient.kt$DockerHttpClient$30000</ID>
+    <ID>UnderscoresInNumericLiterals:DownloadManager.kt$DownloadManager$65536</ID>
+    <ID>UnderscoresInNumericLiterals:Image.kt$Image$2592000</ID>
+    <ID>UnderscoresInNumericLiterals:Image.kt$Image$31536000</ID>
+    <ID>UnderscoresInNumericLiterals:Image.kt$Image$86400</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$100000L</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$142000000L</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$1715000000L</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$1716000000L</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$172800</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$20000000</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$20000000L</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$5000000</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$50000000L</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$5000000L</ID>
+    <ID>UnderscoresInNumericLiterals:ImageTest.kt$ImageTest$75000000L</ID>
+    <ID>UnderscoresInNumericLiterals:NetworkConfigViewModel.kt$NetworkConfigViewModel$65535</ID>
+    <ID>UnderscoresInNumericLiterals:NetworkConfigViewModelTest.kt$NetworkConfigViewModelTest$70000</ID>
+    <ID>UnderscoresInNumericLiterals:QemuDiskManager.kt$QemuDiskManager.Companion$65536</ID>
+    <ID>UnderscoresInNumericLiterals:QemuDiskManagerTest.kt$QemuDiskManagerTest$65536</ID>
+    <ID>UnderscoresInNumericLiterals:QemuSerialConsole.kt$QemuSerialConsole$30000</ID>
+    <ID>UnderscoresInNumericLiterals:QemuVsockChannel.kt$QemuVsockChannel$65536</ID>
+    <ID>UnderscoresInNumericLiterals:SettingsScreen.kt$65535f</ID>
+    <ID>UnderscoresInNumericLiterals:VmInstanceTest.kt$VmInstanceTest$60000</ID>
+    <ID>UnderscoresInNumericLiterals:VmManagerDataStoreIntegrationTest.kt$VmManagerDataStoreIntegrationTest$1000000L</ID>
+    <ID>UnderscoresInNumericLiterals:VmManagerDataStoreIntegrationTest.kt$VmManagerDataStoreIntegrationTest$2000000L</ID>
+    <ID>UnderscoresInNumericLiterals:VmManagerDataStoreIntegrationTest.kt$VmManagerDataStoreIntegrationTest$32768L</ID>
+    <ID>UnderscoresInNumericLiterals:VmManagerService.kt$VmManagerService$10000L</ID>
+    <ID>UnderscoresInNumericLiterals:VmManagerServiceQemuTest.kt$VmManagerServiceQemuTest$1700000000000L</ID>
+    <ID>UnderscoresInNumericLiterals:VmRuntimeTest.kt$VmRuntimeTest$12345</ID>
+    <ID>UnderscoresInNumericLiterals:VmRuntimeTest.kt$VmRuntimeTest$60000L</ID>
+    <ID>UnderscoresInNumericLiterals:VsockService.kt$RealVsockChannel$65536</ID>
+    <ID>UnnecessaryBackticks:QemuProcessManagerTest.kt$QemuProcessManagerTest$`控制台回调正常设置`</ID>
+    <ID>UnusedImports:BackupManagerService.kt$import kotlinx.coroutines.delay</ID>
+    <ID>UnusedImports:BackupManagerServiceTest.kt$import kotlinx.coroutines.Dispatchers</ID>
+    <ID>UnusedImports:BackupRestoreIntegrationTest.kt$import kotlinx.coroutines.flow.StateFlow</ID>
+    <ID>UnusedImports:BackupRestoreIntegrationTest.kt$import kotlinx.coroutines.flow.asStateFlow</ID>
+    <ID>UnusedImports:BackupRestoreIntegrationTest.kt$import org.junit.Assert.assertNotEquals</ID>
+    <ID>UnusedImports:BackupRestoreIntegrationTest.kt$import org.junit.Assert.assertNull</ID>
+    <ID>UnusedImports:BackupTest.kt$import org.junit.Assert.assertNotNull</ID>
+    <ID>UnusedImports:ContainerTest.kt$import org.junit.Assert.assertFalse</ID>
+    <ID>UnusedImports:CreateVmScreen.kt$import androidx.compose.material.icons.filled.Security</ID>
+    <ID>UnusedImports:CreateVmScreen.kt$import androidx.compose.material.icons.filled.Warning</ID>
+    <ID>UnusedImports:CreateVmScreen.kt$import androidx.compose.material3.ButtonDefaults</ID>
+    <ID>UnusedImports:CreateVmScreen.kt$import androidx.compose.material3.OutlinedButton</ID>
+    <ID>UnusedImports:DockerApiClientTest.kt$import com.droidvisor.docker.model.Container</ID>
+    <ID>UnusedImports:DockerContainerIntegrationTest.kt$import com.droidvisor.docker.DockerError</ID>
+    <ID>UnusedImports:DockerContainerIntegrationTest.kt$import kotlinx.coroutines.flow.StateFlow</ID>
+    <ID>UnusedImports:DockerContainerIntegrationTest.kt$import kotlinx.coroutines.flow.asStateFlow</ID>
+    <ID>UnusedImports:DockerContainerIntegrationTest.kt$import org.junit.Assert.assertNotNull</ID>
+    <ID>UnusedImports:DockerContainerIntegrationTest.kt$import org.junit.Assert.assertNull</ID>
+    <ID>UnusedImports:DockerDashboardScreen.kt$import androidx.compose.foundation.background</ID>
+    <ID>UnusedImports:DockerDashboardScreen.kt$import androidx.compose.material.icons.filled.ArrowDropDown</ID>
+    <ID>UnusedImports:DockerDashboardScreen.kt$import androidx.compose.material.icons.filled.ArrowDropUp</ID>
+    <ID>UnusedImports:DockerDashboardScreen.kt$import androidx.compose.material.icons.filled.Dashboard</ID>
+    <ID>UnusedImports:DockerDashboardScreen.kt$import com.droidvisor.docker.model.ContainerStats</ID>
+    <ID>UnusedImports:DockerDashboardViewModelTest.kt$import io.mockk.verify</ID>
+    <ID>UnusedImports:DockerHttpClientTest.kt$import org.junit.Assert.assertEquals</ID>
+    <ID>UnusedImports:DockerHttpClientTest.kt$import org.junit.Assert.assertNotNull</ID>
+    <ID>UnusedImports:DockerHttpClientTest.kt$import org.junit.Assert.assertNull</ID>
+    <ID>UnusedImports:DockerHttpClientTest.kt$import org.junit.Assert.assertTrue</ID>
+    <ID>UnusedImports:DockerProxyServiceTest.kt$import org.junit.Assert.assertEquals</ID>
+    <ID>UnusedImports:ImageTest.kt$import org.junit.Assert.assertFalse</ID>
+    <ID>UnusedImports:MainActivity.kt$import androidx.compose.foundation.layout.size</ID>
+    <ID>UnusedImports:MainActivity.kt$import androidx.compose.ui.text.font.FontWeight</ID>
+    <ID>UnusedImports:NetworkConfigScreen.kt$import androidx.compose.foundation.lazy.items</ID>
+    <ID>UnusedImports:NetworkConfigTest.kt$import org.junit.Assert.assertFalse</ID>
+    <ID>UnusedImports:NetworkConfigViewModelTest.kt$import com.droidvisor.vm.model.PortForwarding</ID>
+    <ID>UnusedImports:PermissionScreen.kt$import android.content.Intent</ID>
+    <ID>UnusedImports:PermissionScreen.kt$import android.os.Build</ID>
+    <ID>UnusedImports:PermissionScreen.kt$import android.provider.Settings</ID>
+    <ID>UnusedImports:PermissionScreen.kt$import com.droidvisor.ui.viewmodel.PermissionState</ID>
+    <ID>UnusedImports:QemuVmConfigTest.kt$import java.io.File</ID>
+    <ID>UnusedImports:QemuVmRuntime.kt$import kotlinx.coroutines.cancel</ID>
+    <ID>UnusedImports:SettingsViewModelTest.kt$import kotlinx.coroutines.flow.first</ID>
+    <ID>UnusedImports:SettingsViewModelTest.kt$import org.junit.Assert.assertFalse</ID>
+    <ID>UnusedImports:SettingsViewModelTest.kt$import org.junit.Assert.assertTrue</ID>
+    <ID>UnusedImports:SetupScreen.kt$import androidx.compose.animation.AnimatedVisibility</ID>
+    <ID>UnusedImports:SetupScreen.kt$import androidx.compose.animation.animateContentSize</ID>
+    <ID>UnusedImports:SetupScreen.kt$import androidx.compose.animation.fadeIn</ID>
+    <ID>UnusedImports:SetupScreen.kt$import androidx.compose.animation.fadeOut</ID>
+    <ID>UnusedImports:SetupScreen.kt$import androidx.compose.ui.text.font.FontFamily</ID>
+    <ID>UnusedImports:SetupViewModel.kt$import kotlinx.coroutines.Dispatchers</ID>
+    <ID>UnusedImports:SimulationModeBannerTest.kt$import androidx.compose.ui.Modifier</ID>
+    <ID>UnusedImports:TerminalViewModel.kt$import java.io.InputStream</ID>
+    <ID>UnusedImports:TerminalViewModelTest.kt$import java.io.ByteArrayOutputStream</ID>
+    <ID>UnusedImports:TerminalViewModelTest.kt$import java.io.OutputStream</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import com.droidvisor.vm.model.VmTemplate</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import com.droidvisor.vm.model.VmTemplateType</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import kotlinx.coroutines.CoroutineScope</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import kotlinx.coroutines.Dispatchers</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import kotlinx.coroutines.SupervisorJob</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import kotlinx.coroutines.delay</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import kotlinx.coroutines.flow.StateFlow</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import kotlinx.coroutines.launch</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import org.junit.Assert.assertNotNull</ID>
+    <ID>UnusedImports:VirtualMachineManagerServiceTest.kt$import org.junit.Assert.assertNull</ID>
+    <ID>UnusedImports:VmConfigTest.kt$import org.junit.Assert.assertNotNull</ID>
+    <ID>UnusedImports:VmCreationIntegrationTest.kt$import kotlinx.coroutines.flow.StateFlow</ID>
+    <ID>UnusedImports:VmCreationIntegrationTest.kt$import kotlinx.coroutines.flow.asStateFlow</ID>
+    <ID>UnusedImports:VmCreationIntegrationTest.kt$import org.junit.Assert.assertFalse</ID>
+    <ID>UnusedImports:VmCreationIntegrationTest.kt$import org.junit.Assert.assertTrue</ID>
+    <ID>UnusedImports:VmManagementViewModelErrorHandlingTest.kt$import com.droidvisor.vm.VmStatus</ID>
+    <ID>UnusedImports:VmManagementViewModelErrorHandlingTest.kt$import java.util.concurrent.TimeUnit</ID>
+    <ID>UnusedImports:VmManagementViewModelErrorHandlingTest.kt$import kotlinx.coroutines.TimeoutCancellationException</ID>
+    <ID>UnusedImports:VmManagementViewModelErrorHandlingTest.kt$import kotlinx.coroutines.withTimeout</ID>
+    <ID>UnusedImports:VmManagementViewModelErrorHandlingTest.kt$import org.junit.Assert.assertTrue</ID>
+    <ID>UnusedImports:VmManagementViewModelErrorHandlingTest.kt$import org.mockito.Mockito.timeout</ID>
+    <ID>UnusedImports:VmManagementViewModelErrorHandlingTest.kt$import org.mockito.Mockito.verify</ID>
+    <ID>UnusedImports:VmManagerServiceQemuTest.kt$import com.droidvisor.vm.qemu.QemuVmRuntime</ID>
+    <ID>UnusedImports:VmNetworkIntegrationTest.kt$import kotlinx.coroutines.flow.StateFlow</ID>
+    <ID>UnusedImports:VmNetworkIntegrationTest.kt$import kotlinx.coroutines.flow.asStateFlow</ID>
+    <ID>UnusedImports:VmNetworkIntegrationTest.kt$import org.junit.Assert.assertNotEquals</ID>
+    <ID>UnusedImports:VmNetworkIntegrationTest.kt$import org.junit.Assert.assertNull</ID>
+    <ID>UnusedImports:VsockService.kt$import com.droidvisor.vm.qemu.QemuVmRuntime</ID>
+    <ID>UnusedImports:VsockServiceTest.kt$import kotlinx.coroutines.runBlocking</ID>
+    <ID>UnusedImports:VsockServiceTest.kt$import org.junit.Assert.assertEquals</ID>
+    <ID>UnusedImports:VsockServiceTest.kt$import org.junit.Assert.assertNotNull</ID>
+    <ID>UnusedImports:VsockServiceTest.kt$import org.junit.Assert.assertTrue</ID>
+    <ID>UnusedImports:VsockServiceTest.kt$import org.mockito.Mockito.`when`</ID>
+    <ID>UnusedParameter:BackupManagerService.kt$BackupManagerService$entryName: String</ID>
+    <ID>UnusedParameter:BackupManagerService.kt$BackupManagerService$parentBackupId: String?</ID>
+    <ID>UnusedParameter:BackupManagerService.kt$BackupManagerService$type: BackupType</ID>
+    <ID>UnusedParameter:BackupRestoreIntegrationTest.kt$TestRestoreService$backupId: String</ID>
+    <ID>UnusedParameter:BackupRestoreIntegrationTest.kt$TestRestoreService$vmId: String</ID>
+    <ID>UnusedParameter:BackupRestoreIntegrationTest.kt$TestVmService$name: String</ID>
+    <ID>UnusedParameter:DockerDashboardScreen.kt$containerId: String</ID>
+    <ID>UnusedParameter:DockerDashboardViewModel.kt$DockerDashboardViewModel$containerId: String</ID>
+    <ID>UnusedParameter:DockerProxyServiceTest.kt$TestableDockerProxyService$containerId: String</ID>
+    <ID>UnusedParameter:DockerProxyServiceTest.kt$TestableDockerProxyService$containerName: String</ID>
+    <ID>UnusedParameter:DockerProxyServiceTest.kt$TestableDockerProxyService$imageName: String</ID>
+    <ID>UnusedParameter:NetworkConfigScreen.kt$onDnsErrorChange: ((String?) -&gt; Unit)? = null</ID>
+    <ID>UnusedParameter:PermissionScreen.kt$context: android.content.Context</ID>
+    <ID>UnusedParameter:PermissionScreen.kt$isAvfSupported: Boolean</ID>
+    <ID>UnusedParameter:QemuVmRuntime.kt$QemuVmRuntime$channel: QemuVsockChannel</ID>
+    <ID>UnusedParameter:SetupViewModel.kt$SetupViewModel$context: Context</ID>
+    <ID>UnusedParameter:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService$port: Int</ID>
+    <ID>UnusedParameter:VmCreationIntegrationTest.kt$VmCreationIntegrationTest.TestVmManager$backupId: String</ID>
+    <ID>UnusedParameter:VmCreationIntegrationTest.kt$VmCreationIntegrationTest.TestVmManager$vmId: String</ID>
+    <ID>UnusedParameter:VmManagementScreen.kt$onDismissBackup: () -&gt; Unit</ID>
+    <ID>UnusedParameter:VmManagementScreen.kt$onDismissNetwork: () -&gt; Unit</ID>
+    <ID>UnusedParameter:VmManagementScreen.kt$viewModel: VmManagementViewModel? = null</ID>
+    <ID>UnusedPrivateMember:BackupManagerService.kt$BackupManagerService$private fun verifyChecksum(backup: Backup): Boolean</ID>
+    <ID>UnusedPrivateMember:VmManagerServiceQemuTest.kt$TestableQemuVmManagerService$private fun updateVmStartedAt(vmId: String, startedAt: Long?)</ID>
+    <ID>UnusedPrivateProperty:AnimatedStatusIndicator.kt$val rotation by animateFloatAsState( targetValue = if (isRotating) 360f else 0f, animationSpec = tween(1000), label = "rotation" )</ID>
+    <ID>UnusedPrivateProperty:BackupManagerServiceTest.kt$BackupManagerServiceTest$@Mock private lateinit var mockContext: Context</ID>
+    <ID>UnusedPrivateProperty:BackupManagerServiceTest.kt$BackupManagerServiceTest$val fullBackup1 = service.backups.value[0]</ID>
+    <ID>UnusedPrivateProperty:ContainerTest.kt$ContainerTest$private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }</ID>
+    <ID>UnusedPrivateProperty:DockerDashboardViewModelTest.kt$DockerDashboardViewModelTest$val errorLines = exported.lines().filter { it.contains("[ERROR]") }</ID>
+    <ID>UnusedPrivateProperty:DockerHttpClient.kt$DockerHttpClient$private val json = Json { ignoreUnknownKeys = true }</ID>
+    <ID>UnusedPrivateProperty:DockerProxyIntegrationTest.kt$DockerProxyIntegrationTest$private lateinit var proxyService: DockerProxyService</ID>
+    <ID>UnusedPrivateProperty:QemuDiskManagerTest.kt$QemuDiskManagerTest$val manager = QemuDiskManager(nonExistentDir)</ID>
+    <ID>UnusedPrivateProperty:QemuDiskManagerTest.kt$QemuDiskManagerTest$val manager = QemuDiskManager(tempDir)</ID>
+    <ID>UnusedPrivateProperty:QemuVsockChannel.kt$QemuVsockChannel$private val connectTimeoutMs: Long = 5000L</ID>
+    <ID>UnusedPrivateProperty:SetupViewModel.kt$SetupViewModel$index</ID>
+    <ID>UnusedPrivateProperty:VirtualMachineManagerService.kt$VirtualMachineManagerService$val builderClass = ReflectCache.vmConfigBuilderClass ?: throw VmError.AvfNotSupportedError("VirtualMachineConfig.Builder class not found")</ID>
+    <ID>UnusedPrivateProperty:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService$private val TAG = "VirtualMachineManagerService"</ID>
+    <ID>UnusedPrivateProperty:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService$private val baseRetryDelayMs = 100L</ID>
+    <ID>UnusedPrivateProperty:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService$private val maxRetries = 3</ID>
+    <ID>UnusedPrivateProperty:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService$private var avfVmManager: Any? = null</ID>
+    <ID>UnusedPrivateProperty:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService$private var isAvfAvailable = false</ID>
+    <ID>UnusedPrivateProperty:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService$private var vmStartRetryCount = 0</ID>
+    <ID>UnusedPrivateProperty:VmCreationIntegrationTest.kt$VmCreationIntegrationTest$val backup2 = vmManager.createBackup(vmId, "backup-second")</ID>
+    <ID>UnusedPrivateProperty:VmManagerServiceTest.kt$TestableVmManagerService$private val TAG = "VmManagerService"</ID>
+    <ID>UnusedPrivateProperty:VmManagerServiceTest.kt$TestableVmManagerService$private val mockDataStore: VmStateDataStore</ID>
+    <ID>UnusedPrivateProperty:VsockService.kt$VsockService$private val HOST_CID = 2</ID>
+    <ID>UnusedPrivateProperty:VsockServiceTest.kt$VsockServiceTest$@Mock private lateinit var mockVsockChannel: VsockChannel</ID>
+    <ID>UseIfInsteadOfWhen:CreateVmScreen.kt$when { canUseAvf || canUseKvmQemu -&gt; Color(0xFF4CAF50) else -&gt; Color(0xFFFF9800) }</ID>
+    <ID>UseIfInsteadOfWhen:PermissionScreen.kt$when { // ── AVF 完全可用 ── permissionState.isAvfFullyAvailable -&gt; { Icon( imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Green ) Spacer(modifier = Modifier.height(16.dp)) Text( text = "所有条件已满足，可使用 AVF 模式运行虚拟机", style = MaterialTheme.typography.titleMedium, color = Color.Green, textAlign = TextAlign.Center ) Spacer(modifier = Modifier.height(24.dp)) Button( onClick = onAllPermissionsGranted, modifier = Modifier.fillMaxWidth() ) { @Suppress("DEPRECATION") Icon(Icons.Default.ArrowForward, contentDescription = null) Spacer(modifier = Modifier.width(8.dp)) Text("开始使用") } } // ── AVF 不可用 ── else -&gt; { // 根据可用后端显示不同状态 val (title, color, icon, description, showStartButton) = when { permissionState.canFallbackToQemu -&gt; arrayOf( "将使用 QEMU 模式运行", Color(0xFF00BCD4), Icons.Default.Bolt, if (permissionState.plainKvmAccessible) "QEMU + KVM 硬件加速已就绪，性能接近原生。" else "QEMU 以软件模拟运行，性能低于 AVF 模式。", true ) permissionState.hasNoRuntime -&gt; arrayOf( "无可用的虚拟化运行时", Color(0xFFE53935), Icons.Default.Cancel, "设备不支持 AVF 且未检测到 QEMU，无法启动虚拟机。" + "请确认系统环境是否满足要求。", false ) else -&gt; arrayOf( "AVF 不可用", Color(0xFFFF9800), Icons.Default.Warning, "检测结果未确定，请重新检测。", false ) } Icon( imageVector = icon as androidx.compose.ui.graphics.vector.ImageVector, contentDescription = null, modifier = Modifier.size(48.dp), tint = color as Color ) Spacer(modifier = Modifier.height(16.dp)) Text( text = title as String, style = MaterialTheme.typography.titleMedium, color = color as Color, textAlign = TextAlign.Center ) Spacer(modifier = Modifier.height(8.dp)) Text( text = description as String, style = MaterialTheme.typography.bodySmall, color = Color.Gray, textAlign = TextAlign.Center ) Spacer(modifier = Modifier.height(24.dp)) Row( modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp) ) { OutlinedButton( onClick = { viewModel.updatePermissionState(context) }, modifier = Modifier.weight(1f) ) { Icon(Icons.Default.Refresh, contentDescription = null) Spacer(modifier = Modifier.width(8.dp)) Text("重新检测") } if (showStartButton as Boolean) { Button( onClick = onAllPermissionsGranted, modifier = Modifier.weight(1f) ) { @Suppress("DEPRECATION") Icon(Icons.Default.ArrowForward, contentDescription = null) Spacer(modifier = Modifier.width(8.dp)) Text("开始使用") } } } } }</ID>
+    <ID>UseIfInsteadOfWhen:QemuVmRuntime.kt$QemuVmRuntime$when { consoleService != null -&gt; QemuVmConfig.ConsoleMode.FileOutput( path = "${File(workDir, "console").absolutePath}/vm_console.log" ) else -&gt; QemuVmConfig.ConsoleMode.None }</ID>
+    <ID>UseRequire:QemuDiskManager.kt$QemuDiskManager$throw IllegalArgumentException("Disk file does not exist: ${diskFile.absolutePath}")</ID>
+    <ID>VariableNaming:AvfCapabilityChecker.kt$AvfCapabilityChecker$private val TAG = "AvfCapabilityChecker"</ID>
+    <ID>VariableNaming:DockerHttpClient.kt$DockerHttpClient$private val TAG = "DockerHttpClient"</ID>
+    <ID>VariableNaming:DockerProxyService.kt$DockerProxyService$private val TAG = "DockerProxyService"</ID>
+    <ID>VariableNaming:DownloadManager.kt$DownloadManager$private val TAG = "DownloadManager"</ID>
+    <ID>VariableNaming:QemuDiskManager.kt$QemuDiskManager$private val TAG = "QemuDiskManager"</ID>
+    <ID>VariableNaming:QemuProcessManager.kt$QemuProcessManager$private val TAG = "QemuProcessManager"</ID>
+    <ID>VariableNaming:QemuSerialConsole.kt$QemuSerialConsole$private val TAG = "QemuSerialConsole"</ID>
+    <ID>VariableNaming:QemuSerialConsoleProvider.kt$QemuSerialConsoleProvider$private val TAG = "QemuSerialConsoleProvider"</ID>
+    <ID>VariableNaming:QemuVmRuntime.kt$QemuVmRuntime$private val TAG = "QemuVmRuntime"</ID>
+    <ID>VariableNaming:QemuVsockChannel.kt$QemuVsockChannel$private val TAG = "QemuVsockChannel"</ID>
+    <ID>VariableNaming:QemuVsockChannel.kt$QemuVsockServer$private val TAG = "QemuVsockServer"</ID>
+    <ID>VariableNaming:SetupViewModel.kt$SetupViewModel$private val TAG = "SetupViewModel"</ID>
+    <ID>VariableNaming:VirtualMachineManagerService.kt$VirtualMachineManagerService$private val TAG = "VirtualMachineManagerService"</ID>
+    <ID>VariableNaming:VirtualMachineManagerServiceTest.kt$TestableVirtualMachineManagerService$private val TAG = "VirtualMachineManagerService"</ID>
+    <ID>VariableNaming:VmManagerService.kt$VmManagerService$private val TAG = "VmManagerService"</ID>
+    <ID>VariableNaming:VmManagerServiceTest.kt$TestableVmManagerService$private val TAG = "VmManagerService"</ID>
+    <ID>VariableNaming:VmStateDataStore.kt$VmStateDataStore$private val TAG = "VmStateDataStore"</ID>
+    <ID>VariableNaming:VsockService.kt$RealVsockChannel$private val TAG = "RealVsockChannel"</ID>
+    <ID>VariableNaming:VsockService.kt$VsockService$private val DEFAULT_RECONNECT_DELAY = 5000L</ID>
+    <ID>VariableNaming:VsockService.kt$VsockService$private val GUEST_CID = 3</ID>
+    <ID>VariableNaming:VsockService.kt$VsockService$private val HOST_CID = 2</ID>
+    <ID>VariableNaming:VsockService.kt$VsockService$private val TAG = "VsockService"</ID>
+  </CurrentIssues>
+</SmellBaseline>
